@@ -75,17 +75,23 @@ def test_body_diagonal_is_only_first_order():
 
 
 @pytest.mark.slow
-def test_convection_dominated_rate_is_below_second_order():
-    """A recorded limitation, not a target.
+def test_convection_dominated_case_refines_and_stays_bounded():
+    """Accuracy and non-degradation only -- the ORDER is recorded, not asserted.
 
-    At Re = 150 the shortest-edge scheme is accurate in absolute terms but
-    converges at ~1.3-1.5, not 2. The truncated strong residual is the suspect:
-    tau is the convective limit h/(2|u|) = O(h) there, and the truncated
-    residual does not vanish on the exact solution, so the inconsistency enters
-    at O(h). This test records the rate so that a future change to the residual
-    can be measured against it rather than argued about.
+    At Re = 150 the shortest-edge scheme converges at roughly 1.3-1.5 rather
+    than 2. Asserting that band would be backwards: a future fix that restores
+    second order would fail the test. So the observed rate is printed for the
+    record and the assertions cover what should hold under any correct scheme --
+    the error falls monotonically under refinement and stays small.
+
+    The rate has NOT been attributed. The truncated strong residual is the
+    leading suspect, since tau is the convective limit h/(2|u|) = O(h) here,
+    but a non-zero strong residual does not by itself imply a non-zero discrete
+    defect, let alone a particular global order. That attribution needs the
+    manufactured-solution A/B, not this duct.
     """
     errs = [duct.solve_duct(n, n // 10, n // 5, U_MID)[0] for n in (20, 40, 80)]
-    rates = [np.log2(a / b) for a, b in zip(errs, errs[1:])]
-    assert all(1.0 < r < 1.8 for r in rates), f"rates {rates} from {errs}"
-    assert errs[-1] < 5e-3
+    rates = [float(np.log2(a / b)) for a, b in zip(errs, errs[1:])]
+    print(f"observed rates at Re=150: {rates} from errors {errs}")
+    assert all(b < a for a, b in zip(errs, errs[1:])), f"not refining: {errs}"
+    assert errs[-1] < 5e-3, f"final error {errs[-1]:.2e}"
