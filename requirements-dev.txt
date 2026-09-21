@@ -1,0 +1,16 @@
+# Enough to run the validation suite against upstream TOFLUX without PETSc.
+jax>=0.6
+jaxlib>=0.6
+numpy>=2.0
+scipy>=1.13
+chex
+pytest>=8
+
+# Needed only by upstream modules the suite does not exercise:
+#   shapely   -> toflux.src.geometry (BREP meshes)
+#   absl-py   -> toflux.src.mma
+#   pyamg     -> toflux.src.solver (AMG_CG / AMG_BICGSTAB)
+#   flax,optax-> experiments/fluid/tounn
+shapely
+absl-py
+pyamg
