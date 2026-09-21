@@ -287,8 +287,8 @@ def test_laplacian_and_symmetric_viscous_forms_differ_as_derived():
     assert np.allclose(np.sort(sym[:, 2]), np.sort([-0.5, 0.5, 0.5, -0.5]), atol=1e-12)
 
 
-def test_brinkman_in_tau_is_what_separates_the_two_tau_forms():
-    """Zhao eq 16 drops the reactive limit; at large alpha that dominates tau."""
+def test_tau_forms_agree_with_the_closed_form():
+    """Both tau forms match their definitions exactly, at ANY parameters."""
     vel = jnp.zeros((4, 2))
     alpha, h, rho, mu = 2.0e5, 0.1, 1000.0, 1.0
     zhou = _one_element_solver(fe_flow.ZHOU_FORM, tau_scale=1.0, density=rho)
@@ -301,13 +301,47 @@ def test_brinkman_in_tau_is_what_separates_the_two_tau_forms():
     )
     assert float(zhao._tau(vel, alpha, h)) == pytest.approx(1.0 / inv_diff, rel=1e-12)
 
-    # Dropping the reactive limit (Zhao eq 16) inflates tau by
-    # sqrt(inv_diff^2 + inv_react^2) / inv_diff, which here is ~167.
-    ratio = float(zhao._tau(vel, alpha, h)) / float(zhou._tau(vel, alpha, h))
-    assert ratio == pytest.approx(
-        (inv_diff**2 + inv_react**2) ** 0.5 / inv_diff, rel=1e-12
-    )
-    assert ratio > 100.0
+
+def test_dropping_the_reactive_limit_is_negligible_at_the_papers_scale():
+    """The switch ratio is bounded, and at Zhao's own numbers the bound is 1.4%.
+
+    Guards a retracted claim. A ~167x ratio was once quoted for this switch; it
+    came from mu = 1.0, a thousand times Zhao's table 1 value. The ratio has a
+    closed form that needs no solver:
+
+        tau_0 / tau_r = sqrt(1 + (alpha tau_0 / rho)^2)
+                      <= sqrt(1 + (alpha h^2 / 12 mu)^2)     since tau_0 <= rho h^2 / 12 mu
+
+    At alpha = 2e5 (the reference field's value at gamma = 0.4, alpha_max = 1e6)
+    and Zhao's mu = 0.001 that bound is 1.0138 for the element edge and 1.0541
+    for the diagonal.
+    """
+    rho, mu = SPEC.fluid_density, SPEC.fluid_viscosity
+    alpha = 0.2 * SPEC.alpha_max_initial  # RAMP factor at gamma = 0.4, q = 0.2
+    zhou = _one_element_solver(fe_flow.ZHOU_FORM, tau_scale=1.0, density=rho,
+                               viscosity=mu)
+    zhao = _one_element_solver(fe_flow.ZHAO_FORM, tau_scale=1.0, density=rho,
+                               viscosity=mu)
+
+    for h, expected_bound in (
+        (SPEC.element_size, 1.0138),
+        (SPEC.element_size * np.sqrt(2.0), 1.0541),
+    ):
+        for speed in (0.0, 0.02, 0.2):
+            vel = jnp.full((4, 2), speed / np.sqrt(2.0))
+            ratio = float(zhao._tau(vel, alpha, h)) / float(zhou._tau(vel, alpha, h))
+            bound = np.sqrt(1.0 + (alpha * h**2 / (12.0 * mu)) ** 2)
+            assert bound == pytest.approx(expected_bound, rel=1e-3)
+            assert 1.0 <= ratio <= bound * (1 + 1e-12), (
+                f"ratio {ratio} outside [1, {bound}] at h={h}, |u|={speed}"
+            )
+        # at zero velocity the bound is attained
+        ratio0 = float(zhao._tau(jnp.zeros((4, 2)), alpha, h)) / float(
+            zhou._tau(jnp.zeros((4, 2)), alpha, h)
+        )
+        assert ratio0 == pytest.approx(
+            np.sqrt(1.0 + (alpha * h**2 / (12.0 * mu)) ** 2), rel=1e-12
+        )
 
 
 def test_brinkman_in_supg_residual_changes_the_residual():

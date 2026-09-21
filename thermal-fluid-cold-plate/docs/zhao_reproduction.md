@@ -78,19 +78,42 @@ explains one and destroys the other.
 | reference field extent | γ = 0.4 over the **whole** domain, tabs included | 1.06 vs 1.44 for fluid tabs — clear, and it is also the reading that makes eq 26's v_f come out at exactly 0.4 |
 | α_max at the reference | **10⁶**, the continuation start | Ψ ∝ α_max exactly, and 10⁷ is off by 9.7× |
 | heat source region | whole domain (the §4.1 text, not fig 7's annotation) | weak: 1.06 vs 1.09, within the residual disagreement |
-| momentum stabilisation | τ **with** the reactive limit | 1.06 vs 1.10, and see below |
+| momentum stabilisation | αu **kept** in the SUPG/PSPG residual | 1.06 vs 1.10, and see below |
 
-### Zhao's printed τ does not reproduce Zhao's own numbers
+### What in the momentum form actually matters, and a retracted claim
 
-Equation 16 gives τ_u with convective and diffusive limits only — no reactive
-(α/ρ) term, unlike Zhou equation 20 and unlike upstream TOFLUX. In a solid cell
-at α = 2 × 10⁵ that inflates τ by a factor of ~167 (`test_zhao2d.py` pins the
-exact ratio). Using equation 16 literally moves the match from 1.06 to 1.10
-here, and at the ×1000 length scale it changes Ψ by a factor of 4 × 10⁵ — it is
-the single most consequential formulation choice found.
+`ZHAO_FORM` differs from `ZHOU_FORM` in three places at once, so the difference
+between them attributes to nothing on its own.
+`scripts/zhao2d_form_attribution.py` varies each independently at the figure-7
+scale and the selected reference state:
 
-The reading recorded here is that equation 16 is an incomplete transcription.
-That is an inference from the numbers, not something the paper states.
+| switch, one at a time from `ZHOU_FORM` | ΔΨ | ΔC |
+|---|---|---|
+| drop the reactive limit in τ (Zhao eq 16) | −0.01% | +0.00% |
+| drop αu from the SUPG/PSPG residual (Zhao eq 15) | **−14.25%** | **+12.66%** |
+| Laplacian instead of symmetric viscous (Zhao eq 13) | +0.11% | −0.00% |
+
+So the one consequential choice is whether the Brinkman term enters the
+*stabilisation residual*. τ's reactive limit and the viscous form are both
+negligible here. Using Zhao equation 15 literally moves the match from 1.06 to
+1.10 — the transposition conclusion is unaffected either way, which is worth
+saying explicitly: it does not rest on this switch.
+
+**Retracted.** An earlier version of this document claimed that dropping the
+reactive limit "inflates τ by a factor of ~167" at α = 2 × 10⁵, and credited it
+with the bulk of the Zhao/Zhou difference. That factor came from a synthetic
+unit-element configuration with h = 0.1 and **μ = 1.0** — a thousand times
+Zhao's table 1 viscosity — and describes no case in the paper. The switch ratio
+has a closed form that needs no solver,
+
+    τ₀ / τ_r = √(1 + (α τ₀ / ρ)²) ≤ √(1 + (α h² / 12μ)²)   since τ₀ ≤ ρh²/12μ,
+
+which at α = 2 × 10⁵, μ = 0.001 gives **1.0138** for h = 10⁻⁴ and **1.0541**
+for the diagonal — 1.4% and 5.4%, not 167×.
+`scripts/tau_decomposition.py` prints the full decomposition against that bound
+at all three scales, and `test_zhao2d.py` now asserts the bound at the paper's
+own parameters rather than at synthetic ones. The 1.7 × 10⁵ ratio that does
+exist belongs to the ×1000 reading, which is rejected above.
 
 ## Implementation
 
@@ -111,6 +134,10 @@ over the whole solid phase. Every term it multiplies carries a factor of u, so
 the products have finite limits, but τ itself is cut off below a velocity floor
 rather than regularised by adding ε to the denominator — adding ε would leave an
 O(h/ε) tail instead of the correct zero limit.
+
+Of these four rows, only "SUPG/PSPG strong residual" measurably changes the
+answer at the figure-7 scale; see the attribution table above before assuming
+any of the others matters.
 
 Both papers print the thermal SUPG block S_T without a ρc factor while printing
 the Galerkin advection block K_c,T with one, so as printed the two cannot be

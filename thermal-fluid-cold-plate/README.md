@@ -28,11 +28,13 @@ paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
 | `scripts/` | upstream checkout, and the reference studies whose numbers the docs quote |
 | `docs/` | per-case reconstruction notes and findings |
 
-Zhao's and Zhou's discretisations differ in ways that are not cosmetic under
-Brinkman penalisation — the stabilisation parameter's reactive limit, whether
-αu enters the SUPG residual, symmetric versus Laplacian viscous form. These are
-explicit switches (`tfopus.fe_flow.FlowForm`, `tfopus.fe_thermal.ThermalForm`)
-with a named constant per paper, not inherited defaults.
+Zhao's and Zhou's discretisations differ in three places — the stabilisation
+parameter's reactive limit, whether αu enters the SUPG residual, and symmetric
+versus Laplacian viscous form. These are explicit switches
+(`tfopus.fe_flow.FlowForm`, `tfopus.fe_thermal.ThermalForm`) with a named
+constant per paper, not inherited defaults. Measured at the figure-7 scale,
+only the second one moves the answer (−14% in Ψ); the other two are under 0.2%.
+See `scripts/zhao2d_form_attribution.py`.
 
 ## Findings so far
 
