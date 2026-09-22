@@ -10,16 +10,26 @@ never passed the convergence gate, and has no objective value. This driver
 re-evaluates the final design and appends it as its own record, so every saved
 design is paired with metrics from the same iterate.
 
-**Stop reasons.** Upstream `mma.py` sets `is_converged = True` when it merely
-reaches `max_iter`, so that flag cannot certify anything. The driver reports
+**Stop reasons.** Upstream `mma.py` sets `is_converged = True` for three
+different reasons -- the design step falling below `step_tol`, the KKT residual
+falling below `kkt_tol`, and simply reaching `max_iter` -- so the flag cannot
+distinguish a converged design from an exhausted budget. `_mma_convergence`
+re-derives the two genuine criteria and ignores the third. The driver reports
 one of:
 
-    converged          the optimiser's own criteria fired inside a phase
-    phase_end          the phase ran out of its allocated iterations
+    converged          step_tol or kkt_tol fired, on its own
+    phase_end          the schedule ran to its end without either firing
     budget_exhausted   the global budget ran out first
 
-Only `converged` in the FINAL phase, at the final alpha_max and beta, describes
-a converged design.
+Only `converged` reached in the FINAL phase, at the final alpha_max and beta,
+describes a converged design; `converged` in an earlier phase means that phase
+settled under its own continuation parameters.
+
+Reading the KKT residual needs care: `MMAState` declares `kkt_norm`, but
+`update_mma` assigns `mma_state.kktnorm` -- a different attribute created on the
+fly. The declared field therefore keeps its initial 1000.0 for the whole run,
+and code that reads the documented name sees a number that never moves.
+`_kkt_norm` reads the one that is actually written.
 
 **One continuation parameter at a time.** alpha_max ramps with beta = 0; beta
 then steps with alpha_max pinned at its cap. `validate_schedule` refuses a
@@ -166,6 +176,12 @@ class RunResult:
     history: list[dict]
     terminal: dict
     stop_reason: str
+    # Which genuine MMA criterion fired, if stop_reason is "converged".
+    converged_by: str | None
+    # True only if convergence was reached in the LAST phase of the schedule,
+    # i.e. at the final alpha_max and beta. Convergence in an earlier phase
+    # says that phase settled, not that the design is final.
+    converged_at_final_stage: bool
     design: np.ndarray
     solid_fraction: np.ndarray
     press_vel: np.ndarray
@@ -219,6 +235,28 @@ def _evaluate(problem, reference, x, alpha_max, beta):
     return record, state
 
 
+def _kkt_norm(state) -> float:
+    """The KKT residual upstream actually writes (`kktnorm`, not `kkt_norm`)."""
+    value = getattr(state, "kktnorm", None)
+    if value is None:  # pragma: no cover - only if upstream fixes the typo
+        value = getattr(state, "kkt_norm", float("nan"))
+    return float(value)
+
+
+def _mma_convergence(state, params) -> str | None:
+    """Which genuine criterion fired, if any. `max_iter` is not one of them.
+
+    Upstream folds three conditions into one boolean, and one of them is just
+    the iteration cap, so `state.is_converged` is True on the last step of every
+    run regardless of the design.
+    """
+    if state.epoch > 1 and state.change_design_var < params.step_tol:
+        return "step_tol"
+    if _kkt_norm(state) < params.kkt_tol:
+        return "kkt_tol"
+    return None
+
+
 def _gradients(problem, reference, x, alpha_max, beta):
     config = problem.config
 
@@ -262,6 +300,7 @@ def run(
 
     history: list[dict] = []
     stop_reason = "phase_end"
+    converged_by: str | None = None
     step = 0
 
     for phase in phases:
@@ -301,7 +340,16 @@ def run(
                 np.asarray(dg).reshape((1, -1)),
             )
             step += 1
-        if stop_reason == "budget_exhausted":
+
+            record["kkt_norm"] = _kkt_norm(state)
+            record["design_step_norm"] = float(state.change_design_var)
+            fired = _mma_convergence(state, params)
+            record["mma_criterion"] = fired
+            if fired is not None:
+                stop_reason = "converged"
+                converged_by = fired
+                break
+        if stop_reason in ("budget_exhausted", "converged"):
             break
 
     # The design MMA last produced has never been solved. Evaluate it so that
@@ -323,6 +371,10 @@ def run(
         history=history,
         terminal=terminal,
         stop_reason=stop_reason,
+        converged_by=converged_by,
+        converged_at_final_stage=bool(
+            stop_reason == "converged" and final_phase == phases[-1].name
+        ),
         design=np.asarray(x_final),
         solid_fraction=s,
         press_vel=press_vel,

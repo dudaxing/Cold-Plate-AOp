@@ -174,9 +174,16 @@ def main() -> None:
     result = drv.run(problem, reference, phases, args.move_limit, args.budget, show)
     elapsed = time.time() - t0
 
-    print(f"\nstop reason: {result.stop_reason}")
+    print(f"\nstop reason: {result.stop_reason}"
+          + (f" ({result.converged_by})" if result.converged_by else ""))
     print(f"ended in phase {result.final_phase} at alpha_max "
           f"{result.final_alpha_max:.3e}, beta {result.final_beta:g}")
+    if result.stop_reason != "converged":
+        print("  -> this run is BUDGET/SCHEDULE limited. It is not a converged "
+              "design and must not be reported as one.")
+    elif not result.converged_at_final_stage:
+        print("  -> converged inside an EARLIER phase, not at the final "
+              "alpha_max and beta.")
     print(f"terminal design re-evaluated: J = {result.terminal['J_self']:.6f} "
           f"(the loop's last record was {result.history[-1]['J_self']:.6f} for the "
           f"PREVIOUS iterate, same model)")
@@ -201,7 +208,11 @@ def main() -> None:
     )
     meta = {
         "stop_reason": result.stop_reason,
-        "converged": result.stop_reason == "converged",
+        "converged_by": result.converged_by,
+        # True only for convergence reached at the final alpha_max and beta.
+        # Upstream MMA's own is_converged flag also fires on max_iter and is
+        # deliberately not used anywhere here.
+        "converged_at_final_stage": result.converged_at_final_stage,
         "elapsed_seconds": elapsed,
         "element_size": spec.element_size,
         "num_elements": int(problem.flow_mesh.num_elems),
@@ -237,7 +248,12 @@ def main() -> None:
     if drift > 1e-10:
         sys.exit("read-back mismatch: the saved design does not reproduce the "
                  "reported terminal metrics")
-    print(f"saved to {(args.out / f'zhao2d_r1d_{tag}.json').relative_to(REPO)}")
+    out_file = args.out / f"zhao2d_r1d_{tag}.json"
+    try:
+        shown = out_file.relative_to(REPO)
+    except ValueError:  # --out pointed outside the repository
+        shown = out_file
+    print(f"saved to {shown}")
 
 
 if __name__ == "__main__":
