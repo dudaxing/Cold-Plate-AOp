@@ -16,13 +16,147 @@ governing equations, objective, constraint — is kept.
 | R1a | frozen configuration and normalisation | **done** |
 | R1b | total-gradient verification | **done** — worst AD/FD 1.7e-7 |
 | R1c | short MMA trial run (mechanism check) | **done** |
-| R1d | full 2D optimisation | awaiting release |
-| R2 | 3D extruded analysis, straight-channel reference (fig 15) | |
-| R3 | 3D cold plate optimisation | |
+| R1d | 2D optimisation, 300-update budget | **done** — budget limited, not converged |
+| R1e | fixed-design mesh and heat check | **done** |
+| R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
-R1d is deliberately not started: the short run is a mechanism check stopped at a
-fixed iteration count, and the filter radius has not been chosen by a
-length-scale study (see `R1Config.filter_radius_elements`).
+## R1d: the 300-update run
+
+5200 elements, filter radius 2×10⁻⁴, Zhao's unmodified 1.03 α ramp to the 10⁷
+cap at n = 78 inside a 100-step β = 0 phase, then β = 1, 2, 4, 8 at the cap.
+80.9 minutes.
+
+| | self scale | paper-interpreted scale |
+|---|---|---|
+| J | 0.891231 | 0.8060 |
+| Ψ/Ψ₀ | 0.4545 | 0.3147 |
+| C/C₀ | 1.3280 | 1.2972 |
+
+Raw Ψ = 0.0143511, C = 27002.4. v_f design 0.399978, constraint active.
+
+**Not converged.** `stop_reason: phase_end`, `converged_by: None`. The objective
+fell because dissipation fell 54.6% against the reference while thermal
+compliance *rose* 32.8% — a trade-off, not an improvement in both. And the
+reference is at α_max = 10⁶ while the final design is at 10⁷, so that pair is
+not a controlled comparison of two geometries at one penalty.
+
+Two convergence numbers need care, and neither supports a statement about
+distance from an optimum:
+
+- The final design step 0.271 is an **L² norm over 5000 variables**, i.e. an RMS
+  change of 0.0038 per variable — not a 27% change in anything.
+- `kkt_norm` ≈ 2.6×10⁻³ is an **internal mixed-iterate diagnostic**: upstream's
+  `_kktcheck` evaluates at the updated `xmma` while still using the objective,
+  constraint and gradients supplied at the previous point. It is not a
+  same-point KKT residual for the terminal design. Claiming convergence later
+  requires re-evaluating value, gradients and multipliers at one point.
+
+The saved state carries the design and the PDE fields but **not** MMA's
+asymptotes, `xold1/xold2` or multipliers, so a later continuation is a
+refinement segment warm-started from x₃₀₀ with MMA re-initialised — not a
+resumption of the same trajectory.
+
+### Binary diagnostic, and a retracted one
+
+The run's own output reported 65 fluid components with inlet and outlet
+disconnected. **That is retracted**: `element_adjacency` indexed cells by
+`round(centre/h)`, centres sit at (i+½)h, and banker's rounding collapsed i with
+i+1 for odd i, dropping 160 of 5200 elements from the graph. It surfaced by
+pushing the threshold to τ = 1.0001, where every cell is fluid and the answer
+must be one component — it still said disconnected. Corrected, on the same
+stored design:
+
+| threshold | 0.3 | 0.4 | 0.5 | 0.6 | 0.7 |
+|---|---|---|---|---|---|
+| fluid components | 1 | 1 | 1 | 1 | 1 |
+| v_f design | 0.3884 | 0.3946 | **0.3988** | 0.4048 | 0.4112 |
+
+All connected. Note that **0.6 and 0.7 exceed the 40% bound**, so they are
+topology-sensitivity probes, not candidate designs.
+
+At threshold 0.5: Ψ −5.65%, C +2.38%, **J +0.33%**. That +0.33% is the net of
+two opposing contributions, ΔJ_Ψ = −0.01285 and ΔJ_C = +0.01581, which largely
+cancel — so it understates how much the thermal response moves. Measured
+separately, **T_max rises 16.0%** (13.832 → 16.047). The defensible statement is:
+
+> At this mesh, this finite Brinkman penalty and the frozen objective, the
+> thresholded design stays connected and most of the combined-objective gain is
+> retained; thermal compliance and peak temperature both worsen.
+
+Not: that performance is independent of grey material, or that peak temperature
+is insensitive. T_max is not an objective here and no hot-spot constraint is
+added retroactively.
+
+The grey figure quoted throughout is the fraction of cells with
+0.05 < s < 0.95: 0.0640 over the whole domain, 0.0666 over the design domain.
+
+## R1e: the fixed-design mesh check, and what it costs the R1d conclusion
+
+The R1d design, unchanged, re-analysed at h and h/2 (5200 → 20800 elements).
+The binary field is thresholded on the parent mesh and transferred, so both
+meshes describe the same polygon; `check_transfer` asserts area, the design/tab
+partition and both fluid fractions are identical (v_f design 0.39997847 on both).
+
+| design / mesh | Ψ | C | T_max | T_min | undershoot nodes |
+|---|---|---|---|---|---|
+| continuous / h | 0.01435114 | 27002.4 | 13.832 | −0.3156 | 18 |
+| continuous / h/2 | 0.01406784 | **32417.5** | 15.290 | **0.0000** | **0** |
+| binary / h | 0.01353975 | 27645.4 | 16.047 | −0.6087 | 26 |
+| binary / h/2 | 0.01358559 | **37008.7** | 18.521 | −0.2275 | 11 |
+
+**Ψ is close to mesh converged; C is not.** One refinement moves Ψ by −1.97%
+(continuous) and +0.34% (binary), but moves C by **+20.05%** and **+33.87%**.
+
+**The undershoot is a discretisation artefact and it refines away** — completely
+for the continuous design, and from −0.609 to −0.227 (26 nodes to 11) for the
+binary one. It is not a defect in the source term or the stabilised residual.
+Both conservation diagnostics also improve under refinement: the energy residual
+1.00e-2 → 6.4e-3 and 4.13e-2 → 8.4e-3, and ∫b_f T ∇·u relative to the source
+3.29e-2 → 6.99e-3 and 6.64e-2 → 2.59e-2. Everything moves toward zero, which is
+what a consistent discretisation with an under-resolved solution looks like.
+
+### The reason
+
+The element Péclet number, Pe_e = b_f |u| h / (2κ), over fluid cells:
+
+| mesh | median | p90 | max | cells with Pe_e > 1 |
+|---|---|---|---|---|
+| h = 10⁻⁴ | 47.3 | 77.4 | 104.2 | 95.2% |
+| h/2 = 5×10⁻⁵ | 23.8 | 38.7 | 51.5 | 91.9% |
+
+With b_f = 4.18×10⁶ against κ_f = 0.61, the thermal layers are far thinner than
+either mesh resolves, so SUPG is carrying the temperature solution and C is
+measuring a boundary layer it cannot see. h/2 halves Pe_e and is still ~24.
+
+### This changes the R1d binarisation conclusion
+
+Continuous → binary, measured on each mesh against the same reporting scale:
+
+| mesh | ΔΨ | ΔC | ΔJ* | ΔT_max |
+|---|---|---|---|---|
+| h = 10⁻⁴ | −5.65% | +2.38% | **+0.33%** | +16.0% |
+| h/2 | −3.43% | +14.16% | **+10.32%** | +21.1% |
+
+So "thresholding costs 0.33% of J" is **a coarse-mesh result, not a property of
+the design**: on one refinement it becomes 10.3%, a factor of 30. The R1d
+statement should be read as holding at h = 10⁻⁴ and not beyond it.
+
+J* here is the raw metrics divided by the ORIGINAL h = 10⁻⁴ frozen denominators,
+used as a common reporting scale so the two meshes are comparable. It is not a
+fine-mesh reference and the fine-mesh J* is not a normalised objective;
+`ReferenceValues.check` is not relaxed to pretend otherwise.
+
+### What this implies, and what it does not
+
+The optimisation in R1d minimised a J whose thermal half carries a
+discretisation error of the same order as the differences being optimised. That
+is a statement about the mesh, not about the method, the implementation or the
+gradients — all of which were verified independently. It does mean a converged
+2D result at h = 10⁻⁴ would not be worth much, and that a mesh or formulation
+decision comes before any further optimisation.
+
+It does not say which way the optimum moves, because the design was held fixed.
+Nothing here re-opens the frozen configuration or the reference values.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 

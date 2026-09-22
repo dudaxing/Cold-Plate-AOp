@@ -25,6 +25,7 @@ from __future__ import annotations
 import dataclasses
 
 import numpy as np
+import jax
 import jax.numpy as jnp
 
 import toflux.src.solver as _solver
@@ -283,16 +284,48 @@ def conservation(spec, planar, press_vel, temperature, q_source, kappa=None) -> 
     out["energy_imbalance_rel"] = abs(net_enthalpy + net_conduction - heat_in) / max(
         abs(heat_in), 1e-300
     )
+    out["temperature_weighted_divergence"] = temperature_weighted_divergence(
+        planar, press_vel, temperature, spec.b_f
+    )
+    out["temperature_weighted_divergence_rel"] = abs(
+        out["temperature_weighted_divergence"]
+    ) / max(abs(heat_in), 1e-300)
     return out
 
 
+# Local coordinates of the Quad4 reference nodes, in isoparametric order.
+_REF_NODES_2D = np.array([[-1.0, -1.0], [1.0, -1.0], [1.0, 1.0], [-1.0, 1.0]])
+
+
+def face_midpoints_local(template) -> np.ndarray:
+    """(num_faces, 2) isoparametric coordinates of each face midpoint.
+
+    Read off `face_connectivity` rather than recovered by inverting the
+    isoparametric map: the midpoint of a face in LOCAL coordinates is always the
+    mean of its nodes' local coordinates, whatever the element's physical shape.
+
+    The inverse map is not available anyway. `Quad4.get_isoparametric_coordinate_of_point`
+    raises NotImplementedError upstream (only `Rect4` implements it), so the
+    earlier version of `_conductive_outflow` raised on every call -- it was never
+    exercised, because R1d's `_evaluate` does not call `conservation`.
+    """
+    conn = np.asarray(template.face_connectivity)
+    return _REF_NODES_2D[conn].mean(axis=1)
+
+
 def _conductive_outflow(planar, temp, kappa) -> float:
-    """-integral_Gamma k (grad T).n dGamma over every boundary face."""
+    """-integral_Gamma k (grad T).n dGamma over every boundary face.
+
+    A ONE-SIDED estimate from the element-interior gradient, not the consistent
+    nodal flux the weak form would recover, so it carries discretisation-level
+    accuracy and its residual should not be read as the energy error of C.
+    """
     template = planar.mesh.elem_template
     conn = np.asarray(template.face_connectivity)
     coords = np.asarray(planar.mesh.elem_node_coords)
     elem_nodes = np.asarray(planar.mesh.elem_nodes)
     kappa = np.asarray(kappa)
+    mid_local = face_midpoints_local(template)
 
     total = 0.0
     for tag, pairs in planar.elem_faces.items():
@@ -305,20 +338,46 @@ def _conductive_outflow(planar, temp, kappa) -> float:
             normal = np.array([edge[1], -edge[0]]) / length
             if np.dot(normal, pts.mean(axis=0) - coords[e].mean(axis=0)) < 0:
                 normal = -normal
-            # element-interior gradient at the face midpoint
-            mid_iso = np.asarray(
-                template.get_isoparametric_coordinate_of_point(
-                    jnp.asarray(pts.mean(axis=0)), jnp.asarray(coords[e])
-                )
-            )
             grad_n = np.asarray(
                 template.get_gradient_shape_function_physical(
-                    jnp.asarray(mid_iso), jnp.asarray(coords[e])
+                    jnp.asarray(mid_local[f]), jnp.asarray(coords[e])
                 )
             )
             grad_t = grad_n.T @ temp[elem_nodes[e]]
             total += -float(kappa[e]) * float(np.dot(grad_t, normal)) * length
     return total
+
+
+def temperature_weighted_divergence(planar, press_vel, temperature, b_f) -> float:
+    """integral b_f T (div u) dOmega.
+
+    Zero for a pointwise divergence-free field, and the exact gap between the
+    non-conservative convection form the residual uses and the boundary enthalpy
+    flux, since div(T u) = u.grad T + T div u. Global mass balance can hold to
+    machine precision while this term does not vanish, so it is reported
+    separately rather than folded into an energy residual.
+    """
+    mesh = planar.mesh
+    shp = jax.vmap(mesh.elem_template.shape_functions)(mesh.gauss_pts)
+    vel = jnp.asarray(press_vel).reshape(-1, 3)[:, 1:]
+
+    def per_element(node_ids, node_coords):
+        grad_n = jax.vmap(
+            mesh.elem_template.get_gradient_shape_function_physical, in_axes=(0, None)
+        )(mesh.gauss_pts, node_coords)
+        _, det = jax.vmap(
+            mesh.elem_template.compute_jacobian_and_determinant, in_axes=(0, None)
+        )(mesh.gauss_pts, node_coords)
+        u = vel[node_ids]
+        t = jnp.asarray(temperature)[node_ids]
+        div_u = jnp.einsum("gnd, nd -> g", grad_n, u)
+        t_g = jnp.einsum("gn, n -> g", shp, t)
+        return jnp.einsum("g, g, g, g -> ", t_g, div_u, mesh.gauss_weights, det)
+
+    per = jax.vmap(per_element)(
+        jnp.asarray(mesh.elem_nodes), mesh.elem_node_coords
+    )
+    return float(b_f * jnp.sum(per))
 
 
 def analyse(
