@@ -13,9 +13,16 @@ governing equations, objective, constraint — is kept.
 | Stage | Content | State |
 |---|---|---|
 | R0 | 2D fixed-design analysis, reference-scale verification | **done** |
-| R1 | 2D density optimisation (w = 0.5, v_f ≤ 0.4) | next |
+| R1a | frozen configuration and normalisation | **done** |
+| R1b | total-gradient verification | **done** — worst AD/FD 1.7e-7 |
+| R1c | short MMA trial run (mechanism check) | **done** |
+| R1d | full 2D optimisation | awaiting release |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | |
 | R3 | 3D cold plate optimisation | |
+
+R1d is deliberately not started: the short run is a mechanism check stopped at a
+fixed iteration count, and the filter radius has not been chosen by a
+length-scale study (see `R1Config.filter_radius_elements`).
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -135,9 +142,20 @@ the products have finite limits, but τ itself is cut off below a velocity floor
 rather than regularised by adding ε to the denominator — adding ε would leave an
 O(h/ε) tail instead of the correct zero limit.
 
-Of these four rows, only "SUPG/PSPG strong residual" measurably changes the
-answer at the figure-7 scale; see the attribution table above before assuming
-any of the others matters.
+**Scope of the attribution above.** `zhao2d_form_attribution.py` varies only
+`FlowForm`. It says nothing about τ_T, because it never changed it — an earlier
+version of this document generalised its conclusion across all four rows, which
+it does not support. The thermal switches are measured separately by
+`scripts/zhao2d_freeze_reference.py`, one change at a time on the same
+converged flow field:
+
+| thermal change, on one flow field | ΔC₀ |
+|---|---|
+| τ_T convective → two-limit | +0.16% |
+| then stabilised source off → on | +0.14% |
+
+So both thermal switches are small here too, but that is a measurement, not an
+inference from the flow study.
 
 Both papers print the thermal SUPG block S_T without a ρc factor while printing
 the Galerkin advection block K_c,T with one, so as printed the two cannot be
@@ -164,20 +182,70 @@ derived, or a reconstruction choice, plus this list:
   ρc over the whole domain, so the solid pair is unused. `build_material`
   leaves them at zero so that any code path starting to use them fails loudly.
 
-## What this means for R1
+## R1: the frozen configuration
 
-The optimisation cannot be normalised against the paper's printed constants as
-labelled. Two options, and this is a decision rather than a finding:
+Decided 2026-09-22. **The reference state used for R1 is not the one that best
+matched the paper.** R0's best match was γ = 0.4 over the whole domain; R1 uses
+fluid tabs, because the reference state should be defined by the physics of the
+problem, not chosen for agreement with a number being investigated. The two
+serve different purposes and are both kept.
 
-1. Use the transposed values — treat 20,816 as C₀ and 0.0456 as Ψ₀.
-2. Use this implementation's own reference values under the selected reading,
-   and report the paper's alongside.
+| | value |
+|---|---|
+| reference field | γ = 0.4 on the design domain, tabs pure fluid (`TABS_FLUID`) |
+| α_max at the reference | 10⁶, the continuation start |
+| heat source | whole domain, independent of the design |
+| outlet | zero external traction |
+| h_e | element edge (`min_edge`) |
+| flow form | symmetric viscous, αu **in** the SUPG/PSPG residual, τ_u **with** the reactive limit |
+| thermal form | τ_T two-limit, stabilised source **on**, SUPG advection carries b_f |
+| volume constraint domain | design domain |
+| objective | J = 0.5 Ψ/Ψ₀ + 0.5 C/C₀, self-computed denominators |
 
-Option 2 keeps J internally consistent with the solver that produces it, which
-matters because J's two terms are ratios; option 1 keeps the numbers comparable
-to tables 4 and 7. Since table 4's J, C/C₀ and Ψ/Ψ₀ are self-consistent
-(0.5 × 0.6312 + 0.5 × 1.1794 = 0.9053 for Case 1, exactly), the ratios are
-reproducible either way as long as the same reference is used throughout.
+The flow and thermal forms are **not** a literal transcription of equations
+13–18 — αu in the stabilisation residual and the reactive limit in τ_u are both
+additions to what Zhao prints, and the stabilised source is too. That is a
+stated modelling choice: the goal is Zhao's geometry, physics and metrics under
+a declared stabilisation, not a reproduction of the printed discrete operators.
+`ZHAO_FORM` and `ThermalForm(tau="convective", stabilise_source=False)` remain
+available for the printed-formula diagnostics.
+
+### Frozen normalisation
+
+Computed once at h = 10⁻⁴ under exactly that configuration and then held —
+α_max continuation moves the state, never the denominators:
+
+    Psi_0_self = 0.03157912835073678
+    C_0_self   = 20332.91587569144
+
+Stored with the configuration fingerprint in `tfopus/zhao2d_reference.json`;
+`ReferenceValues.check` refuses a reference frozen under different settings or a
+different mesh. As a cheap staleness detector, J at the reference state is
+exactly 1 by construction, and `test_zhao2d_r1.py` asserts it.
+
+Ψ₀ is identical across all three thermal variants (spread exactly 0), which is
+the cross-check that the coupling really is one way. C₀ moves +0.31% in total
+from R0's thermal setting, attributed above.
+
+Every result also carries the parallel figures against the transposed paper
+constants (Ψ/0.0456, C/20816), which are reporting only and never the objective.
+
+### Why not the paper's constants as the denominators
+
+Changing a denominator is not a change of units: with
+
+    J = (w/Ψ₀) Ψ + ((1-w)/C₀) C
+
+the two denominators set the relative weight of the terms. Evaluating the same
+raw metrics against the transposed paper scale instead corresponds to an
+effective dissipation weight near 0.478 rather than 0.5. Self-computed
+denominators keep J consistent with the solver that produces it; the paper scale
+is kept alongside for comparison with tables 4 and 7.
+
+One caveat on that comparison: table 4's arithmetic
+(0.5 × 0.6312 + 0.5 × 1.1794 = 0.9053) is self-consistent, but because both
+weights are 0.5 it stays self-consistent if the two columns are swapped. It
+confirms the arithmetic, not which column is which.
 
 ## Running it
 
@@ -185,4 +253,12 @@ reproducible either way as long as the same reference is used throughout.
 python scripts/zhao2d_reference_study.py --provenance   # the sweep, both stages
 python scripts/zhao2d_swap_test.py                      # the transposition test
 pytest validation/test_zhao2d.py
+```
+
+## Running R1
+
+```bash
+python scripts/zhao2d_freeze_reference.py --write   # A/B/C thermal study, freezes Psi_0 and C_0
+python scripts/zhao2d_gradient_check.py             # Psi, C, g and J against finite differences
+python scripts/zhao2d_short_run.py --iterations 20  # short MMA mechanism check
 ```

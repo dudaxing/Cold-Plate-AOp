@@ -69,9 +69,14 @@ def build_material(spec: _z.Zhao2DSpec, alpha_max: float):
 
     The solid phase carries only its conductivity: section 2 puts the fluid
     rho*c over the whole domain, so table 1's solid density 2700 and heat
-    capacity 900 are never used. They are left at zero rather than filled in, so
-    that any code path that starts using them fails loudly instead of silently
-    adopting an untested two-phase rule.
+    capacity 900 are never used here.
+
+    They are left at zero. Note what that does and does not buy: zero is a
+    marker, NOT a guard. `Phase.volumetric_heat_capacity` returns 0.0 for this
+    phase without raising, so a code path that started using a two-phase rho*c
+    would silently get zero rather than failing. The protection against that is
+    that every consumer takes the single `b_f` off the material object; there is
+    no separate defensive mechanism, and this docstring previously claimed one.
     """
     return _materials.ThermoFluidMaterial(
         fluid=_materials.Phase(
@@ -165,11 +170,18 @@ def solve_thermal(spec, planar, s, elem_vel, options, settings):
     return solver, state, kappa, q_source, report
 
 
+# Two-point Gauss on a straight edge, in the parameter t in [0, 1]. Exact for
+# quadratics, which is what a product of two linear traces is.
+_GAUSS_T = np.array([0.5 - 0.5 / np.sqrt(3.0), 0.5 + 0.5 / np.sqrt(3.0)])
+_GAUSS_W = np.array([0.5, 0.5])
+
+
 def _edge_integral(planar, tag: Face, per_face):
     """Sum per_face(nodes, outward_normal, length) over the tagged edges.
 
-    A Quad4 face is a straight two-node segment, so the trapezoid rule is exact
-    for the bilinear trace.
+    `per_face` receives the two end-node indices and is expected to return an
+    already-integrated quantity for that edge; use `_edge_quadrature` for
+    integrands that are not linear in the nodal values.
     """
     conn = np.asarray(planar.mesh.elem_template.face_connectivity)
     elem_nodes = np.asarray(planar.mesh.elem_nodes)
@@ -186,21 +198,53 @@ def _edge_integral(planar, tag: Face, per_face):
     return total
 
 
-def conservation(spec, planar, press_vel, temperature, q_source) -> dict:
-    """Mass and energy budgets measured on the discrete solution."""
+def _edge_quadrature(nodal_a, nodal_b, nodes, normal, length):
+    """integral over the edge of (a.n) * b, with a and b linear in t.
+
+    The trapezoid rule -- mean(a).n * mean(b) * length -- is NOT this integral:
+    the product of two linear traces is quadratic, and the two differ by
+    (a_1 - a_0).n (b_1 - b_0) * length / 12. On the inlet, where u_n is uniform
+    but T varies, they happen to agree; on the outlet, where both vary, they do
+    not.
+    """
+    a0, a1 = nodal_a[nodes[0]], nodal_a[nodes[1]]
+    b0, b1 = nodal_b[nodes[0]], nodal_b[nodes[1]]
+    total = 0.0
+    for t, w in zip(_GAUSS_T, _GAUSS_W):
+        a = (1.0 - t) * a0 + t * a1
+        b = (1.0 - t) * b0 + t * b1
+        total += w * float(np.dot(a, normal)) * float(b)
+    return total * length
+
+
+def conservation(spec, planar, press_vel, temperature, q_source, kappa=None) -> dict:
+    """Mass and energy budgets measured on the discrete solution.
+
+    The energy budget closes only if BOTH boundary transports are counted:
+
+        integral_Omega Q dOmega = integral_Gamma b_f (u.n) T dGamma
+                                - integral_Gamma k (grad T).n dGamma
+
+    The conductive term is not optional. The inlet carries a Dirichlet
+    temperature, which does not make it adiabatic -- there is generally a
+    non-zero conductive flux there, and at the large kappa the reference field
+    produces it is not small. `energy_imbalance_rel` counts both; the two
+    transports are also reported separately so a failure can be attributed.
+
+    The conductive flux is evaluated from the element-interior temperature
+    gradient at the face midpoint, which is a ONE-SIDED estimate, not the
+    consistent nodal flux the weak form would recover. It is a diagnostic at
+    discretisation accuracy, so a residual imbalance of the order of the
+    discretisation error is expected and does not by itself indicate a defect.
+    """
     vel = np.asarray(press_vel).reshape(-1, 3)[:, 1:]
     temp = np.asarray(temperature)
 
     def flux(nodes, normal, length):
-        return float(np.dot(vel[nodes].mean(axis=0), normal)) * length
+        return _edge_quadrature(vel, np.ones(len(temp)), nodes, normal, length)
 
     def enthalpy(nodes, normal, length):
-        return (
-            float(np.dot(vel[nodes].mean(axis=0), normal))
-            * length
-            * float(temp[nodes].mean())
-            * spec.b_f
-        )
+        return spec.b_f * _edge_quadrature(vel, temp, nodes, normal, length)
 
     inflow = -_edge_integral(planar, Face.INLET, flux)
     outflow = _edge_integral(planar, Face.OUTLET, flux)
@@ -210,10 +254,15 @@ def conservation(spec, planar, press_vel, temperature, q_source) -> dict:
     nominal = spec.inlet_speed * spec.inlet_half_width
 
     heat_in = float(jnp.sum(q_source * jnp.asarray(planar.elem_area)))
-    net_enthalpy = _edge_integral(planar, Face.OUTLET, enthalpy) + _edge_integral(
-        planar, Face.INLET, enthalpy
+    net_enthalpy = sum(
+        _edge_integral(planar, tag, enthalpy)
+        for tag in (Face.INLET, Face.OUTLET, Face.WALL, Face.SYMMETRY)
     )
-    return {
+    net_conduction = (
+        _conductive_outflow(planar, temp, kappa) if kappa is not None else None
+    )
+
+    out = {
         "mass_in": inflow,
         "mass_out": outflow,
         "mass_imbalance_rel": abs(inflow - outflow) / max(abs(inflow), 1e-300),
@@ -221,8 +270,55 @@ def conservation(spec, planar, press_vel, temperature, q_source) -> dict:
         "inlet_flux_over_nominal": inflow / nominal,
         "heat_in": heat_in,
         "enthalpy_net_out": net_enthalpy,
-        "energy_imbalance_rel": abs(net_enthalpy - heat_in) / max(abs(heat_in), 1e-300),
     }
+    if net_conduction is None:
+        # Without kappa only the advective half can be formed. Name it for what
+        # it is rather than calling it an energy balance.
+        out["enthalpy_minus_source_rel"] = abs(net_enthalpy - heat_in) / max(
+            abs(heat_in), 1e-300
+        )
+        return out
+
+    out["conduction_net_out"] = net_conduction
+    out["energy_imbalance_rel"] = abs(net_enthalpy + net_conduction - heat_in) / max(
+        abs(heat_in), 1e-300
+    )
+    return out
+
+
+def _conductive_outflow(planar, temp, kappa) -> float:
+    """-integral_Gamma k (grad T).n dGamma over every boundary face."""
+    template = planar.mesh.elem_template
+    conn = np.asarray(template.face_connectivity)
+    coords = np.asarray(planar.mesh.elem_node_coords)
+    elem_nodes = np.asarray(planar.mesh.elem_nodes)
+    kappa = np.asarray(kappa)
+
+    total = 0.0
+    for tag, pairs in planar.elem_faces.items():
+        if tag is Face.NONE:
+            continue
+        for e, f in pairs:
+            pts = coords[e][conn[f]]
+            edge = pts[1] - pts[0]
+            length = float(np.linalg.norm(edge))
+            normal = np.array([edge[1], -edge[0]]) / length
+            if np.dot(normal, pts.mean(axis=0) - coords[e].mean(axis=0)) < 0:
+                normal = -normal
+            # element-interior gradient at the face midpoint
+            mid_iso = np.asarray(
+                template.get_isoparametric_coordinate_of_point(
+                    jnp.asarray(pts.mean(axis=0)), jnp.asarray(coords[e])
+                )
+            )
+            grad_n = np.asarray(
+                template.get_gradient_shape_function_physical(
+                    jnp.asarray(mid_iso), jnp.asarray(coords[e])
+                )
+            )
+            grad_t = grad_n.T @ temp[elem_nodes[e]]
+            total += -float(kappa[e]) * float(np.dot(grad_t, normal)) * length
+    return total
 
 
 def analyse(
@@ -280,7 +376,7 @@ def analyse(
         temperature_max=float(jnp.max(temperature)),
         temperature_mean=float(jnp.mean(temperature)),
         **treport,
-        **conservation(spec, thermal_mesh, press_vel, temperature, q_source),
+        **conservation(spec, thermal_mesh, press_vel, temperature, q_source, kappa),
     )
     out["state"] = {
         "press_vel": press_vel,
