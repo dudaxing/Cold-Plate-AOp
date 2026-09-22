@@ -38,21 +38,6 @@ from tfopus import zhao2d as z, zhao2d_driver as drv, zhao2d_r1 as r1  # noqa: E
 from tfopus.mesh import Face  # noqa: E402
 
 
-def element_adjacency(planar) -> sp.csr_matrix:
-    """Face-neighbour graph of a structured masked grid, from element centres."""
-    centres = np.asarray(planar.elem_centres)
-    h = float(np.sqrt(np.asarray(planar.elem_area)[0]))
-    index = {(round(x / h), round(y / h)): i for i, (x, y) in enumerate(centres)}
-    rows, cols = [], []
-    for (i, j), e in index.items():
-        for nb in ((i + 1, j), (i, j + 1)):
-            if nb in index:
-                rows += [e, index[nb]]
-                cols += [index[nb], e]
-    n = len(centres)
-    return sp.csr_matrix((np.ones(len(rows)), (rows, cols)), shape=(n, n))
-
-
 def port_elements(planar, tag: Face) -> np.ndarray:
     return np.unique([e for e, _ in planar.elem_faces[tag]])
 
@@ -65,21 +50,19 @@ def binary_diagnostic(problem, reference, x, alpha_max, beta) -> dict:
     s_bin[~problem.flow_mesh.design_mask] = 0.0
 
     fluid = s_bin < 0.5
-    graph = element_adjacency(problem.flow_mesh)
-    n_comp, labels = csgraph.connected_components(
-        graph[fluid][:, fluid], directed=False
+    n_comp, sizes, connected, inlet_ids, outlet_ids = z.fluid_connectivity(
+        problem.flow_mesh,
+        fluid,
+        port_elements(problem.flow_mesh, Face.INLET),
+        port_elements(problem.flow_mesh, Face.OUTLET),
     )
-    fluid_idx = np.nonzero(fluid)[0]
-    lookup = {e: labels[k] for k, e in enumerate(fluid_idx)}
-    inlet = [lookup[e] for e in port_elements(problem.flow_mesh, Face.INLET)
-             if e in lookup]
-    outlet = [lookup[e] for e in port_elements(problem.flow_mesh, Face.OUTLET)
-              if e in lookup]
-    connected = bool(inlet and outlet and set(inlet) & set(outlet))
 
     out = {
         "grey_fraction_before": float(np.mean((s_grey > 0.05) & (s_grey < 0.95))),
         "fluid_components": int(n_comp),
+        "largest_components": [int(v) for v in np.sort(sizes)[::-1][:5]],
+        "inlet_component_sizes": [int(sizes[i]) for i in inlet_ids],
+        "outlet_component_sizes": [int(sizes[i]) for i in outlet_ids],
         "inlet_outlet_connected": connected,
         **{f"binary_{k}": v for k, v in z.fluid_fractions(
             problem.flow_mesh, jnp.asarray(s_bin)).items()},

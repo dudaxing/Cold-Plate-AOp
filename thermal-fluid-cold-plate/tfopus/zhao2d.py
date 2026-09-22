@@ -455,6 +455,62 @@ def heat_source_field(
     return jnp.where(jnp.asarray(planar.design_mask), spec.heat_source, 0.0)
 
 
+def element_adjacency(planar: PlanarMesh):
+    """Face-neighbour graph of the structured masked grid.
+
+    Face neighbours only, not diagonals: two cells touching at a single corner
+    share one node and carry no channel, so counting them as connected would
+    report a flow path where the discretisation has none.
+
+    The cell index is `floor(centre / h)`, NOT `round`. Centres sit at
+    (i + 1/2) h, so `centre / h` is always a half-integer and Python's round
+    does banker's rounding on every one of them -- i and i+1 collapse onto the
+    same key for odd i. That silently dropped 160 of 5200 elements from the
+    graph and reported a fully fluid domain as disconnected.
+    """
+    import scipy.sparse as sp
+
+    centres = np.asarray(planar.elem_centres)
+    h = float(np.sqrt(np.asarray(planar.elem_area)[0]))
+    index = {
+        (int(np.floor(x / h)), int(np.floor(y / h))): i
+        for i, (x, y) in enumerate(centres)
+    }
+    if len(index) != len(centres):
+        raise RuntimeError(
+            f"cell index collided: {len(centres)} elements mapped to "
+            f"{len(index)} keys"
+        )
+    rows, cols = [], []
+    for (i, j), e in index.items():
+        for nb in ((i + 1, j), (i, j + 1)):
+            if nb in index:
+                rows += [e, index[nb]]
+                cols += [index[nb], e]
+    n = len(centres)
+    return sp.csr_matrix((np.ones(len(rows)), (rows, cols)), shape=(n, n))
+
+
+def fluid_connectivity(planar: PlanarMesh, fluid_mask, inlet_elems, outlet_elems):
+    """Connected components of the fluid phase, and whether the ports join.
+
+    Returns (num_components, component_sizes, connected, inlet_ids, outlet_ids).
+    """
+    import scipy.sparse.csgraph as csgraph
+
+    fluid = np.asarray(fluid_mask, dtype=bool)
+    graph = element_adjacency(planar)
+    num, labels = csgraph.connected_components(
+        graph[fluid][:, fluid], directed=False
+    )
+    sizes = np.bincount(labels, minlength=num)
+    lookup = {e: labels[k] for k, e in enumerate(np.nonzero(fluid)[0])}
+    inlet_ids = sorted({lookup[e] for e in inlet_elems if e in lookup})
+    outlet_ids = sorted({lookup[e] for e in outlet_elems if e in lookup})
+    connected = bool(set(inlet_ids) & set(outlet_ids))
+    return num, sizes, connected, inlet_ids, outlet_ids
+
+
 def fluid_fractions(planar: PlanarMesh, s) -> dict:
     """Area-weighted fluid fraction over the whole domain and the design domain.
 
