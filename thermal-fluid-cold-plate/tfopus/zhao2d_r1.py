@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import pathlib
 
 import numpy as np
 import jax
@@ -81,9 +82,12 @@ class R1Config:
     `volume_domain` defaults to the design domain. Equation 26 writes
     (1/|Omega|) integral over Omega, but with fluid tabs the whole-domain
     fraction of the reference state is 0.4231, so a whole-domain bound of 0.4
-    would make the paper's own reference model infeasible. Restricting the
-    constraint to the design domain makes it exactly 0.4. Both are always
-    reported; this only chooses which one MMA sees.
+    would put this project's reference state outside the constraint.
+
+    That is a reason for THIS reproduction's convention, not evidence about
+    Zhao's: a normalisation reference is allowed to be infeasible, and the
+    paper's own 3D reference has v_f = 0.616, well past its bound. Both
+    fractions are always reported; this only chooses which one MMA sees.
     """
 
     reference: str = _z.ReferenceField.TABS_FLUID.value
@@ -107,7 +111,12 @@ class R1Config:
     thermal_form: _fe_thermal.ThermalForm = R1_THERMAL_FORM
 
     def fingerprint(self) -> str:
-        """Stable JSON of every switch, for binding a stored reference value."""
+        """Stable JSON of every switch. Recorded with a run; does NOT gate reuse.
+
+        Use `reference_identity` for deciding whether a stored Psi_0 / C_0 may
+        be reused: this one changes when beta or the filter radius moves, which
+        are stages of the optimisation and have no effect on the reference.
+        """
         payload = {
             f.name: (
                 dataclasses.asdict(getattr(self, f.name))
@@ -131,28 +140,106 @@ class R1Config:
         return _z.SourceRegion(self.source)
 
 
+# Fields of Zhao2DSpec that the reference computation actually depends on:
+# the geometry it is solved on, the materials, the loads and boundary values,
+# the interpolation exponents and the reference density itself. `reported_*`
+# are comparison values that enter nothing, so they are excluded -- binding
+# them would invalidate a reference for a change that cannot move it.
+_REFERENCE_SPEC_FIELDS = (
+    "inlet_half_width",
+    "tab_length",
+    "design_half_width",
+    "design_height",
+    "element_size",
+    "inlet_speed",
+    "heat_source",
+    "inlet_temperature",
+    "fluid_density",
+    "fluid_viscosity",
+    "fluid_heat_capacity",
+    "fluid_conductivity",
+    "solid_conductivity",
+    "q_alpha",
+    "q_kappa",
+    "reference_gamma",
+)
+
+# Fields of R1Config that the reference depends on. Deliberately absent:
+# filter_radius_elements, projection_beta, volume_domain, max_fluid_fraction
+# and weight. The reference is a directly specified uniform physical density --
+# `freeze_reference` never routes it through the filter or the projection --
+# and Psi_0 / C_0 are states, not objective weights.
+_REFERENCE_CONFIG_FIELDS = (
+    "reference",
+    "outlet",
+    "source",
+    "alpha_max_reference",
+    "element_length_mode",
+    "flow_form",
+    "thermal_form",
+)
+
+
+def reference_identity(spec: _z.Zhao2DSpec, config: R1Config) -> str:
+    """Canonical JSON of everything Psi_0 and C_0 depend on, and nothing else.
+
+    Two separate identities are needed, and conflating them fails both ways.
+    Binding the whole `R1Config` rejects a legitimate projection step, which is
+    a stage of the optimisation the reference is deliberately independent of;
+    binding only `R1Config` silently accepts a changed heat source, inlet speed
+    or geometry, which change the reference problem entirely.
+    """
+    payload = {
+        "spec": {f: getattr(spec, f) for f in _REFERENCE_SPEC_FIELDS},
+        "config": {
+            f: (
+                dataclasses.asdict(getattr(config, f))
+                if dataclasses.is_dataclass(getattr(config, f))
+                else getattr(config, f)
+            )
+            for f in _REFERENCE_CONFIG_FIELDS
+        },
+    }
+    return json.dumps(payload, sort_keys=True)
+
+
 @dataclasses.dataclass(frozen=True)
 class ReferenceValues:
-    """Frozen normalisation. Bound to the configuration that produced it."""
+    """Frozen normalisation, bound to the reference problem that produced it.
+
+    `run_fingerprint` records the full configuration of the freezing run for
+    provenance; only `identity` decides whether the values may be reused.
+    """
 
     psi_0: float
     c_0: float
-    fingerprint: str
+    identity: str
+    run_fingerprint: str
     spec_element_size: float
     flow_residual_relative: float
     thermal_residual_relative: float
 
     def check(self, config: R1Config, spec: _z.Zhao2DSpec) -> None:
-        if self.fingerprint != config.fingerprint():
+        """Raise unless this reference belongs to the problem being run.
+
+        Changing beta, the filter radius or the volume-constraint domain passes:
+        those are optimisation stages, and the denominators are held fixed
+        across them on purpose.
+        """
+        current = reference_identity(spec, config)
+        if self.identity != current:
+            stored = json.loads(self.identity)
+            now = json.loads(current)
+            diffs = [
+                f"{group}.{k}: {stored[group][k]!r} -> {now[group][k]!r}"
+                for group in ("spec", "config")
+                for k in stored[group]
+                if stored[group][k] != now[group][k]
+            ]
             raise ValueError(
-                "the frozen reference was computed under a different "
-                "configuration; recompute it rather than reusing it.\n"
-                f"stored: {self.fingerprint}\ncurrent: {config.fingerprint()}"
-            )
-        if not np.isclose(self.spec_element_size, spec.element_size, rtol=1e-12):
-            raise ValueError(
-                f"reference was frozen at h={self.spec_element_size}, "
-                f"running at h={spec.element_size}"
+                "the frozen reference belongs to a different reference "
+                "problem; recompute it rather than reusing it:\n  "
+                + "\n  ".join(diffs or ["(fields differ in shape)"])
             )
 
     def to_json(self) -> str:
@@ -240,24 +327,30 @@ class Zhao2DProblem:
 
     # -- design map ---------------------------------------------------------
 
-    def solid_fraction(self, x):
+    def solid_fraction(self, x, beta: float | None = None):
         """Design vector -> (num_elems,) solid fraction, tabs pinned to fluid.
 
         The filter acts only among design elements, so it cannot bleed material
         into the fixed inlet/outlet tabs. The tabs are pinned AFTER the filter
         for the same reason.
+
+        `beta` overrides the configured projection sharpness. It is a call
+        argument rather than a rebuilt problem because it is the one stage
+        parameter that touches nothing else: the mesh, the filter, the solvers
+        and the boundary conditions are all independent of it, so a
+        continuation step must not pay for rebuilding them.
         """
         filtered = self.filter_matrix @ jnp.asarray(x)
         projected = _design.heaviside_projection(
-            filtered, self.config.projection_beta
+            filtered, self.config.projection_beta if beta is None else beta
         )
         return jnp.zeros(self.flow_mesh.num_elems).at[self.design_elements].set(
             projected
         )
 
-    def fluid_fraction(self, x):
+    def fluid_fraction(self, x, beta: float | None = None):
         """v_f on the domain the constraint is measured over."""
-        gamma = 1.0 - self.solid_fraction(x)
+        gamma = 1.0 - self.solid_fraction(x, beta)
         if self.config.volume_domain == VolumeDomain.WHOLE:
             return jnp.sum(gamma * self.area) / jnp.sum(self.area)
         mask = jnp.asarray(self.flow_mesh.design_mask)
@@ -361,13 +454,16 @@ def freeze_reference(
     """
     problem = Zhao2DProblem(spec, config, solver_settings)
     s = _z.reference_solid_fraction(problem.flow_mesh, spec, config.reference_field)
-    norms = problem.residual_norms(s, config.alpha_max_reference)
+    # Gate, not merely measure: a reference frozen from an unconverged state
+    # would silently become the denominator of every result that follows.
+    norms = problem.require_converged(s, config.alpha_max_reference)
     psi, c = problem.metrics(s, config.alpha_max_reference)
 
     values = ReferenceValues(
         psi_0=float(psi),
         c_0=float(c),
-        fingerprint=config.fingerprint(),
+        identity=reference_identity(spec, config),
+        run_fingerprint=config.fingerprint(),
         spec_element_size=spec.element_size,
         flow_residual_relative=norms["flow"],
         thermal_residual_relative=norms["thermal"],
@@ -379,3 +475,52 @@ def freeze_reference(
         **_z.fluid_fractions(problem.flow_mesh, s),
     }
     return values, report
+
+
+REFERENCE_FILE = pathlib.Path(__file__).resolve().parent / "zhao2d_reference.json"
+
+
+def load_reference(
+    spec: _z.Zhao2DSpec,
+    config: R1Config = R1Config(),
+    path: pathlib.Path | None = None,
+) -> ReferenceValues:
+    """Read the frozen reference from disk and check it belongs here."""
+    path = path or REFERENCE_FILE
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"{path} not found; run scripts/zhao2d_freeze_reference.py --write"
+        )
+    values = ReferenceValues.from_json(path.read_text(encoding="utf-8"))
+    values.check(config, spec)
+    return values
+
+
+def verify_reference_against_state(
+    problem: "Zhao2DProblem", reference: ReferenceValues, rtol: float = 1e-9
+) -> dict:
+    """Re-solve the physical reference state and check BOTH ratios are 1.
+
+    Separately, not through J. J = w + (1-w) = 1 whenever the two errors happen
+    to cancel, and with w = 0.5 an equal and opposite pair does exactly that,
+    so J alone cannot detect a swapped or stale pair of denominators.
+
+    The state re-solved here is the PHYSICAL reference density, never the design
+    vector: with beta > 0 the projection moves x = 0.6 to P_beta(0.6) != 0.6, so
+    requiring J(x = 0.6) = 1 after a projection step would be wrong.
+    """
+    s = _z.reference_solid_fraction(
+        problem.flow_mesh, problem.spec, problem.config.reference_field
+    )
+    problem.require_converged(s, problem.config.alpha_max_reference)
+    psi, c = problem.metrics(s, problem.config.alpha_max_reference)
+    ratios = {
+        "psi_over_psi_0": float(psi) / reference.psi_0,
+        "c_over_c_0": float(c) / reference.c_0,
+    }
+    bad = {k: v for k, v in ratios.items() if not np.isclose(v, 1.0, rtol=rtol)}
+    if bad:
+        raise ValueError(
+            f"the loaded reference does not reproduce its own state: {bad}"
+        )
+    return ratios

@@ -180,7 +180,11 @@ derived, or a reconstruction choice, plus this list:
 - h_e for the stabilisation parameters is named but never defined.
 - Table 1 lists solid density 2700 and heat capacity 900, but §2 puts the fluid
   ρc over the whole domain, so the solid pair is unused. `build_material`
-  leaves them at zero so that any code path starting to use them fails loudly.
+  leaves them at zero as a marker. Zero is not a guard:
+  `Phase.volumetric_heat_capacity` returns 0.0 without raising, so a code path
+  that started using a two-phase ρc would get zero silently. What protects
+  against that is that every consumer takes the single `b_f` off the material
+  object, not a defensive mechanism.
 
 ## R1: the frozen configuration
 
@@ -238,7 +242,7 @@ Changing a denominator is not a change of units: with
 
 the two denominators set the relative weight of the terms. Evaluating the same
 raw metrics against the transposed paper scale instead corresponds to an
-effective dissipation weight near 0.478 rather than 0.5. Self-computed
+effective dissipation weight near 0.585 rather than 0.5. Self-computed
 denominators keep J consistent with the solver that produces it; the paper scale
 is kept alongside for comparison with tables 4 and 7.
 

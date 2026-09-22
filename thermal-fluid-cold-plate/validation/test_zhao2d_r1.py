@@ -79,27 +79,118 @@ def test_r1_config_does_not_inherit_the_analysis_defaults():
         {"thermal_form": fe_thermal.ZHAO_FORM},
     ],
 )
-def test_every_switch_reaches_the_fingerprint(change):
-    """A fingerprint that missed a switch would let a reference be misapplied."""
+def test_every_switch_reaches_the_run_fingerprint(change):
+    """The run record must capture every switch, for provenance.
+
+    This is NOT the reuse test: the fingerprint deliberately moves for stage
+    parameters like beta, which must not invalidate a reference.
+    """
     base = r1.R1Config()
     assert dataclasses.replace(base, **change).fingerprint() != base.fingerprint()
 
 
+# -- what may and may not invalidate a frozen reference ---------------------
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"heat_source": 2.0e8},
+        {"inlet_speed": 0.4},
+        {"inlet_temperature": 5.0},
+        {"fluid_density": 998.0},
+        {"fluid_viscosity": 2.0e-3},
+        {"fluid_heat_capacity": 4200.0},
+        {"fluid_conductivity": 0.7},
+        {"solid_conductivity": 400.0},
+        {"q_alpha": 0.1},
+        {"q_kappa": 0.1},
+        {"reference_gamma": 0.3},
+        {"design_height": 0.02},
+        {"design_half_width": 0.004},
+        {"inlet_half_width": 0.002},
+        {"tab_length": 0.002},
+        {"element_size": 1.0e-4},
+    ],
+)
+def test_changing_the_reference_problem_invalidates_the_reference(frozen, change):
+    """Every physical input the reference depends on must bind it.
+
+    These all live in `Zhao2DSpec`, which an earlier version of `check` did not
+    look at beyond the element size -- so changing the heat source, the inlet
+    speed or the geometry silently kept the old denominators.
+    """
+    with pytest.raises(ValueError, match="different reference problem"):
+        frozen.check(r1.R1Config(), dataclasses.replace(SPEC, **change))
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"projection_beta": 1.0},
+        {"projection_beta": 8.0},
+        {"filter_radius_elements": 4.0},
+        {"volume_domain": r1.VolumeDomain.WHOLE},
+        {"max_fluid_fraction": 0.3},
+        {"weight": 0.9},
+    ],
+)
+def test_optimisation_stages_do_not_invalidate_the_reference(frozen, change):
+    """beta and the filter are stages of the run, not the reference problem.
+
+    The denominators are held fixed across continuation on purpose, so a
+    projection step must not demand a refreeze. An earlier version rejected
+    beta = 2, which would have made the R1d schedule impossible to run.
+    """
+    frozen.check(dataclasses.replace(r1.R1Config(), **change), SPEC)
+
+
+def test_reported_values_do_not_bind_the_reference(frozen):
+    """`reported_*` are comparison numbers that enter no computation."""
+    frozen.check(r1.R1Config(), dataclasses.replace(SPEC, reported_psi_0=1.0))
+
+
 def test_reference_values_reject_a_different_configuration(frozen):
-    frozen.check(r1.R1Config(), SPEC)  # the one it was frozen under
-    with pytest.raises(ValueError, match="different"):
+    frozen.check(r1.R1Config(), SPEC)
+    with pytest.raises(ValueError, match="different reference problem"):
         frozen.check(
             dataclasses.replace(r1.R1Config(), alpha_max_reference=1.0e7), SPEC
         )
 
 
-def test_reference_values_reject_a_different_mesh(frozen):
-    with pytest.raises(ValueError, match="frozen at"):
-        frozen.check(r1.R1Config(), dataclasses.replace(SPEC, element_size=2.0e-4))
-
-
 def test_reference_values_round_trip_through_json(frozen):
     assert r1.ReferenceValues.from_json(frozen.to_json()) == frozen
+
+
+def test_freezing_refuses_an_unconverged_state():
+    """A reference frozen from a bad state becomes every later denominator."""
+    settings = {
+        "linear": {"solver": r1._solver.LinearSolvers.SCIPY_SPARSE, "rtol": 1e-10},
+        "nonlinear": {"max_iter": 1, "threshold": 1e-14},
+    }
+    with pytest.raises(r1.NotConverged):
+        r1.freeze_reference(SPEC, r1.R1Config(), solver_settings=settings)
+
+
+def test_verify_reference_checks_both_ratios_not_just_j(problem, frozen):
+    ratios = r1.verify_reference_against_state(problem, frozen)
+    assert ratios["psi_over_psi_0"] == pytest.approx(1.0, rel=1e-9)
+    assert ratios["c_over_c_0"] == pytest.approx(1.0, rel=1e-9)
+
+    # A swapped pair leaves J = 1 but fails both ratios, which is the point.
+    swapped = dataclasses.replace(frozen, psi_0=frozen.c_0, c_0=frozen.psi_0)
+    with pytest.raises(ValueError, match="does not reproduce"):
+        r1.verify_reference_against_state(problem, swapped)
+
+
+def test_stored_reference_file_matches_the_main_configuration():
+    """The committed reference must belong to the main spec and config."""
+    spec = z.Zhao2DSpec()
+    loaded = r1.load_reference(spec, r1.R1Config())
+    assert loaded.spec_element_size == spec.element_size
+    assert loaded.psi_0 > 0 and loaded.c_0 > 0
+    assert loaded.flow_residual_relative < 1e-10
+    assert loaded.thermal_residual_relative < 1e-10
 
 
 # -- the design map ---------------------------------------------------------
