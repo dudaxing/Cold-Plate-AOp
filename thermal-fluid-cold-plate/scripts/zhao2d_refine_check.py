@@ -18,6 +18,13 @@ magnitude; they do not establish mesh independence.
 
 from __future__ import annotations
 
+import pathlib
+import sys
+
+# Cap BLAS threads BEFORE numpy loads; see tfopus/_threads.py.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+import tfopus._threads  # noqa: F401,E402
+
 import argparse
 import json
 import pathlib
@@ -110,11 +117,19 @@ def figures(panels, out_dir, spec) -> None:
         nodes = np.asarray(pm.mesh.nodes.coords)
         t_el = temp[np.asarray(pm.mesh.elem_nodes)].mean(axis=1)
 
+        # A cell whose NODAL MEAN is negative is a much rarer thing than a cell
+        # touching a negative node: averaging four nodes hides a single cold
+        # one. The earlier version plotted the mean and so showed no undershoot
+        # at all while 18 nodes were below the inlet value. Mark any cell with
+        # at least one negative node, which is the region being discussed.
+        below_node = temp < spec.inlet_temperature - 1e-10
+        touches = below_node[np.asarray(pm.mesh.elem_nodes)].any(axis=1)
+
         for row, (field, cmap, label, rng) in enumerate((
             (s, "gray_r", "solid fraction s", (0.0, 1.0)),
             (t_el, "inferno", "temperature", (tmin, tmax)),
-            (np.where(t_el < spec.inlet_temperature - 1e-10, 1.0, np.nan),
-             "cool", "undershoot cells", (0.0, 1.0)),
+            (np.where(touches, 1.0, np.nan),
+             "cool", "cells touching a node below inlet T", (0.0, 1.0)),
         )):
             ax = axes[row, col]
             ax.scatter(c[:, 0], c[:, 1], c=field, s=(h / 1e-4) ** 2 * 1.1,
@@ -128,8 +143,10 @@ def figures(panels, out_dir, spec) -> None:
             if row == 0:
                 ax.set_title(f"{panel['name']}\n{pm.num_elems} elements")
             if row == 2:
-                n = int(np.sum(t_el < spec.inlet_temperature - 1e-10))
-                ax.set_xlabel(f"{n} elements below inlet T")
+                ax.set_xlabel(
+                    f"{int(below_node.sum())} nodes below inlet T "
+                    f"in {int(touches.sum())} cells"
+                )
 
     fig.suptitle("R1e fixed-design mesh check: same design, h and h/2",
                  fontsize=12)

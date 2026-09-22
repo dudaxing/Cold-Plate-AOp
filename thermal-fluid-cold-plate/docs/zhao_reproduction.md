@@ -18,6 +18,7 @@ governing equations, objective, constraint — is kept.
 | R1c | short MMA trial run (mechanism check) | **done** |
 | R1d | 2D optimisation, 300-update budget | **done** — budget limited, not converged |
 | R1e | fixed-design mesh and heat check | **done** |
+| R1f | thermal space / stabilisation / velocity separation | **done** |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## R1d: the 300-update run
@@ -117,7 +118,10 @@ what a consistent discretisation with an under-resolved solution looks like.
 
 ### The reason
 
-The element Péclet number, Pe_e = b_f |u| h / (2κ), over fluid cells:
+The element Péclet number, Pe_e = b_f |u at the element centre| h / (2κ), over
+cells with s < 0.5, inlet and outlet tabs included (2194 of 5200 at h). The mask
+matters: over the whole domain the median is 0.0027, four orders of magnitude
+away, because the solid cells carry no flow. R1f's table lists every mask.
 
 | mesh | median | p90 | max | cells with Pe_e > 1 |
 |---|---|---|---|---|
@@ -127,6 +131,10 @@ The element Péclet number, Pe_e = b_f |u| h / (2κ), over fluid cells:
 With b_f = 4.18×10⁶ against κ_f = 0.61, the thermal layers are far thinner than
 either mesh resolves, so SUPG is carrying the temperature solution and C is
 measuring a boundary layer it cannot see. h/2 halves Pe_e and is still ~24.
+
+"SUPG is carrying the solution" was a reading of the Péclet numbers when it was
+written; R1f measures it directly — the net stabilisation work is 18.49% of C at
+h and 9.40% at h/2 — and separates which of the three changes moves C.
 
 ### This changes the R1d binarisation conclusion
 
@@ -157,6 +165,131 @@ decision comes before any further optimisation.
 
 It does not say which way the optimum moves, because the design was held fixed.
 Nothing here re-opens the frozen configuration or the reference values.
+
+## R1f: which part of the refinement moves C
+
+R1e changed three things at once — the temperature space, τ (which shrinks with
+h), and the velocity (re-solved on the fine mesh). Four analyses on the same
+continuous design change one at a time, with 3×3 thermal quadrature throughout
+(2×2 is not exact for the SUPG term; the production baseline stays 2×2):
+
+| | C | τ median | T_max | T_min | undershoot nodes |
+|---|---|---|---|---|---|
+| **A** h, u_h, τ_h | 26938.33 | 4.503e-5 | 13.828 | −0.3101 | 18 |
+| **B** h/2, u_h extended, **τ frozen** | 31348.68 | 4.503e-5 | 15.130 | **0.0000** | **0** |
+| **C** h/2, u_h extended, τ_{h/2} | 33233.13 | 1.126e-5 | 15.541 | −0.0987 | 1 |
+| **D** h/2, u_{h/2}, τ_{h/2} | 32400.12 | 1.126e-5 | 15.289 | 0.0000 | 0 |
+
+| step | ΔC | share of the total |
+|---|---|---|
+| temperature space, A → B | **+4410.34** | **+80.7%** |
+| stabilisation coefficient, B → C | +1884.46 | +34.5% |
+| velocity input, C → D | −833.02 | −15.3% |
+| total, A → D | +5461.78 | |
+
+**The temperature approximation space dominates.** The shares exceed 100%
+because the velocity update partly cancels the other two; they sum along this
+path and are not a path-independent budget.
+
+Two internal checks: B's τ median is *identical* to A's, so the freeze worked;
+C and D's is exactly a quarter of it, which is τ ∝ h² in the diffusive limit
+with h halved. And the undershoot is removed by the finer space, not by τ — B,
+with the larger frozen τ, has none, while C with the smaller τ has one.
+
+Stabilisation's share of C falls with refinement, from the identity
+C + D_SUPG − F_SUPG = L_Q (exact because T_h vanishes on the Dirichlet
+boundary, the inlet value being zero):
+
+| | L_Q | D_SUPG | F_SUPG | (D−F)/C | closure |
+|---|---|---|---|---|---|
+| A | 31919.82 | 5042.41 | 60.91 | **18.49%** | 1.1e-16 |
+| B | 35357.17 | 4069.91 | 61.42 | 12.79% | 2.1e-16 |
+| C | 36356.02 | 3154.05 | 31.16 | **9.40%** | 2.0e-16 |
+| D | 35490.78 | 3120.00 | 29.33 | 9.54% | 2.1e-16 |
+
+C is therefore not an independent quantity: it is L_Q minus the net
+stabilisation work. At h = 10⁻⁴ that net work is 18.5% of the reported
+compliance. That is how large the stabilisation term *is*, which is not the same
+as how large the error is — the identity says nothing about which of C and L_Q
+is closer to the continuous value.
+
+A and R1e's h row are the same analysis at different quadrature: C = 26938.33
+(3×3) against 27002.4 (2×2), 0.24% apart. Every comparison within R1f is at 3×3,
+and the production objective is unchanged at 2×2.
+
+The two authorised binary controls behave the same way: C = 26278.58 on the
+coarse mesh and 34904.70 on the fine one, so the refinement moves the
+thresholded design in the same direction and by a comparable amount.
+
+### An independent accuracy reference
+
+Ranking stabilisation variants by which gives a smaller C on the cold plate
+would be selection bias, since there is no exact answer there.
+`scripts/zhao2d_advection_benchmark.py` solves a convection–diffusion problem
+with a known exact solution, using the same element and residual: an
+exponential layer of width L/Pe at a Dirichlet outlet, Pe = 1000.
+
+| nx | Pe_e | ‖T_h − T‖ / ‖T‖ | ∫k\|∇T\|² rel. error |
+|---|---|---|---|
+| 10 | 50.0 | 11.4 | **94.0%** |
+| 20 | 25.0 | 5.35 | 94.0% |
+| 40 | 12.5 | 3.81 | 92.6% |
+| 80 | 6.25 | 2.51 | 86.1% |
+| 160 | 3.13 | 1.54 | 74.9% |
+| 320 | 1.56 | 0.81 | **56.8%** |
+
+At the cold plate's element Péclet numbers (25–50 over the fluid) the error in
+the integral metric is ~94% and the L² error is several times the solution norm.
+
+Neither converges at the rate a resolved Q1 solution would. The observed orders
+between successive meshes are 0.49–1.09 for the L² error and **0.00–0.40 for the
+integral metric** — the quantity C is built from is the slower of the two, and
+over the first refinement it does not improve at all.
+
+The exact solution is evaluated analytically at the quadrature points, not
+interpolated from its nodal values: it varies by O(1) inside the last element on
+every mesh here, so its interpolant is a different function and comparing
+against it hides the error being looked for. An earlier version of this script
+did that and reported an error that *grew* under refinement.
+
+Caveat: the benchmark's layer sits at a Dirichlet outlet, while the cold plate
+has a volumetric source, adiabatic walls and interior layers. It bounds the
+order of magnitude; it does not transfer a percentage.
+
+### Péclet, with the mask stated
+
+`b_f |u at element centre| h / (2κ)`, h = 10⁻⁴:
+
+| mask | n | median | p90 | max | > 1 |
+|---|---|---|---|---|---|
+| whole domain | 5200 | **0.0027** | 64.50 | 104.16 | 40.2% |
+| s < 0.5, tabs included | 2194 | **47.35** | 77.45 | 104.16 | 95.2% |
+| s < 0.5, design domain only | 1994 | 45.26 | 74.87 | 103.63 | 94.7% |
+
+A bare "median Pe" is not checkable: the first two differ by four orders of
+magnitude.
+
+### What this points at
+
+A → B dominating says the limit is the temperature approximation space, not the
+stabilisation formula. The cheap consequence is that **thermal resolution can be
+raised independently** — the flow and design meshes have no need to follow, since
+the velocity contribution is small and of the opposite sign.
+
+It does not say that τ is fine: B → C is still 34.5%, and the benchmark shows
+h/2 is itself badly under-resolved at these Péclet numbers. How far the thermal
+mesh needs to go is a question for the benchmark, not for the cold plate's own C.
+
+### An environment fault worth knowing about
+
+Repeated large sparse solves through `jax.pure_callback` crash the interpreter
+with Windows heap corruption (0xC0000374) and **no traceback**, immediately after
+OpenBLAS reports exceeding its precompiled thread count on this 32-core machine.
+The shell sees exit code 0 and a truncated log, so it is indistinguishable from
+a clean finish — it killed an R1f run after the first of four analyses and then
+a full test run. `tfopus/_threads.py` caps the BLAS thread count before NumPy
+loads, and is imported from `tfopus/__init__.py` and `validation/conftest.py`
+as well as the entry scripts.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -396,7 +529,17 @@ pytest validation/test_zhao2d.py
 ## Running R1
 
 ```bash
-python scripts/zhao2d_freeze_reference.py --write   # A/B/C thermal study, freezes Psi_0 and C_0
+python scripts/zhao2d_freeze_reference.py --write   # freezes Psi_0 and C_0
 python scripts/zhao2d_gradient_check.py             # Psi, C, g and J against finite differences
-python scripts/zhao2d_short_run.py --iterations 20  # short MMA mechanism check
+python scripts/zhao2d_optimise.py --coarse --budget 25   # R1c mechanism check
+python scripts/zhao2d_optimise.py --budget 300           # R1d, the main case (~80 min)
+python scripts/zhao2d_binary_diagnostic.py               # R1d thresholding and connectivity
+python scripts/zhao2d_refine_check.py                    # R1e, h vs h/2 on a fixed design
+python scripts/zhao2d_thermal_separation.py              # R1f, analyses A/B/C/D
+python scripts/zhao2d_thermal_separation.py --binary     # R1f binary controls A', C'
+python scripts/zhao2d_advection_benchmark.py --pe 1000   # R1f accuracy reference
 ```
+
+`zhao2d_short_run.py` is retired to a pointer: it had its own optimisation loop
+with the terminal-pairing defect, and both entry points now share
+`tfopus/zhao2d_driver.py`.

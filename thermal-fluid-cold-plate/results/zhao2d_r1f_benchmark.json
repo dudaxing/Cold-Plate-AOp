@@ -1,0 +1,91 @@
+{
+  "note": "Analytic convection-diffusion reference for the SUPG element the cold plate uses. The exact solution is evaluated analytically at the quadrature points, NOT interpolated from its nodal values -- it varies by O(1) inside the last element on every mesh here, so its interpolant is a different function and comparing against it hides the error.",
+  "global_pe": 1000.0,
+  "layer_width": 0.001,
+  "thermal_form": {
+    "tau": "two_limit",
+    "stabilise_source": true,
+    "supg_heat_capacity": true,
+    "tau_velocity_floor": 1e-12
+  },
+  "rows": [
+    {
+      "nx": 10,
+      "h": 0.1,
+      "pe_element": 50.0,
+      "l2_error": 0.08930124949241555,
+      "l2_error_rel": 11.40345177819578,
+      "max_nodal_error": 0.503174451520761,
+      "diffusive_integral": 6310.526288647836,
+      "diffusive_exact": 104500.0,
+      "diffusive_rel_error": 0.9396121886253797,
+      "overshoot": 0.0,
+      "undershoot": 0.503174451520761
+    },
+    {
+      "nx": 20,
+      "h": 0.05,
+      "pe_element": 25.0,
+      "l2_error": 0.05719164948095654,
+      "l2_error_rel": 5.353421268846284,
+      "max_nodal_error": 0.20212252610950993,
+      "diffusive_integral": 6297.79925310612,
+      "diffusive_exact": 104500.0,
+      "diffusive_rel_error": 0.9397339784391759,
+      "overshoot": 0.0,
+      "undershoot": 0.20212252610950993
+    },
+    {
+      "nx": 40,
+      "h": 0.025,
+      "pe_element": 12.5,
+      "l2_error": 0.04254658637352052,
+      "l2_error_rel": 3.809345305485174,
+      "max_nodal_error": 0.03698705383245598,
+      "diffusive_integral": 7763.634271019091,
+      "diffusive_exact": 104500.0,
+      "diffusive_rel_error": 0.925706849081157,
+      "overshoot": 0.0,
+      "undershoot": -0.0
+    },
+    {
+      "nx": 80,
+      "h": 0.0125,
+      "pe_element": 6.25,
+      "l2_error": 0.028029369402097295,
+      "l2_error_rel": 2.50702637868819,
+      "max_nodal_error": 0.0686550431052778,
+      "diffusive_integral": 14571.55998743975,
+      "diffusive_exact": 104500.0,
+      "diffusive_rel_error": 0.8605592345699546,
+      "overshoot": 0.0,
+      "undershoot": -0.0
+    },
+    {
+      "nx": 160,
+      "h": 0.00625,
+      "pe_element": 3.125,
+      "l2_error": 0.017165702375106357,
+      "l2_error_rel": 1.5353470958335167,
+      "max_nodal_error": 0.11795216000298406,
+      "diffusive_integral": 26280.544953192988,
+      "diffusive_exact": 104500.0,
+      "diffusive_rel_error": 0.7485115315483925,
+      "overshoot": 0.0,
+      "undershoot": -0.0
+    },
+    {
+      "nx": 320,
+      "h": 0.003125,
+      "pe_element": 1.5625,
+      "l2_error": 0.009096113644943385,
+      "l2_error_rel": 0.8135811376462372,
+      "max_nodal_error": 0.15034939644227485,
+      "diffusive_integral": 45119.9422522445,
+      "diffusive_exact": 104500.0,
+      "diffusive_rel_error": 0.5682302176818708,
+      "overshoot": 0.0,
+      "undershoot": -0.0
+    }
+  ]
+}

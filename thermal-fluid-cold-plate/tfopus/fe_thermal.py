@@ -137,9 +137,21 @@ class ThermalSolver(_solver.NonlinearProblem):
         solver_settings,
         elem_length=None,
         form: ThermalForm = ZHOU_FORM,
+        tau_elem=None,
     ):
+        """
+        Args:
+          tau_elem: (num_elems,) stabilisation parameter supplied per element,
+            overriding the formula. This exists for ONE diagnostic purpose:
+            refining the mesh changes both the temperature space and tau at the
+            same time, so a refined run with tau frozen at the parent values
+            separates the two. It is a counterfactual, not a production mode --
+            the frozen values are not the ones the formula would give on this
+            mesh, so a solution obtained with it is not the scheme's solution.
+        """
         super().__init__(solver_settings=solver_settings)
         self.form = form
+        self.tau_elem = None if tau_elem is None else jnp.asarray(tau_elem)
         self.elem_length = (
             _elements.element_lengths(mesh, "min_edge")
             if elem_length is None
@@ -171,8 +183,15 @@ class ThermalSolver(_solver.NonlinearProblem):
         speed = jnp.sqrt(jnp.where(speed_sq > floor**2, speed_sq, 1.0))
         return jnp.where(speed_sq > floor**2, h / (2.0 * speed), 0.0)
 
-    def element_residual(self, temperature, velocity, k, q_source, node_coords, h):
-        """Element residual. `velocity` is flat (nodes_per_elem * dim,)."""
+    def element_residual(
+        self, temperature, velocity, k, q_source, node_coords, h, tau_given
+    ):
+        """Element residual. `velocity` is flat (nodes_per_elem * dim,).
+
+        `tau_given` is used only when the solver was constructed with
+        `tau_elem`; the branch is on a Python attribute, not a traced value, so
+        the formula path is unchanged when it is not.
+        """
         vel_nodes = velocity.reshape(-1, self.dim)
 
         grad_n = jax.vmap(
@@ -184,7 +203,7 @@ class ThermalSolver(_solver.NonlinearProblem):
         )(self.mesh.gauss_pts, node_coords)
         w = self.mesh.gauss_weights * det_j
 
-        tau = self._tau(vel_nodes, k, h)
+        tau = tau_given if self.tau_elem is not None else self._tau(vel_nodes, k, h)
 
         u_g = jnp.einsum("gn, nd -> gd", self.shp_fn, vel_nodes)
         grad_t = jnp.einsum("gnd, n -> gd", grad_n, temperature)
@@ -215,6 +234,9 @@ class ThermalSolver(_solver.NonlinearProblem):
             q_source,
             self.mesh.elem_node_coords,
             self.elem_length,
+            self.tau_elem
+            if self.tau_elem is not None
+            else jnp.zeros(self.mesh.num_elems),
         )
         elem_res = jax.vmap(self.element_residual)(*args)
         residual = jnp.zeros((self.mesh.num_dofs,))
@@ -272,3 +294,94 @@ class ThermalSolver(_solver.NonlinearProblem):
                 self.mesh.elem_node_coords,
             )
         )
+
+    def compliance_decomposition(
+        self, temperature, elem_velocity, k, q_source
+    ) -> dict:
+        """C split into its parts, plus the stabilisation terms it excludes.
+
+        Taking the test function to be T_h itself in the discrete residual --
+        legitimate here because T_h vanishes on the Dirichlet boundary, the
+        inlet value being zero -- gives an identity that must hold exactly:
+
+            C + D_SUPG - F_SUPG = L_Q
+
+            C      = integral [ b_f T (u.grad T) + k |grad T|^2 ]   (Zhao eq 23)
+            L_Q    = integral Q T
+            D_SUPG = sum_e integral b_f tau (u.grad T)^2
+            F_SUPG = sum_e integral tau Q (u.grad T)
+
+        So C is not an independent quantity: it is L_Q minus the net
+        stabilisation work. That makes `net_supg_over_c` the honest measure of
+        how much of the reported compliance is shaped by the stabilisation --
+        without implying the error IS that size, or that the stabilisation
+        should be removed.
+
+        `closure` is the residual of the identity and should be at solver
+        precision. It is computed with the SAME quadrature as the residual, so
+        a non-zero value means the state or the assembly disagrees, not that
+        the integration rules differ.
+        """
+        temp_elem = temperature[self.mesh.elem_dof_mat]
+
+        def per_element(temp, velocity, k_e, q_e, node_coords, h, tau_given):
+            vel_nodes = velocity.reshape(-1, self.dim)
+            grad_n = jax.vmap(
+                self.mesh.elem_template.get_gradient_shape_function_physical,
+                in_axes=(0, None),
+            )(self.mesh.gauss_pts, node_coords)
+            _, det_j = jax.vmap(
+                self.mesh.elem_template.compute_jacobian_and_determinant,
+                in_axes=(0, None),
+            )(self.mesh.gauss_pts, node_coords)
+            w = self.mesh.gauss_weights * det_j
+
+            tau = (
+                tau_given if self.tau_elem is not None
+                else self._tau(vel_nodes, k_e, h)
+            )
+            u_g = jnp.einsum("gn, nd -> gd", self.shp_fn, vel_nodes)
+            t_g = jnp.einsum("gn, n -> g", self.shp_fn, temp)
+            grad_t = jnp.einsum("gnd, n -> gd", grad_n, temp)
+            u_dot_grad_t = jnp.einsum("gd, gd -> g", u_g, grad_t)
+
+            adv = jnp.einsum("g, g, g -> ", self.b_f * t_g, u_dot_grad_t, w)
+            diff = k_e * jnp.einsum("gd, gd, g -> ", grad_t, grad_t, w)
+            load = q_e * jnp.einsum("g, g -> ", t_g, w)
+            supg_d = self.b_f * tau * jnp.einsum(
+                "g, g, g -> ", u_dot_grad_t, u_dot_grad_t, w
+            )
+            supg_f = tau * q_e * jnp.einsum("g, g -> ", u_dot_grad_t, w)
+            return adv, diff, load, supg_d, supg_f
+
+        args = (
+            temp_elem,
+            elem_velocity,
+            k,
+            q_source,
+            self.mesh.elem_node_coords,
+            self.elem_length,
+            self.tau_elem
+            if self.tau_elem is not None
+            else jnp.zeros(self.mesh.num_elems),
+        )
+        adv, diff, load, supg_d, supg_f = jax.vmap(per_element)(*args)
+
+        c_adv, c_diff = float(jnp.sum(adv)), float(jnp.sum(diff))
+        l_q, d_supg, f_supg = (
+            float(jnp.sum(load)),
+            float(jnp.sum(supg_d)),
+            float(jnp.sum(supg_f)),
+        )
+        c = c_adv + c_diff
+        return {
+            "c_advective": c_adv,
+            "c_diffusive": c_diff,
+            "compliance": c,
+            "l_q": l_q,
+            "d_supg": d_supg,
+            "f_supg": f_supg,
+            "closure": c + d_supg - f_supg - l_q,
+            "closure_relative": abs(c + d_supg - f_supg - l_q) / max(abs(l_q), 1e-300),
+            "net_supg_over_c": (d_supg - f_supg) / c if c != 0 else float("nan"),
+        }

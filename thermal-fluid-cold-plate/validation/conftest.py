@@ -12,8 +12,17 @@ import os
 import pathlib
 import sys
 
-import jax
-import pytest
+# Cap BLAS threads BEFORE jax/numpy load. `tfopus/__init__.py` does this too,
+# but conftest is imported first and a test touching only upstream toflux would
+# otherwise run uncapped. Without the cap, repeated large sparse solves through
+# jax.pure_callback crash the interpreter with Windows heap corruption and no
+# traceback -- it killed a full-suite run. See tfopus/_threads.py.
+for _var in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS",
+             "NUMEXPR_NUM_THREADS"):
+    os.environ.setdefault(_var, "8")
+
+import jax  # noqa: E402
+import pytest  # noqa: E402
 
 jax.config.update("jax_enable_x64", True)
 

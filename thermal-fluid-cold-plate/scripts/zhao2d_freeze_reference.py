@@ -18,10 +18,15 @@ that the difference between R0's and R1's C_0 attributes to one change each.
 
 from __future__ import annotations
 
-import argparse
-import dataclasses
 import pathlib
 import sys
+
+# Cap BLAS threads BEFORE numpy loads; see tfopus/_threads.py.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+import tfopus._threads  # noqa: F401,E402
+
+import argparse
+import dataclasses
 
 import jax
 

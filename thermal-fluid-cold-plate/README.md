@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D fixed-design analysis done |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; thermal mesh resolution unresolved |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -47,6 +47,16 @@ both constants within 6% simultaneously. Details and the rejected alternative
 (a length-scale reading) are in
 [`docs/zhao_reproduction.md`](docs/zhao_reproduction.md).
 
+**The thermal compliance is not mesh converged, and the temperature space is
+why.** On a fixed design, one refinement moves the dissipated power by ~2% but
+the thermal compliance by +20% (continuous) and +34% (binary); "thresholding
+costs 0.33% of the objective" becomes 10.3% on the finer mesh. Changing the
+temperature space, the stabilisation coefficient and the velocity one at a time
+attributes +80.7% of that move to the temperature space alone, so thermal
+resolution can be raised without refining the flow or design meshes. Element
+Peclet numbers are 25-50 over the fluid, where an analytic high-Peclet benchmark
+using the same element puts the error in the same integral metric near 94%.
+
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
 as source substitutions against a pristine checkout rather than a fork, so the
@@ -69,11 +79,21 @@ pytest                                   # add -m "not slow" to skip refinement 
 `TOFLUX_ZIP` sets the archive path and `TOFLUX_ROOT` the checkout location. The
 suite uses SciPy's sparse direct solver, so PETSc and PARDISO are not needed.
 
+On Windows, `tfopus` caps the BLAS thread count at import (`tfopus/_threads.py`).
+Without it, repeated large sparse solves through `jax.pure_callback` crash the
+interpreter with heap corruption and no traceback, after OpenBLAS reports
+exceeding its precompiled thread count. Set `OPENBLAS_NUM_THREADS` yourself to
+override.
+
 ## Reproducing the reported studies
 
 ```bash
 python scripts/zhao2d_reference_study.py --provenance   # the option sweep
 python scripts/zhao2d_swap_test.py                      # the transposition test
+python scripts/zhao2d_optimise.py --budget 300          # the 2D optimisation run
+python scripts/zhao2d_refine_check.py                   # fixed-design mesh check
+python scripts/zhao2d_thermal_separation.py             # what moves the compliance
+python scripts/zhao2d_advection_benchmark.py --pe 1000  # analytic accuracy reference
 ```
 
 `Zhao2DSpec.provenance()` prints, per field, whether a number comes from the
