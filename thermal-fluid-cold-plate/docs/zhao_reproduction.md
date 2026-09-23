@@ -18,7 +18,8 @@ governing equations, objective, constraint — is kept.
 | R1c | short MMA trial run (mechanism check) | **done** |
 | R1d | 2D optimisation, 300-update budget | **done** — budget limited, not converged |
 | R1e | fixed-design mesh and heat check | **done** |
-| R1f | thermal space / stabilisation / velocity separation | **done** |
+| R1f | thermal space / stabilisation / velocity separation | **done** — closed with the benchmark and label corrections below |
+| R1g | dual-mesh thermal model: differentiable chain, fixed-design h/2 vs h/4 | **done** — h/4 still drifts; stopped as the contract says |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## R1d: the 300-update run
@@ -133,8 +134,9 @@ either mesh resolves, so SUPG is carrying the temperature solution and C is
 measuring a boundary layer it cannot see. h/2 halves Pe_e and is still ~24.
 
 "SUPG is carrying the solution" was a reading of the Péclet numbers when it was
-written; R1f measures it directly — the net stabilisation work is 18.49% of C at
-h and 9.40% at h/2 — and separates which of the three changes moves C.
+written. R1f measures the size of the stabilisation terms on the solution —
+(D_SUPG − F_SUPG)/C is 18.49% at h and 9.40% at h/2, a ratio of terms, not an
+error — and separates which of the three changes moves C.
 
 ### This changes the R1d binarisation conclusion
 
@@ -189,16 +191,35 @@ continuous design change one at a time, with 3×3 thermal quadrature throughout
 
 **The temperature approximation space dominates.** The shares exceed 100%
 because the velocity update partly cancels the other two; they sum along this
-path and are not a path-independent budget.
+path and are not a path-independent budget. Nor is 80.7% the share of the true
+error that comes from the temperature mesh: its denominator is a net change with
+cancellation in it, and nothing says another design would keep the proportion.
+What it does support is the order of work — improve the temperature space first.
 
 Two internal checks: B's τ median is *identical* to A's, so the freeze worked;
-C and D's is exactly a quarter of it, which is τ ∝ h² in the diffusive limit
-with h halved. And the undershoot is removed by the finer space, not by τ — B,
-with the larger frozen τ, has none, while C with the smaller τ has one.
+C and D's whole-domain median is a quarter of it, which is τ ∝ h² in the
+diffusive limit with h halved. That quarter is a property of the whole-domain
+**median**, not of every element: the median cell is solid, where diffusion
+dominates. Paired child against parent (same velocity function, R1g), the ratio
+is
 
-Stabilisation's share of C falls with refinement, from the identity
-C + D_SUPG − F_SUPG = L_Q (exact because T_h vanishes on the Dirichlet
-boundary, the inlet value being zero):
+| τ(h/2) / τ(h) | median | p10 | p90 |
+|---|---|---|---|
+| whole domain | 0.2500 | 0.2500 | 0.524 |
+| fluid, parent s < 0.5 | **0.4973** | 0.349 | 0.605 |
+
+as the formula says it should be: for the same local velocity and conductivity,
+τ(h/2)/τ(h) = ½ √(Pe² + 1) / √(Pe² + 4), with Pe the parent's element Péclet
+number — ¼ where diffusion dominates, ½ where convection does. In the channels
+the stabilisation coefficient roughly halved, it did not quarter. (An earlier
+version of this paragraph read the quarter as applying to the channels too.)
+
+And the undershoot is removed by the finer space, not by τ — B, with the larger
+frozen τ, has none, while C with the smaller τ has one.
+
+The net stabilisation term, measured against C, falls with refinement. It comes
+from the identity C + D_SUPG − F_SUPG = L_Q (exact because T_h vanishes on the
+Dirichlet boundary, the inlet value being zero):
 
 | | L_Q | D_SUPG | F_SUPG | (D−F)/C | closure |
 |---|---|---|---|---|---|
@@ -207,54 +228,103 @@ boundary, the inlet value being zero):
 | C | 36356.02 | 3154.05 | 31.16 | **9.40%** | 2.0e-16 |
 | D | 35490.78 | 3120.00 | 29.33 | 9.54% | 2.1e-16 |
 
-C is therefore not an independent quantity: it is L_Q minus the net
-stabilisation work. At h = 10⁻⁴ that net work is 18.5% of the reported
-compliance. That is how large the stabilisation term *is*, which is not the same
-as how large the error is — the identity says nothing about which of C and L_Q
-is closer to the continuous value.
+The identity is a statement about the discrete balance on one solution. C's
+definition (Zhao eq 23) contains no τ; τ reaches C only through the state
+equation, and changing τ changes T and with it L_Q, D_SUPG and F_SUPG together.
+So (D − F)/C = 18.49% is a ratio of terms on this solution. It is not an error,
+not the change C would undergo if the stabilisation were removed, and not a
+statement that 18% of the performance is set by τ — an earlier wording of this
+section said that and is withdrawn. The objective stays Zhao's C; adding the
+SUPG terms to it to "correct" the number would change the task.
 
 A and R1e's h row are the same analysis at different quadrature: C = 26938.33
 (3×3) against 27002.4 (2×2), 0.24% apart. Every comparison within R1f is at 3×3,
 and the production objective is unchanged at 2×2.
 
-The two authorised binary controls behave the same way: C = 26278.58 on the
-coarse mesh and 34904.70 on the fine one, so the refinement moves the
-thresholded design in the same direction and by a comparable amount.
+The two authorised binary controls, A′ = 26278.58 at h and C′ = 34904.70 at h/2,
+threshold the density and recompute κ but keep the **continuous design's
+velocity** (`zhao2d_thermal_separation.py` passes `ev_coarse` and
+`ev_fine_ext`). They are the thermal response to a binary conductivity field
+with the flow held at the continuous design's — not the binary design's
+performance with its own flow, and not comparable with R1e's full binary states
+(27645.4 and 37008.7), which re-solve the flow on the binary design. What they
+do show is the same direction of change under refinement as the continuous
+case. The JSON keys still read `binary, u_h`; the script's labels now say
+`binary k, continuous-design u`.
 
 ### An independent accuracy reference
 
 Ranking stabilisation variants by which gives a smaller C on the cold plate
 would be selection bias, since there is no exact answer there.
-`scripts/zhao2d_advection_benchmark.py` solves a convection–diffusion problem
+`tfopus/advection_benchmark.py` (driven by
+`scripts/zhao2d_advection_benchmark.py`) solves a convection–diffusion problem
 with a known exact solution, using the same element and residual: an
-exponential layer of width L/Pe at a Dirichlet outlet, Pe = 1000.
+exponential layer of width L/Pe at a Dirichlet outlet, Pe = 1000. It checks the
+method on a known answer. It does not size the cold plate's thermal mesh — see
+"What this points at".
 
-| nx | Pe_e | ‖T_h − T‖ / ‖T‖ | ∫k\|∇T\|² rel. error |
-|---|---|---|---|
-| 10 | 50.0 | 11.4 | **94.0%** |
-| 20 | 25.0 | 5.35 | 94.0% |
-| 40 | 12.5 | 3.81 | 92.6% |
-| 80 | 6.25 | 2.51 | 86.1% |
-| 160 | 3.13 | 1.54 | 74.9% |
-| 320 | 1.56 | 0.81 | **56.8%** |
+**Corrected after review.** The first version had two measurement faults. Its
+L² denominator, the norm of the exact solution, was integrated with a fixed
+10-point Gauss rule that cannot follow a layer thinner than the element: it came
+out 51% low at nx = 10 and 9% low at nx = 20, so the relative errors on those
+meshes were not comparable with the rest. The denominator is now the closed
+form, ‖T‖ = 0.0111803398875, and the numerator uses composite Gauss accepted
+only once doubling the subdivision changes it by less than 10⁻¹¹; a test pins
+the norm as mesh-independent. And it reported one "h" for two different
+lengths: Pe used hx = L/nx while τ used the min edge, which on the first two
+meshes is hy. The ∫k|∇T|² column was never affected.
 
-At the cold plate's element Péclet numbers (25–50 over the fluid) the error in
-the integral metric is ~94% and the L² error is several times the solution norm.
+**Anisotropic series**, ny = 8 — the original meshes, lengths now separate:
 
-Neither converges at the rate a resolved Q1 solution would. The observed orders
-between successive meshes are 0.49–1.09 for the L² error and **0.00–0.40 for the
-integral metric** — the quantity C is built from is the slower of the two, and
-over the first refinement it does not improve at all.
+| nx | hx | h_τ | Pe_x | Pe_τ | ‖T_h − T‖/‖T‖ | as first reported | ∫k\|∇T\|² error | undershoot |
+|---|---|---|---|---|---|---|---|---|
+| 10 | 0.1 | 0.03125 | 50 | **15.6** | **8.00** | 11.40 | 94.0% | 0.50 |
+| 20 | 0.05 | 0.03125 | 25 | **15.6** | **5.12** | 5.35 | 94.0% | 0.20 |
+| 40 | 0.025 | 0.025 | 12.5 | 12.5 | 3.81 | 3.81 | 92.6% | 0 |
+| 80 | 0.0125 | 0.0125 | 6.25 | 6.25 | 2.51 | 2.51 | 86.1% | 0 |
+| 160 | 0.00625 | 0.00625 | 3.13 | 3.13 | 1.54 | 1.54 | 74.9% | 0 |
+| 320 | 0.003125 | 0.003125 | 1.56 | 1.56 | 0.81 | 0.81 | 56.8% | 0 |
 
-The exact solution is evaluated analytically at the quadrature points, not
-interpolated from its nodal values: it varies by O(1) inside the last element on
-every mesh here, so its interpolant is a different function and comparing
-against it hides the error being looked for. An earlier version of this script
-did that and reported an error that *grew* under refinement.
+**Square series**, ny = nx/4, so hx = hy = h_τ — the one comparable with the
+cold plate's square elements:
 
-Caveat: the benchmark's layer sits at a Dirichlet outlet, while the cold plate
-has a volumetric source, adiabatic walls and interior layers. It bounds the
-order of magnitude; it does not transfer a percentage.
+| nx | h | Pe_e | ‖T_h − T‖/‖T‖ | ∫k\|∇T\|² error | undershoot |
+|---|---|---|---|---|---|
+| 8 | 0.125 | 62.5 | 9.00 | 98.4% | 0 |
+| 16 | 0.0625 | 31.3 | 6.28 | 96.9% | 0 |
+| 32 | 0.03125 | 15.6 | 4.32 | 94.0% | 0 |
+| 64 | 0.0156 | 7.81 | 2.88 | 88.6% | 0 |
+| 128 | 0.00781 | 3.91 | 1.82 | 79.1% | 0 |
+| 256 | 0.00391 | 1.95 | 1.02 | 63.5% | 0 |
+| 512 | 0.00195 | 0.98 | 0.46 | 40.6% | 0 |
+
+The ∫k|∇T|² errors are underestimates: the discrete layer is smeared over an
+element, so its gradient — and the dissipation it carries — is too small.
+
+Observed orders between successive meshes, against hx:
+
+| series | L² | ∫k\|∇T\|² |
+|---|---|---|
+| anisotropic | 0.64, 0.43, 0.60, 0.71, 0.92 | −0.00, 0.02, 0.11, 0.20, 0.40 |
+| square | 0.52, 0.54, 0.58, 0.67, 0.83, 1.15 | 0.02, 0.04, 0.09, 0.16, 0.32, 0.65 |
+
+These replace the earlier "0.49–1.09" for L², which came from the faulty
+denominator. The earlier statement that the integral "does not improve at all"
+over the first refinement also needs narrowing: in the anisotropic series h_τ
+does not change over nx = 10 → 20 while the aspect ratio does, so that stall
+cannot be put down to layer resolution. The square series, where only h
+changes, shows the slow convergence is real — order 0.02 from Pe_e 62.5 to 31.3,
+still under 0.7 at Pe_e ≈ 1 — without that confound.
+
+The anisotropic series also undershoots, by 0.50 and 0.20 on its first two
+meshes; the square series never does. With the min edge as h_τ on elements 3.2
+and 1.6 times longer streamwise, τ is sized by the cross-stream edge and the
+streamwise stabilisation is too weak. The cold plate's elements are square, so
+this does not carry over, and its min-edge definition is unchanged.
+
+Caveat: the layer sits at a Dirichlet outlet, while the cold plate has a
+volumetric source, adiabatic walls and interior channel/solid layers. The
+benchmark bounds nothing about the cold plate's percentages.
 
 ### Péclet, with the mask stated
 
@@ -271,14 +341,27 @@ magnitude.
 
 ### What this points at
 
-A → B dominating says the limit is the temperature approximation space, not the
-stabilisation formula. The cheap consequence is that **thermal resolution can be
-raised independently** — the flow and design meshes have no need to follow, since
-the velocity contribution is small and of the opposite sign.
+A → B dominating says the temperature approximation space is where to start,
+not that the stabilisation formula is irrelevant. The cheap consequence is that
+**thermal resolution can be raised on its own mesh**, leaving the design and flow
+meshes where they are — R1g builds exactly that.
 
-It does not say that τ is fine: B → C is still 34.5%, and the benchmark shows
-h/2 is itself badly under-resolved at these Péclet numbers. How far the thermal
-mesh needs to go is a question for the benchmark, not for the cold plate's own C.
+Keeping the coarse flow is a cost decision, not a finding that it is accurate:
+C → D is −833.02, −2.51% of the C row's compliance. Small beside A → B, not zero,
+and it stays in the error discussion.
+
+Nor does it say τ is fine: B → C is +34.5% of the net change.
+
+How fine the thermal mesh must be is decided by two different checks with
+different jobs. The analytic benchmark asks whether the method gets a known
+answer right; it cannot be converted into a cold-plate mesh size, because an
+outlet layer at a Dirichlet boundary is not the cold plate's interior
+channel-and-solid problem. The cold plate's own fixed-design refinement — same
+physics, design and scheme, only the thermal mesh changing — is a legitimate
+discretisation check of the metric that matters. What would be biased is
+comparing different *schemes* on one mesh and keeping the one with the smaller
+C. (An earlier version of this paragraph said the question belonged to the
+benchmark and not to the cold plate's C; that conflated the two.)
 
 ### An environment fault worth knowing about
 
@@ -287,9 +370,203 @@ with Windows heap corruption (0xC0000374) and **no traceback**, immediately afte
 OpenBLAS reports exceeding its precompiled thread count on this 32-core machine.
 The shell sees exit code 0 and a truncated log, so it is indistinguishable from
 a clean finish — it killed an R1f run after the first of four analyses and then
-a full test run. `tfopus/_threads.py` caps the BLAS thread count before NumPy
-loads, and is imported from `tfopus/__init__.py` and `validation/conftest.py`
-as well as the entry scripts.
+a full test run. `tfopus/_threads.py` sets a default of 8 BLAS threads before
+NumPy loads, and is imported from `tfopus/__init__.py` and
+`validation/conftest.py` as well as the entry scripts. It is a default, not a
+cap: an explicit value in the environment wins. It also only works if it runs
+before the BLAS library starts, since OpenBLAS reads the variable once; if NumPy
+was imported first it warns rather than pretend. This is a mitigation that has
+worked on this machine, not a root-cause proof.
+
+## R1g: the temperature on a mesh of its own
+
+Decided in the review of df39ce6: the design variables and the flow stay on the
+h = 10⁻⁴ mesh, the temperature gets an independent nested mesh, and the chain
+stays differentiable end to end. R1g builds that chain and checks it on the R1d
+design at h_T = h/2 (the development candidate) and h_T = h/4 (one resolution
+check). Neither is declared resolved in advance, and nothing is optimised.
+
+### The chain
+
+    x → filter, projection → s_D                        design = flow mesh, h
+      → α(s_D) → Newton(flow)    [implicit] → u_F
+      → s_T = E s_D,   u_T = P u_F                    fixed nested maps
+      → κ(s_T), τ_T(u_T, κ, h_T)   recomputed at every evaluation
+      → Newton(thermal) [implicit] → T_T              thermal mesh, h/r
+      → Ψ(u_F, α) on the flow mesh,  C(T_T, u_T, κ) on the thermal mesh,
+        g on the design domain
+
+`tfopus/zhao2d_dual.py`. **E** copies each parent's physical density to its r²
+children. **P** evaluates the coarse Q1 velocity at the thermal nodes — the same
+function, not a projection. Both are index/weight tables built once from the
+geometry and applied as JAX gathers, so their transposes are scatter-adds: a
+parent's design sensitivity is the **sum** of its children's, never their
+average. τ comes from the formula on the thermal mesh, with the thermal mesh's
+own element length, at every evaluation; R1f's frozen τ stays a diagnostic.
+`Zhao2DDualProblem` inherits the design and flow side of `Zhao2DProblem`
+unchanged and rebuilds only the thermal members.
+
+The single-mesh Ψ₀ and C₀ are **refused** as this model's normalisation.
+`objective_and_constraint` checks an identity that includes the thermal mesh;
+the inherited check compares only the spec and the R1 config, neither of which
+mentions the thermal mesh, and would have accepted them. Here they are only a
+stated reporting scale, J*. A dual-mesh optimisation needs its own versioned
+reference first, and `tfopus/zhao2d_reference.json` is untouched.
+
+### Verification
+
+| check | result |
+|---|---|
+| P reproduces constants and a + bx + cy + dxy, r = 2 and 4 | error < 10⁻¹² |
+| fine interpolant of P u equals the coarse function at 300 random interior points, random u | < 10⁻¹² |
+| P against R1f's independent NumPy extension | < 10⁻¹³ |
+| E keeps 0/1 endpoints, the design/tab partition and fluid tabs; children tile parents | exact |
+| total heat source on the thermal mesh, both source regions | equal to 10⁻¹³ |
+| E^T 1 = r² per parent; vjp of E = explicit E^T; ⟨Ea, b⟩ = ⟨a, E^T b⟩ | exact; 10⁻¹³ |
+| vjp of P = explicit P^T; rows of P sum to one; ⟨Pu, v⟩ = ⟨u, P^T v⟩ | 10⁻¹² |
+| r = 1 at 2×2: Ψ, C and ∇C equal the single-mesh chain | 10⁻¹³, 10⁻¹², 10⁻¹⁰ |
+| total gradient, 208 flow / 832 thermal cells, α = 10⁷, β = 8, grey field, two ±1 directions: Ψ, C, g, J separately | best-step error < 10⁻⁵ |
+| freezing τ changes dC·d by 0.24%; the unfrozen chain matches finite differences to 4×10⁻¹⁰, the frozen one misses by 2.4×10⁻³ at every step | τ(u, κ) is in the gradient — small in this direction, 5000× the noise |
+| the single-mesh reference is refused, although the inherited check passes it | yes |
+| **R1b's gradient-check protocol on the dual chain**, h_T = h/2: 1300 flow / 5200 thermal cells, 3 stages (α 10⁶ and 10⁷, β 0 and 8) × uniform and grey fields × 6 coordinate probes + 2 ±1 directions, Ψ, C, g and J separately, every perturbed state gated | summary **5.7×10⁻⁷** (threshold 10⁻⁵; R1b single-mesh 1.7×10⁻⁷); directions ≤ 4.3×10⁻⁹ |
+
+The one entry above 10⁻⁷ is J at a coordinate probe where its Ψ and C terms
+cancel about 300-fold (dJ = −3.4×10⁻⁶); Ψ and C themselves agree to 3×10⁻¹⁰
+and 1×10⁻⁹ there. Full table: `results/zhao2d_r1g_gradient_check.txt`.
+
+### Anchors
+
+| | this chain | R1f | relative difference |
+|---|---|---|---|
+| h_T = h, 3×3 | 26938.332194702118 | A 26938.332194702118 | 0 |
+| h_T = h/2, 3×3 | 33233.13278907866 | **C** 33233.13278907864 | 7×10⁻¹⁶ |
+| h_T = h/2, against the fine-flow row | | D 32400.115711650746 | +2.57% |
+
+The flow is re-solved from the saved design and matches the saved R1d state bit
+for bit, so landing on C rather than D also confirms that no fine-mesh flow
+crept in. The C anchor is a slow regression test.
+
+### h, h/2, h/4 on the same coarse flow
+
+`scripts/zhao2d_dual_check.py`: the flow is solved once and reused, so the
+levels differ only in how the temperature is discretised. 3×3 quadrature
+throughout.
+
+| | h | h/2 | h/4 |
+|---|---|---|---|
+| thermal elements | 5,200 | 20,800 | 83,200 |
+| **C** | 26938.33 | 33233.13 | **36180.16** |
+| c_advective | 17403.91 | 18320.14 | 18565.18 |
+| c_diffusive | 9534.42 | 14912.99 | 17614.98 |
+| L_Q | 31919.82 | 36356.02 | 37686.52 |
+| D_SUPG − F_SUPG | 4981.49 | 3122.89 | 1506.36 |
+| (D − F)/C | 18.49% | 9.40% | 4.16% |
+| T_max | 13.828 | 15.541 | 15.951 |
+| T_min (nodes below inlet) | −0.310 (18) | −0.099 (1) | 0 (0) |
+| fluid Pe_e, median (s < 0.5, tabs incl.) | 47.3 | 23.6 | 11.8 |
+| J* (single-mesh scale) | 0.8897 | 1.0445 | 1.1169 |
+
+| step | C | c_diffusive | c_advective | L_Q | T_max | J* |
+|---|---|---|---|---|---|---|
+| h → h/2 | +23.37% | +56.41% | +5.26% | +13.90% | +12.39% | +17.40% |
+| h/2 → h/4 | **+8.87%** | **+18.12%** | +1.34% | +3.66% | +2.64% | +6.94% |
+
+**h/4 still drifts**: C moves another +8.87%, and the diffusive half carries 92%
+of that step. The ratio of successive changes, (C_h/2 − C_h)/(C_h/4 − C_h/2),
+is 2.14 — about first order if the sequence were asymptotic, which three levels
+cannot show. As the stage contract says, this is recorded and the stage stops:
+no h/8, no optimisation. Neither h/2 nor h/4 is declared adequate.
+
+### The coarse velocity's divergence grows with the thermal resolution
+
+The boundary enthalpy flux exceeds the heat source by ∫ b_f T ∇·u to within 0.08
+of 5200, on every level:
+
+| | h | h/2 | h/4 |
+|---|---|---|---|
+| ∫ b_f T ∇·u, share of the heat input | 3.26% | 7.56% | **8.97%** |
+| −½ ∫ b_f T² ∇·u, share of C | −3.02% | −5.86% | **−6.73%** |
+
+The residual uses the non-conservative form b_f u·∇T, and u_T = P u_F carries
+the coarse flow's discrete divergence. The temperature does not create it; a
+finer temperature samples it more faithfully, so the term grows toward its
+value for this velocity field instead of refining away. For comparison, R1e's
+flow re-solved at h/2 gave 0.70% for the first row.
+
+The second row is inside C. Element by element,
+∫ b_f T u·∇T = ½∮ b_f T² u·n − ½∫ b_f T² ∇·u, exactly for these fields at 3×3
+(the split closes to 10⁻¹⁵), so the second term is the part of C's advective
+half that exists only because ∇·u ≠ 0. At h/4 it is −6.7% of C, of the same size
+as the +8.9% step. Keeping the coarse flow was a cost decision; this is its
+measured price, and it is not small. It also makes the "C → D = −2.5%" of R1f an
+incomplete account of what the coarse flow costs.
+
+(`conservation()`'s `energy_imbalance_rel`, 0.96% → 6.28% → 8.30%, mixes this
+with a one-sided estimate of boundary conduction; the enthalpy-excess form
+above is the clean statement.)
+
+### τ, paired element by element
+
+| ratio to the parent's τ at h | whole domain, median | fluid (parent s < 0.5): median [p10, p90] |
+|---|---|---|
+| h/2 | 0.2500 | 0.4973 [0.349, 0.605] |
+| h/4 | 0.0625 | 0.2479 [0.147, 0.292] |
+
+The diffusive limit, (1/r)², holds for the median cell, which is solid; in the
+channels τ scales nearer 1/r, the convective limit. This is the correction to
+R1f's "a quarter" above.
+
+### Where the design gradient points
+
+| | ‖∇J*‖ | cos with h | cos with h/2 |
+|---|---|---|---|
+| h | 7.74×10⁻³ | | |
+| h/2 | 3.82×10⁻² | 0.17 | |
+| h/4 | 5.76×10⁻² | 0.04 | **0.976** |
+
+At the R1d design, the thermal model at h and the finer ones disagree on which
+way to move: the gradient at h is nearly orthogonal to both others. h/2 and h/4
+agree closely on direction while still disagreeing on C by 8.9%. This is local
+information at one design, not a statement about where an optimisation on
+either model would end, but it bears on the choice of a development mesh: h/2
+already points the way h/4 does.
+
+### Cost
+
+| | h | h/2 | h/4 |
+|---|---|---|---|
+| thermal solve, repeat | 0.96 s | 2.49 s | 9.49 s |
+| value + gradient of J* through the whole chain, first / repeat | 17.0 / 5.0 s | 13.0 / 7.4 s | 23.6 / 18.1 s |
+| one-time build (mesh, maps, solver) | — | 10.8 s | 33.1 s |
+| peak working set after the level (cumulative) | 2.2 GB | 3.0 GB | 4.5 GB |
+
+The coarse flow solve is 7.8 s on first call and 3.0 s repeated. The repeat
+value-and-gradient is the chain's cost per evaluation: ×1.5 at h/2 and ×3.6 at
+h/4 against the same chain at h. R1d's measured 16.2 s per MMA iteration is
+more than one value-and-gradient because its driver also solves the state twice
+more (the convergence gate and the reported metrics); from these parts, the same
+driver would cost roughly 20–25 s per iteration at h/2 and 45–50 s at h/4.
+Those are estimates from measured components, not measurements.
+
+**The existing driver is not dual-mesh aware.** `zhao2d_driver._evaluate` builds
+the thermal velocity with `flow.element_velocities`, the flow mesh's layout, so
+it fails on shape for r > 1; and it forms J itself, so it would bypass the
+reference refusal above. It is unchanged here, since no optimisation is
+authorised, and must be adapted before any dual-mesh run.
+
+### What R1g says, and what it does not
+
+- The dual-mesh chain is right: the maps are exact, their transposes
+  accumulate, r = 1 reproduces the old chain, the total gradient matches finite
+  differences at the existing threshold, and both anchors reproduce R1f.
+- On the R1d design, C is not stable between h/2 and h/4 (+8.9%), mostly in its
+  diffusive half. Neither mesh is declared adequate.
+- Part of what remains is not in the temperature space at all: the coarse flow's
+  discrete divergence reaches ~9% of the energy balance and −6.7% of C at h/4,
+  and thermal refinement exposes it rather than removing it.
+- h/2 and h/4 agree on the design gradient's direction (cos 0.976); h does not.
+- Not done, by the contract: optimisation, h/8, a new reference, any change to
+  the physical task or the stabilisation formula.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -538,6 +815,8 @@ python scripts/zhao2d_refine_check.py                    # R1e, h vs h/2 on a fi
 python scripts/zhao2d_thermal_separation.py              # R1f, analyses A/B/C/D
 python scripts/zhao2d_thermal_separation.py --binary     # R1f binary controls A', C'
 python scripts/zhao2d_advection_benchmark.py --pe 1000   # R1f accuracy reference
+python scripts/zhao2d_dual_check.py                      # R1g, h / h/2 / h/4 on one flow
+python scripts/zhao2d_gradient_check.py --thermal-refinement 2   # R1g gradients
 ```
 
 `zhao2d_short_run.py` is retired to a pointer: it had its own optimisation loop

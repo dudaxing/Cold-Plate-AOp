@@ -12,11 +12,13 @@ import os
 import pathlib
 import sys
 
-# Cap BLAS threads BEFORE jax/numpy load. `tfopus/__init__.py` does this too,
-# but conftest is imported first and a test touching only upstream toflux would
-# otherwise run uncapped. Without the cap, repeated large sparse solves through
-# jax.pure_callback crash the interpreter with Windows heap corruption and no
-# traceback -- it killed a full-suite run. See tfopus/_threads.py.
+# Default the BLAS thread count BEFORE jax/numpy load; an explicit value in the
+# environment still wins. `tfopus/__init__.py` does this too, but conftest is
+# imported first and a test touching only upstream toflux would otherwise run
+# with the BLAS default, and it only works before the BLAS library loads.
+# Without it, repeated large sparse solves through jax.pure_callback crashed
+# the interpreter with Windows heap corruption and no traceback -- it killed a
+# full-suite run. See tfopus/_threads.py.
 for _var in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS",
              "NUMEXPR_NUM_THREADS"):
     os.environ.setdefault(_var, "8")

@@ -122,6 +122,29 @@ def test_tau_formula_scales_as_h_squared_in_the_diffusive_limit(meshes):
         assert np.allclose(tau, expected, rtol=1e-10)
 
 
+@pytest.mark.parametrize("speed", [0.0, 1e-5, 1e-3, 0.2])
+def test_tau_ratio_under_halving_follows_the_peclet_formula(meshes, speed):
+    """tau(h/2)/tau(h) = 1/2 sqrt(Pe^2 + 1)/sqrt(Pe^2 + 4), Pe the parent's.
+
+    1/4 only where diffusion dominates, 1/2 where convection does. So a
+    whole-domain median of 1/4 says the median cell is diffusion-dominated --
+    on the cold plate, solid -- and nothing about the channels, where R1f's
+    paired child/parent ratio has a median near 1/2.
+    """
+    coarse, fine, fine_spec = meshes
+    k = 0.61
+    taus = []
+    for mesh, spec in ((coarse, SPEC), (fine, fine_spec)):
+        solver, _ = _thermal(mesh, spec)
+        vel = jnp.tile(jnp.array([speed, 0.0]), (mesh.num_elems, 4))
+        taus.append(np.asarray(
+            ts.element_tau(solver, vel, jnp.full(mesh.num_elems, k))
+        ))
+    pe = SPEC.b_f * speed * SPEC.element_size / (2.0 * k)
+    expected = 0.5 * np.sqrt(pe**2 + 1.0) / np.sqrt(pe**2 + 4.0)
+    assert np.allclose(taus[1] / taus[0][0], expected, rtol=1e-12)
+
+
 def test_supplying_tau_changes_the_answer(meshes):
     """If tau_elem were ignored, A/B/C would be indistinguishable."""
     coarse, _, _ = meshes
@@ -227,11 +250,3 @@ def test_peclet_reports_every_mask_separately(meshes):
         <= stats["whole_domain"]["elements"]
     )
 
-
-def test_thread_cap_is_set_before_numpy():
-    """The OpenBLAS cap that stops a silent heap-corruption crash."""
-    import os
-
-    from tfopus import _threads  # noqa: F401
-
-    assert os.environ["OPENBLAS_NUM_THREADS"] == _threads.DEFAULT_THREADS

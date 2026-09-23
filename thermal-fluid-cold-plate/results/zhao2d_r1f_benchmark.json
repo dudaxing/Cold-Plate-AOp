@@ -1,91 +1,404 @@
 {
-  "note": "Analytic convection-diffusion reference for the SUPG element the cold plate uses. The exact solution is evaluated analytically at the quadrature points, NOT interpolated from its nodal values -- it varies by O(1) inside the last element on every mesh here, so its interpolant is a different function and comparing against it hides the error.",
+  "note": "Analytic convection-diffusion reference for the SUPG element the cold plate uses. L2 errors are relative to the CLOSED-FORM norm and integrated by composite Gauss verified at two subdivision levels. hx, hy and h_tau are reported separately: the anisotropic series keeps h_tau fixed over its first refinement. This checks the method on a known answer; it does not size the cold plate's thermal mesh.",
   "global_pe": 1000.0,
   "layer_width": 0.001,
+  "exact_norm": 0.011180339887498949,
   "thermal_form": {
     "tau": "two_limit",
     "stabilise_source": true,
     "supg_heat_capacity": true,
     "tau_velocity_floor": 1e-12
   },
-  "rows": [
-    {
-      "nx": 10,
-      "h": 0.1,
-      "pe_element": 50.0,
-      "l2_error": 0.08930124949241555,
-      "l2_error_rel": 11.40345177819578,
-      "max_nodal_error": 0.503174451520761,
-      "diffusive_integral": 6310.526288647836,
-      "diffusive_exact": 104500.0,
-      "diffusive_rel_error": 0.9396121886253797,
-      "overshoot": 0.0,
-      "undershoot": 0.503174451520761
+  "series": {
+    "anisotropic": {
+      "rows": [
+        {
+          "nx": 10,
+          "ny": 8,
+          "hx": 0.1,
+          "hy": 0.03125,
+          "h_tau": 0.03125,
+          "h_tau_min": 0.03125,
+          "aspect_hx_over_hy": 3.2,
+          "pe_x": 50.0,
+          "pe_tau": 15.625,
+          "l2_error": 0.08940421589092494,
+          "l2_error_rel": 7.996556168287003,
+          "l2_quadrature": {
+            "subintervals": 32,
+            "points_per_subinterval": 10,
+            "last_relative_change": 2.9112034725732285e-12
+          },
+          "max_nodal_error": 0.503174451520761,
+          "diffusive_integral": 6310.526288647836,
+          "diffusive_exact": 104500.0,
+          "diffusive_rel_error": 0.9396121886253797,
+          "overshoot": 0.0,
+          "undershoot": 0.503174451520761
+        },
+        {
+          "nx": 20,
+          "ny": 8,
+          "hx": 0.05,
+          "hy": 0.03125,
+          "h_tau": 0.03125,
+          "h_tau_min": 0.03125,
+          "aspect_hx_over_hy": 1.6,
+          "pe_x": 25.0,
+          "pe_tau": 15.625,
+          "l2_error": 0.057276401041623556,
+          "l2_error_rel": 5.122957049424401,
+          "l2_quadrature": {
+            "subintervals": 16,
+            "points_per_subinterval": 10,
+            "last_relative_change": 7.090605137539477e-12
+          },
+          "max_nodal_error": 0.20212252610950993,
+          "diffusive_integral": 6297.79925310612,
+          "diffusive_exact": 104500.0,
+          "diffusive_rel_error": 0.9397339784391759,
+          "overshoot": 0.0,
+          "undershoot": 0.20212252610950993
+        },
+        {
+          "nx": 40,
+          "ny": 8,
+          "hx": 0.025,
+          "hy": 0.03125,
+          "h_tau": 0.025000000000000022,
+          "h_tau_min": 0.02499999999999991,
+          "aspect_hx_over_hy": 0.8,
+          "pe_x": 12.5,
+          "pe_tau": 12.50000000000001,
+          "l2_error": 0.04254954170842177,
+          "l2_error_rel": 3.8057467068597446,
+          "l2_quadrature": {
+            "subintervals": 16,
+            "points_per_subinterval": 10,
+            "last_relative_change": 0.0
+          },
+          "max_nodal_error": 0.03698705383245598,
+          "diffusive_integral": 7763.634271019091,
+          "diffusive_exact": 104500.0,
+          "diffusive_rel_error": 0.925706849081157,
+          "overshoot": 0.0,
+          "undershoot": -0.0
+        },
+        {
+          "nx": 80,
+          "ny": 8,
+          "hx": 0.0125,
+          "hy": 0.03125,
+          "h_tau": 0.012500000000000067,
+          "h_tau_min": 0.012499999999999956,
+          "aspect_hx_over_hy": 0.4,
+          "pe_x": 6.25,
+          "pe_tau": 6.250000000000034,
+          "l2_error": 0.028029375383911984,
+          "l2_error_rel": 2.5070235490114583,
+          "l2_quadrature": {
+            "subintervals": 8,
+            "points_per_subinterval": 10,
+            "last_relative_change": 6.0720607764719176e-15
+          },
+          "max_nodal_error": 0.0686550431052778,
+          "diffusive_integral": 14571.55998743975,
+          "diffusive_exact": 104500.0,
+          "diffusive_rel_error": 0.8605592345699546,
+          "overshoot": 0.0,
+          "undershoot": -0.0
+        },
+        {
+          "nx": 160,
+          "ny": 8,
+          "hx": 0.00625,
+          "hy": 0.03125,
+          "h_tau": 0.006250000000000089,
+          "h_tau_min": 0.006249999999999978,
+          "aspect_hx_over_hy": 0.2,
+          "pe_x": 3.125,
+          "pe_tau": 3.1250000000000444,
+          "l2_error": 0.01716570237578406,
+          "l2_error_rel": 1.5353470957513122,
+          "l2_quadrature": {
+            "subintervals": 4,
+            "points_per_subinterval": 10,
+            "last_relative_change": 1.876537694491419e-14
+          },
+          "max_nodal_error": 0.11795216000298406,
+          "diffusive_integral": 26280.544953192988,
+          "diffusive_exact": 104500.0,
+          "diffusive_rel_error": 0.7485115315483925,
+          "overshoot": 0.0,
+          "undershoot": -0.0
+        },
+        {
+          "nx": 320,
+          "ny": 8,
+          "hx": 0.003125,
+          "hy": 0.03125,
+          "h_tau": 0.0031250000000000444,
+          "h_tau_min": 0.0031249999999999334,
+          "aspect_hx_over_hy": 0.1,
+          "pe_x": 1.5625,
+          "pe_tau": 1.5625000000000222,
+          "l2_error": 0.009096113644943634,
+          "l2_error_rel": 0.8135811376462941,
+          "l2_quadrature": {
+            "subintervals": 2,
+            "points_per_subinterval": 10,
+            "last_relative_change": 3.505276684492025e-14
+          },
+          "max_nodal_error": 0.15034939644227485,
+          "diffusive_integral": 45119.9422522445,
+          "diffusive_exact": 104500.0,
+          "diffusive_rel_error": 0.5682302176818708,
+          "overshoot": 0.0,
+          "undershoot": -0.0
+        }
+      ],
+      "observed_orders_vs_hx": [
+        {
+          "from_nx": 10,
+          "to_nx": 20,
+          "l2": 0.6424020200490231,
+          "diffusive": -0.0001869858397774962
+        },
+        {
+          "from_nx": 20,
+          "to_nx": 40,
+          "l2": 0.4287972507651332,
+          "diffusive": 0.021697017767811112
+        },
+        {
+          "from_nx": 40,
+          "to_nx": 80,
+          "l2": 0.6022039978259248,
+          "diffusive": 0.10528089594507826
+        },
+        {
+          "from_nx": 80,
+          "to_nx": 160,
+          "l2": 0.7074107054016686,
+          "diffusive": 0.2012499576260611
+        },
+        {
+          "from_nx": 160,
+          "to_nx": 320,
+          "l2": 0.9162067056365061,
+          "diffusive": 0.39754898851985077
+        }
+      ]
     },
-    {
-      "nx": 20,
-      "h": 0.05,
-      "pe_element": 25.0,
-      "l2_error": 0.05719164948095654,
-      "l2_error_rel": 5.353421268846284,
-      "max_nodal_error": 0.20212252610950993,
-      "diffusive_integral": 6297.79925310612,
-      "diffusive_exact": 104500.0,
-      "diffusive_rel_error": 0.9397339784391759,
-      "overshoot": 0.0,
-      "undershoot": 0.20212252610950993
-    },
-    {
-      "nx": 40,
-      "h": 0.025,
-      "pe_element": 12.5,
-      "l2_error": 0.04254658637352052,
-      "l2_error_rel": 3.809345305485174,
-      "max_nodal_error": 0.03698705383245598,
-      "diffusive_integral": 7763.634271019091,
-      "diffusive_exact": 104500.0,
-      "diffusive_rel_error": 0.925706849081157,
-      "overshoot": 0.0,
-      "undershoot": -0.0
-    },
-    {
-      "nx": 80,
-      "h": 0.0125,
-      "pe_element": 6.25,
-      "l2_error": 0.028029369402097295,
-      "l2_error_rel": 2.50702637868819,
-      "max_nodal_error": 0.0686550431052778,
-      "diffusive_integral": 14571.55998743975,
-      "diffusive_exact": 104500.0,
-      "diffusive_rel_error": 0.8605592345699546,
-      "overshoot": 0.0,
-      "undershoot": -0.0
-    },
-    {
-      "nx": 160,
-      "h": 0.00625,
-      "pe_element": 3.125,
-      "l2_error": 0.017165702375106357,
-      "l2_error_rel": 1.5353470958335167,
-      "max_nodal_error": 0.11795216000298406,
-      "diffusive_integral": 26280.544953192988,
-      "diffusive_exact": 104500.0,
-      "diffusive_rel_error": 0.7485115315483925,
-      "overshoot": 0.0,
-      "undershoot": -0.0
-    },
-    {
-      "nx": 320,
-      "h": 0.003125,
-      "pe_element": 1.5625,
-      "l2_error": 0.009096113644943385,
-      "l2_error_rel": 0.8135811376462372,
-      "max_nodal_error": 0.15034939644227485,
-      "diffusive_integral": 45119.9422522445,
-      "diffusive_exact": 104500.0,
-      "diffusive_rel_error": 0.5682302176818708,
-      "overshoot": 0.0,
-      "undershoot": -0.0
+    "square": {
+      "rows": [
+        {
+          "nx": 8,
+          "ny": 2,
+          "hx": 0.125,
+          "hy": 0.125,
+          "h_tau": 0.125,
+          "h_tau_min": 0.125,
+          "aspect_hx_over_hy": 1.0,
+          "pe_x": 62.5,
+          "pe_tau": 62.5,
+          "l2_error": 0.10064267366194211,
+          "l2_error_rel": 9.00175438981721,
+          "l2_quadrature": {
+            "subintervals": 64,
+            "points_per_subinterval": 10,
+            "last_relative_change": 2.055167249472782e-15
+          },
+          "max_nodal_error": 0.007873527871462081,
+          "diffusive_integral": 1645.8766060680514,
+          "diffusive_exact": 104500.0,
+          "diffusive_rel_error": 0.9842499846309277,
+          "overshoot": 0.0,
+          "undershoot": -0.0
+        },
+        {
+          "nx": 16,
+          "ny": 4,
+          "hx": 0.0625,
+          "hy": 0.0625,
+          "h_tau": 0.0625,
+          "h_tau_min": 0.0625,
+          "aspect_hx_over_hy": 1.0,
+          "pe_x": 31.25,
+          "pe_tau": 31.25,
+          "l2_error": 0.0701745109255295,
+          "l2_error_rel": 6.276599068691425,
+          "l2_quadrature": {
+            "subintervals": 32,
+            "points_per_subinterval": 10,
+            "last_relative_change": 3.1703993930032744e-15
+          },
+          "max_nodal_error": 0.015500158893895787,
+          "diffusive_integral": 3241.9172363741545,
+          "diffusive_exact": 104500.0,
+          "diffusive_rel_error": 0.9689768685514435,
+          "overshoot": 0.0,
+          "undershoot": -0.0
+        },
+        {
+          "nx": 32,
+          "ny": 8,
+          "hx": 0.03125,
+          "hy": 0.03125,
+          "h_tau": 0.03125,
+          "h_tau_min": 0.03125,
+          "aspect_hx_over_hy": 1.0,
+          "pe_x": 15.625,
+          "pe_tau": 15.625,
+          "l2_error": 0.04824638999666079,
+          "l2_error_rel": 4.315288308059975,
+          "l2_quadrature": {
+            "subintervals": 16,
+            "points_per_subinterval": 10,
+            "last_relative_change": 5.216733482410004e-15
+          },
+          "max_nodal_error": 0.030048265746936528,
+          "diffusive_integral": 6297.799253105955,
+          "diffusive_exact": 104500.0,
+          "diffusive_rel_error": 0.9397339784391775,
+          "overshoot": 0.0,
+          "undershoot": -0.0
+        },
+        {
+          "nx": 64,
+          "ny": 16,
+          "hx": 0.015625,
+          "hy": 0.015625,
+          "h_tau": 0.015625,
+          "h_tau_min": 0.015625,
+          "aspect_hx_over_hy": 1.0,
+          "pe_x": 7.8125,
+          "pe_tau": 7.8125,
+          "l2_error": 0.03224154357839634,
+          "l2_error_rel": 2.883771325632642,
+          "l2_quadrature": {
+            "subintervals": 8,
+            "points_per_subinterval": 10,
+            "last_relative_change": 2.920361760840913e-15
+          },
+          "max_nodal_error": 0.05656236041260101,
+          "diffusive_integral": 11943.84562060243,
+          "diffusive_exact": 104500.0,
+          "diffusive_rel_error": 0.8857048265971059,
+          "overshoot": 0.0,
+          "undershoot": -0.0
+        },
+        {
+          "nx": 128,
+          "ny": 32,
+          "hx": 0.0078125,
+          "hy": 0.0078125,
+          "h_tau": 0.0078125,
+          "h_tau_min": 0.0078125,
+          "aspect_hx_over_hy": 1.0,
+          "pe_x": 3.90625,
+          "pe_tau": 3.90625,
+          "l2_error": 0.020333031867935527,
+          "l2_error_rel": 1.8186416578149347,
+          "l2_quadrature": {
+            "subintervals": 4,
+            "points_per_subinterval": 10,
+            "last_relative_change": 2.8191257910510005e-14
+          },
+          "max_nodal_error": 0.10062174610836072,
+          "diffusive_integral": 21842.657152505937,
+          "diffusive_exact": 104500.0,
+          "diffusive_rel_error": 0.7909793573922876,
+          "overshoot": 0.0,
+          "undershoot": -0.0
+        },
+        {
+          "nx": 256,
+          "ny": 64,
+          "hx": 0.00390625,
+          "hy": 0.00390625,
+          "h_tau": 0.00390625,
+          "h_tau_min": 0.00390625,
+          "aspect_hx_over_hy": 1.0,
+          "pe_x": 1.953125,
+          "pe_tau": 1.953125,
+          "l2_error": 0.01140771128378926,
+          "l2_error_rel": 1.0203367159297674,
+          "l2_quadrature": {
+            "subintervals": 2,
+            "points_per_subinterval": 10,
+            "last_relative_change": 7.435693086534697e-14
+          },
+          "max_nodal_error": 0.1472841937959369,
+          "diffusive_integral": 38159.52673994894,
+          "diffusive_exact": 104500.0,
+          "diffusive_rel_error": 0.6348370646894839,
+          "overshoot": 0.0,
+          "undershoot": -0.0
+        },
+        {
+          "nx": 512,
+          "ny": 128,
+          "hx": 0.001953125,
+          "hy": 0.001953125,
+          "h_tau": 0.001953125,
+          "h_tau_min": 0.001953125,
+          "aspect_hx_over_hy": 1.0,
+          "pe_x": 0.9765625,
+          "pe_tau": 0.9765625,
+          "l2_error": 0.005157490129230126,
+          "l2_error_rel": 0.46129994088970955,
+          "l2_quadrature": {
+            "subintervals": 2,
+            "points_per_subinterval": 10,
+            "last_relative_change": 2.878670273361645e-14
+          },
+          "max_nodal_error": 0.12359760225409927,
+          "diffusive_integral": 62117.41872254243,
+          "diffusive_exact": 104500.0,
+          "diffusive_rel_error": 0.4055749404541394,
+          "overshoot": 0.0,
+          "undershoot": -0.0
+        }
+      ],
+      "observed_orders_vs_hx": [
+        {
+          "from_nx": 8,
+          "to_nx": 16,
+          "l2": 0.5202231451511867,
+          "diffusive": 0.022562558869971185
+        },
+        {
+          "from_nx": 16,
+          "to_nx": 32,
+          "l2": 0.5405261063059557,
+          "diffusive": 0.04420981207204965
+        },
+        {
+          "from_nx": 32,
+          "to_nx": 64,
+          "l2": 0.5815001825501519,
+          "diffusive": 0.08542643314342899
+        },
+        {
+          "from_nx": 64,
+          "to_nx": 128,
+          "l2": 0.6650954630350547,
+          "diffusive": 0.16318593635929748
+        },
+        {
+          "from_nx": 128,
+          "to_nx": 256,
+          "l2": 0.8338159777738057,
+          "diffusive": 0.3172536826491757
+        },
+        {
+          "from_nx": 256,
+          "to_nx": 512,
+          "l2": 1.1452683142891433,
+          "diffusive": 0.6464178474871031
+        }
+      ]
     }
-  ]
+  }
 }

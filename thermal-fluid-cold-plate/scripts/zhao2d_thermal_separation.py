@@ -16,7 +16,7 @@ from __future__ import annotations
 import pathlib
 import sys
 
-# Cap BLAS threads BEFORE numpy loads; see tfopus/_threads.py.
+# Default the BLAS thread count BEFORE numpy loads; see tfopus/_threads.py.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 import tfopus._threads  # noqa: F401,E402
 
@@ -235,11 +235,17 @@ def main() -> None:
         s_bin_f = ref.refine_design(coarse, fine, s_bin_c)
         ka_bc = materials.conductivity(s_bin_c, material_c)
         ka_bf = materials.conductivity(s_bin_f, material_c)
-        print("\nbinary controls (the two that bound the same question):")
+        # Binary CONDUCTIVITY only: the velocity is still the continuous
+        # design's (ev_coarse, ev_fine_ext). These are thermal controls at a
+        # fixed flow, not the binary design's performance with its own flow,
+        # and not comparable with R1e's binary states, which re-solve it.
+        print("\nbinary-conductivity controls, continuous-design velocity:")
         binary = {}
         for label, (sp, ev, ka, tau) in {
-            "A' h,   binary, u_h,     tau_h": (spec, ev_coarse, ka_bc, None),
-            "C' h/2, binary, u_h ext, tau_h/2": (fine_spec, ev_fine_ext, ka_bf, None),
+            "A' h,   binary k, continuous-design u_h,     tau_h":
+                (spec, ev_coarse, ka_bc, None),
+            "C' h/2, binary k, continuous-design u_h ext, tau_h/2":
+                (fine_spec, ev_fine_ext, ka_bf, None),
         }.items():
             r = thermal_only(sp, config, None, ev, ka, tau)
             binary[label] = {k: v for k, v in r.items() if not k.startswith("_")}

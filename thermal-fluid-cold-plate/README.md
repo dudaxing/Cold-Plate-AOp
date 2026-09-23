@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; thermal mesh resolution unresolved |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified, thermal resolution still open |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -23,7 +23,7 @@ paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
 | Path | Contents |
 |---|---|
 | `tfopus/` | the library: corrected elements, dimension-agnostic stabilised flow and thermal kernels, materials and interpolations, meshes, boundary conditions, design mapping |
-| `tfopus/zhao2d*.py` | Zhao's 2D heat sink: geometry reconstruction and fixed-design analysis |
+| `tfopus/zhao2d*.py` | Zhao's 2D heat sink: geometry reconstruction, fixed-design analysis, the R1 optimisation chain and its dual-mesh thermal variant |
 | `validation/` | the test suite — analytic solutions, gradient checks, formulation comparisons |
 | `scripts/` | upstream checkout, and the reference studies whose numbers the docs quote |
 | `docs/` | per-case reconstruction notes and findings |
@@ -52,10 +52,20 @@ why.** On a fixed design, one refinement moves the dissipated power by ~2% but
 the thermal compliance by +20% (continuous) and +34% (binary); "thresholding
 costs 0.33% of the objective" becomes 10.3% on the finer mesh. Changing the
 temperature space, the stabilisation coefficient and the velocity one at a time
-attributes +80.7% of that move to the temperature space alone, so thermal
-resolution can be raised without refining the flow or design meshes. Element
-Peclet numbers are 25-50 over the fluid, where an analytic high-Peclet benchmark
-using the same element puts the error in the same integral metric near 94%.
+along one path, the temperature space gives the largest step (+4410 of a net
++5462; a signed path decomposition, not an error budget), which is why the
+temperature now gets its own finer mesh while the design and flow meshes stay
+put. Element Peclet numbers are 25-50 over the fluid; an analytic high-Peclet
+benchmark with the same element shows how poorly the integral metric converges
+in that range, though it does not translate into a cold-plate mesh size.
+
+**The dual-mesh model works, and shows the next problem.** With the temperature
+on a nested mesh and the chain differentiable end to end (maps exact, gradients
+matching finite differences, R1f's rows reproduced to 1e-15), C still moves
++8.9% from h/2 to h/4, and h/2 and h/4 agree on the design gradient's direction
+where h does not. Keeping the flow coarse is not free: its discrete divergence
+reaches 9% of the energy balance and -6.7% of C at h/4, and refining the
+temperature exposes that rather than removing it.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
@@ -79,11 +89,13 @@ pytest                                   # add -m "not slow" to skip refinement 
 `TOFLUX_ZIP` sets the archive path and `TOFLUX_ROOT` the checkout location. The
 suite uses SciPy's sparse direct solver, so PETSc and PARDISO are not needed.
 
-On Windows, `tfopus` caps the BLAS thread count at import (`tfopus/_threads.py`).
-Without it, repeated large sparse solves through `jax.pure_callback` crash the
-interpreter with heap corruption and no traceback, after OpenBLAS reports
-exceeding its precompiled thread count. Set `OPENBLAS_NUM_THREADS` yourself to
-override.
+On Windows, `tfopus` sets a default of 8 BLAS threads at import
+(`tfopus/_threads.py`). Without it, repeated large sparse solves through
+`jax.pure_callback` crashed the interpreter on a 32-core machine with heap
+corruption and no traceback, after OpenBLAS reported exceeding its precompiled
+thread count. It is a default, not a cap -- a value already in the environment
+wins -- and it only takes effect if `tfopus` is imported before NumPy, since
+OpenBLAS reads the variable once at startup; it warns if it comes too late.
 
 ## Reproducing the reported studies
 
@@ -94,6 +106,7 @@ python scripts/zhao2d_optimise.py --budget 300          # the 2D optimisation ru
 python scripts/zhao2d_refine_check.py                   # fixed-design mesh check
 python scripts/zhao2d_thermal_separation.py             # what moves the compliance
 python scripts/zhao2d_advection_benchmark.py --pe 1000  # analytic accuracy reference
+python scripts/zhao2d_dual_check.py                     # dual-mesh thermal model, h/2 vs h/4
 ```
 
 `Zhao2DSpec.provenance()` prints, per field, whether a number comes from the

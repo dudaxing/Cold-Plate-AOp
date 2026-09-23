@@ -33,7 +33,19 @@ x +- delta e_i are gated for convergence too, not only the base state: a
 finite difference taken across an unconverged solve is not a derivative of
 anything.
 
+**Dual-mesh mode (R1g).** `--thermal-refinement r` runs the same protocol on
+`Zhao2DDualProblem`: the temperature on a nested mesh r times finer, reached
+through the density map E and the velocity extension P. Everything above still
+applies, and two things are added. `--directions N` random +-1 directions are
+checked as well as coordinate probes: a directional derivative sums every
+component, so it exercises every E^T and P^T accumulation at once, which a
+single coordinate probe cannot. And each perturbed state is solved once and
+gated from that same solve (`evaluate`), rather than solved twice. The
+threshold is unchanged. J uses the check mesh's single-mesh reference as fixed
+constants -- a reporting scale, which is all a derivative check needs.
+
     python scripts/zhao2d_gradient_check.py [--full] [--probes N] [--stage NAME]
+        [--thermal-refinement R] [--thermal-quadrature Q] [--directions N]
 """
 
 from __future__ import annotations
@@ -41,7 +53,7 @@ from __future__ import annotations
 import pathlib
 import sys
 
-# Cap BLAS threads BEFORE numpy loads; see tfopus/_threads.py.
+# Default the BLAS thread count BEFORE numpy loads; see tfopus/_threads.py.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 import tfopus._threads  # noqa: F401,E402
 
@@ -57,19 +69,44 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "external" / "TOFLUX"))
 
-from tfopus import zhao2d as z, zhao2d_r1 as r1  # noqa: E402
+from tfopus import zhao2d as z, zhao2d_dual as dual, zhao2d_r1 as r1  # noqa: E402
 
 STEPS = (1e-4, 1e-5, 1e-6)
 
 
-def build(full: bool):
+def build(full: bool, refinement: int = 1, quadrature: int | None = None):
     spec = z.Zhao2DSpec()
     if not full:
         spec = dataclasses.replace(spec, element_size=spec.element_size * 2)
     config = r1.R1Config()
-    problem = r1.Zhao2DProblem(spec, config)
+    if refinement == 1 and quadrature is None:
+        problem = r1.Zhao2DProblem(spec, config)
+    else:
+        problem = dual.Zhao2DDualProblem(
+            spec, config, thermal_refinement=refinement,
+            thermal_quadrature=3 if quadrature is None else quadrature,
+        )
+    # single-mesh reference on the check mesh: fixed constants for J
     reference, _ = r1.freeze_reference(spec, config)
     return spec, config, problem, reference
+
+
+def perturbed(problem, reference, x, alpha_max, beta):
+    """(Psi, C, g, J) as floats at a perturbed design, gated for convergence.
+
+    The dual-mesh problem gates from the same solve it reports; the single-mesh
+    problem keeps the original two-step path, so R1b's protocol is unchanged.
+    """
+    if isinstance(problem, dual.Zhao2DDualProblem):
+        e = problem.evaluate(x, alpha_max, beta)
+        bad = {k: v for k, v in e["residuals"].items() if not (v <= 1e-8)}
+        if bad:
+            raise r1.NotConverged(f"perturbed state not converged: {bad}")
+        w = problem.config.weight
+        j = w * e["psi"] / reference.psi_0 + (1.0 - w) * e["c"] / reference.c_0
+        return e["psi"], e["c"], e["g"], j
+    problem.require_converged(problem.solid_fraction(x, beta), alpha_max)
+    return tuple(float(v) for v in quantities(problem, reference, x, alpha_max, beta))
 
 
 def quantities(problem, reference, x, alpha_max, beta):
@@ -97,9 +134,23 @@ def main() -> None:
     ap.add_argument("--full", action="store_true", help="full 5200-element mesh")
     ap.add_argument("--probes", type=int, default=6)
     ap.add_argument("--stage", choices=tuple(STAGES) + ("all",), default="all")
+    ap.add_argument("--thermal-refinement", type=int, default=1,
+                    help="R1g: temperature on a nested mesh this many times finer")
+    ap.add_argument("--thermal-quadrature", type=int, default=None,
+                    help="thermal Gauss order (dual mode defaults to 3)")
+    ap.add_argument("--directions", type=int, default=None,
+                    help="random +-1 directional probes (dual mode defaults to 2)")
     args = ap.parse_args()
 
-    spec, config, problem, reference = build(args.full)
+    spec, config, problem, reference = build(
+        args.full, args.thermal_refinement, args.thermal_quadrature
+    )
+    is_dual = isinstance(problem, dual.Zhao2DDualProblem)
+    n_dirs = args.directions if args.directions is not None else (2 if is_dual else 0)
+    if is_dual:
+        print(f"DUAL MESH: thermal refinement {problem.thermal_refinement}, "
+              f"{problem.thermal_mesh.num_elems} thermal elements, quadrature "
+              f"{problem.thermal_quadrature}")
     stages = STAGES if args.stage == "all" else {args.stage: STAGES[args.stage]}
     print(f"mesh h = {spec.element_size:g}, {problem.flow_mesh.num_elems} elements, "
           f"{problem.num_design} design variables")
@@ -140,40 +191,43 @@ def main() -> None:
             ]
 
             probes = rng.choice(problem.num_design, size=args.probes, replace=False)
+            directions = [rng.choice([-1.0, 1.0], problem.num_design)
+                          for _ in range(n_dirs)]
             print(f"    {'probe':>6} {'qty':>4} {'AD':>14} "
                   + "".join(f"{'rel @ ' + f'{h:.0e}':>13}" for h in STEPS)
                   + f"{'best':>10}")
-            for i in probes:
+            probe_list = [("e", i, None) for i in probes] + [
+                ("d", k, d) for k, d in enumerate(directions)
+            ]
+            for kind, i, d in probe_list:
+                if kind == "e":
+                    step_dir = np.zeros(problem.num_design)
+                    step_dir[i] = 1.0
+                else:
+                    step_dir = d
                 fd_by_step = {}
                 for h in STEPS:
-                    row = []
-                    for sign in (+1, -1):
-                        xs = x0.copy()
-                        xs[i] += sign * h
-                        # gate the PERTURBED state too: a difference taken
-                        # across an unconverged solve is not a derivative
-                        problem.require_converged(
-                            problem.solid_fraction(jax.numpy.asarray(xs), beta),
-                            alpha_max,
-                        )
-                        row.append(
-                            quantities(
-                                problem, reference, jax.numpy.asarray(xs),
-                                alpha_max, beta,
-                            )
-                        )
+                    # gate the PERTURBED state too: a difference taken across
+                    # an unconverged solve is not a derivative
+                    row = [
+                        perturbed(problem, reference,
+                                  jax.numpy.asarray(x0 + sign * h * step_dir),
+                                  alpha_max, beta)
+                        for sign in (+1, -1)
+                    ]
                     fd_by_step[h] = [
                         (float(a) - float(b)) / (2 * h) for a, b in zip(*row)
                     ]
+                label = f"{i:6d}" if kind == "e" else f"{'dir' + str(i):>6}"
                 for q in range(4):
-                    ad = float(grads[q][i])
+                    ad = float(np.dot(grads[q], step_dir))
                     rels = {
                         h: abs(ad - fd[q]) / max(abs(fd[q]), 1e-300)
                         for h, fd in fd_by_step.items()
                     }
                     best = min(rels.values())
                     worst_overall = max(worst_overall, best)
-                    print(f"    {i:6d} {names[q]:>4} {ad:14.6e} "
+                    print(f"    {label} {names[q]:>4} {ad:14.6e} "
                           + "".join(f"{rels[h]:13.2e}" for h in STEPS)
                           + f"{best:10.2e}")
             print()

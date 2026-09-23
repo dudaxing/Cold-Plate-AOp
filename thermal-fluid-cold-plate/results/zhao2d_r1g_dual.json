@@ -1,0 +1,466 @@
+{
+  "note": "R1g fixed-design check of the dual-mesh thermal model. The coarse flow is solved once and reused by every level. J* divides by the single-mesh frozen Psi_0 and C_0 as a common reporting scale; it is not a normalised objective of this model.",
+  "alpha_max": 10000000.0,
+  "beta": 8.0,
+  "thermal_quadrature": 3,
+  "run_fingerprint": "{\"alpha_max_reference\": 1000000.0, \"element_length_mode\": \"min_edge\", \"filter_radius_elements\": 2.0, \"flow_form\": {\"brinkman_in_supg_residual\": true, \"brinkman_in_tau\": true, \"viscous_form\": \"symmetric\"}, \"max_fluid_fraction\": 0.4, \"outlet\": \"traction\", \"projection_beta\": 0.0, \"reference\": \"tabs_fluid\", \"source\": \"whole_domain\", \"thermal_form\": {\"stabilise_source\": true, \"supg_heat_capacity\": true, \"tau\": \"two_limit\", \"tau_velocity_floor\": 1e-12}, \"volume_domain\": \"design\", \"weight\": 0.5}",
+  "reporting_scale": {
+    "psi_0": 0.03157912835073678,
+    "c_0": 20332.91587569144,
+    "identity": "single-mesh h = 1e-4 reference"
+  },
+  "r1f_rows": {
+    "A": 26938.332194702118,
+    "C": 33233.13278907864,
+    "D": 32400.115711650746
+  },
+  "levels": {
+    "1": {
+      "t_thermal_first_s": 4.193616499891505,
+      "t_thermal_repeat_s": 0.9635015998501331,
+      "thermal_residual_relative": 2.0541260111990962e-13,
+      "c_advective": 17403.91199684377,
+      "c_diffusive": 9534.420197858348,
+      "compliance": 26938.332194702118,
+      "l_q": 31919.82392017158,
+      "d_supg": 5042.406096257073,
+      "f_supg": 60.91437078760515,
+      "closure": 3.637978807091713e-12,
+      "closure_relative": 1.1397239584372235e-16,
+      "net_supg_over_c": 0.18492205417413193,
+      "t_max": 13.82752430452693,
+      "nodes_below_inlet": 18,
+      "fraction_below_inlet": 0.0033513312232358963,
+      "min_temperature": -0.3100507036330342,
+      "undershoot_depth": 0.3100507036330342,
+      "heat": {
+        "mass_in": 0.00020000000000000004,
+        "mass_out": 0.00019999999999999914,
+        "mass_imbalance_rel": 4.472333961502705e-15,
+        "wall_leak_rel": 0.0,
+        "inlet_flux_over_nominal": 1.0000000000000002,
+        "heat_in": 5200.000000000001,
+        "enthalpy_net_out": 5369.327744594378,
+        "conduction_net_out": -119.19590437558246,
+        "energy_imbalance_rel": 0.009640738503614311,
+        "temperature_weighted_divergence": 169.36422060243655,
+        "temperature_weighted_divergence_rel": 0.032570042423545484
+      },
+      "divergence": {
+        "b_f_T_div_u": 169.36422060243655,
+        "b_f_T2_div_u": 1625.5021816382507,
+        "enthalpy_excess": 169.32774459437678,
+        "enthalpy_excess_minus_T_div_u": -0.03647600805976481,
+        "advective_part_from_div_u": -812.7510908191254,
+        "advective_part_from_div_u_over_c": -0.030170802147096793,
+        "advective_part_from_boundary": 18216.663087662928,
+        "split_closure_relative": 1.881290210486194e-15
+      },
+      "tau": {
+        "whole_domain": {
+          "n": 5200,
+          "median": 4.503255512790034e-05,
+          "p10": 4.414946778944229e-05,
+          "p90": 0.0005735477175174223
+        },
+        "fluid_s_lt_0.5": {
+          "n": 2194,
+          "median": 0.0003542852073378191,
+          "p10": 0.00022088463832868512,
+          "p90": 0.0011417444990341275
+        }
+      },
+      "peclet": {
+        "definition": "b_f * |u at element centre| * h / (2 k)",
+        "h": 0.0001,
+        "whole_domain": {
+          "elements": 5200,
+          "median": 0.00265697360446524,
+          "p90": 64.49955885130434,
+          "max": 104.16311006217494,
+          "fraction_above_1": 0.4015384615384615
+        },
+        "fluid_s_lt_0.5_incl_tabs": {
+          "elements": 2194,
+          "median": 47.34518603158222,
+          "p90": 77.44907765723428,
+          "max": 104.16311006217494,
+          "fraction_above_1": 0.9516864175022789
+        },
+        "fluid_s_lt_0.5_design_only": {
+          "elements": 1994,
+          "median": 45.25715624212377,
+          "p90": 74.86581703628381,
+          "max": 103.63462480697258,
+          "fraction_above_1": 0.9473420260782347
+        }
+      },
+      "t_build_s": 6.00004568696022e-07,
+      "maps": {
+        "factor": 1,
+        "coarse_elements": 5200,
+        "coarse_nodes": 5371,
+        "fine_elements": 5200,
+        "fine_nodes": 5371,
+        "parents_sha256": "209ab95eb82d5b827590485767018c2b03adfdf8d36e507eb94d4ab00b1cfb5a",
+        "node_map_sha256": "c05943252293be0e6850adb8a6e5d54978048ca05e422bd8874f6319b0c19d50"
+      },
+      "nesting": {
+        "area_flow_mesh": 5.200000000000002e-05,
+        "area_thermal_mesh": 5.200000000000002e-05,
+        "heat_source_flow_mesh": 5200.000000000002,
+        "heat_source_thermal_mesh": 5200.000000000002,
+        "design_cells_flow_mesh": 5000,
+        "design_cells_thermal_mesh": 5000
+      },
+      "psi": 0.014351143070216225,
+      "j_star": 0.8896567346683951,
+      "cost": {
+        "value_and_grad_first_s": 17.026326399995014,
+        "value_and_grad_repeat_s": 4.998702600132674,
+        "gradient_norm": 0.0077354833594838,
+        "repeat_reproduces_gradient": 0.0,
+        "j_star_through_full_chain": 0.8896567346683952
+      },
+      "peak_working_set_mb_so_far": 2185.82421875
+    },
+    "2": {
+      "t_thermal_first_s": 5.966402000049129,
+      "t_thermal_repeat_s": 2.485352599993348,
+      "thermal_residual_relative": 9.959779305380564e-13,
+      "c_advective": 18320.14150176262,
+      "c_diffusive": 14912.991287316047,
+      "compliance": 33233.13278907866,
+      "l_q": 36356.02196399167,
+      "d_supg": 3154.0519258472204,
+      "f_supg": 31.162750934212976,
+      "closure": 0.0,
+      "closure_relative": 0.0,
+      "net_supg_over_c": 0.09396914804069499,
+      "t_max": 15.540620612665556,
+      "nodes_below_inlet": 1,
+      "fraction_below_inlet": 4.7301452154581144e-05,
+      "min_temperature": -0.09871409333247645,
+      "undershoot_depth": 0.09871409333247645,
+      "heat": {
+        "mass_in": 0.00019999999999999996,
+        "mass_out": 0.0001999999999999992,
+        "mass_imbalance_rel": 3.794707603699266e-15,
+        "wall_leak_rel": 0.0,
+        "inlet_flux_over_nominal": 0.9999999999999998,
+        "heat_in": 5200.0,
+        "enthalpy_net_out": 5593.263819620195,
+        "conduction_net_out": -66.74670141016057,
+        "energy_imbalance_rel": 0.06279175350192977,
+        "temperature_weighted_divergence": 393.3319487434736,
+        "temperature_weighted_divergence_rel": 0.07564075937374493
+      },
+      "divergence": {
+        "b_f_T_div_u": 393.3319487434736,
+        "b_f_T2_div_u": 3895.13338118602,
+        "enthalpy_excess": 393.26381962019514,
+        "enthalpy_excess_minus_T_div_u": -0.06812912327848153,
+        "advective_part_from_div_u": -1947.56669059301,
+        "advective_part_from_div_u_over_c": -0.05860316278196424,
+        "advective_part_from_boundary": 20267.708192355552,
+        "split_closure_relative": 4.170140003644382e-15
+      },
+      "tau": {
+        "whole_domain": {
+          "n": 20800,
+          "median": 1.125823909793579e-05,
+          "p10": 1.1037370957490072e-05,
+          "p90": 0.0002743818818128384
+        },
+        "fluid_s_lt_0.5": {
+          "n": 8776,
+          "median": 0.0001702006659677943,
+          "p10": 0.00010780289023195666,
+          "p90": 0.0005531365077484243
+        },
+        "child_over_parent": {
+          "definition": "tau on this thermal mesh / tau of the parent at h, same velocity function, paired element by element",
+          "whole_domain": {
+            "n": 20800,
+            "median": 0.25000060739201924,
+            "p10": 0.25000002641143104,
+            "p90": 0.5239406180664945
+          },
+          "fluid_parent_s_lt_0.5": {
+            "n": 8776,
+            "median": 0.4972630770259542,
+            "p10": 0.3485800864121423,
+            "p90": 0.6046088659547111
+          }
+        }
+      },
+      "peclet": {
+        "definition": "b_f * |u at element centre| * h / (2 k)",
+        "h": 5e-05,
+        "whole_domain": {
+          "elements": 20800,
+          "median": 0.0013204181855586386,
+          "p90": 32.44200820106894,
+          "max": 52.31300847807216,
+          "fraction_above_1": 0.3891826923076923
+        },
+        "fluid_s_lt_0.5_incl_tabs": {
+          "elements": 8776,
+          "median": 23.64600793207889,
+          "p90": 39.0815843193689,
+          "max": 52.31300847807216,
+          "fraction_above_1": 0.9224020054694622
+        },
+        "fluid_s_lt_0.5_design_only": {
+          "elements": 7976,
+          "median": 22.596284395668565,
+          "p90": 37.44227399679778,
+          "max": 52.174168114611724,
+          "fraction_above_1": 0.9164994984954865
+        }
+      },
+      "t_build_s": 10.800449199974537,
+      "maps": {
+        "factor": 2,
+        "coarse_elements": 5200,
+        "coarse_nodes": 5371,
+        "fine_elements": 20800,
+        "fine_nodes": 21141,
+        "parents_sha256": "662eb525823fe05755402ab7fa89f403a89356ab6fe3a8930fddcded27e06313",
+        "node_map_sha256": "d46bb3e9628d8972ceb302b32d76b225ad3a728febf645c2232b17bd32822031"
+      },
+      "nesting": {
+        "area_flow_mesh": 5.200000000000002e-05,
+        "area_thermal_mesh": 5.200000000000001e-05,
+        "heat_source_flow_mesh": 5200.000000000002,
+        "heat_source_thermal_mesh": 5200.000000000002,
+        "design_cells_flow_mesh": 5000,
+        "design_cells_thermal_mesh": 20000
+      },
+      "psi": 0.014351143070216225,
+      "j_star": 1.0444500912351764,
+      "cost": {
+        "value_and_grad_first_s": 12.951836000196636,
+        "value_and_grad_repeat_s": 7.356691600056365,
+        "gradient_norm": 0.038205931850123664,
+        "repeat_reproduces_gradient": 0.0,
+        "j_star_through_full_chain": 1.0444500912351766
+      },
+      "peak_working_set_mb_so_far": 2958.58203125
+    },
+    "4": {
+      "t_thermal_first_s": 13.236443500034511,
+      "t_thermal_repeat_s": 9.490258899983019,
+      "thermal_residual_relative": 3.8850838426834215e-12,
+      "c_advective": 18565.176018389724,
+      "c_diffusive": 17614.98427757482,
+      "compliance": 36180.16029596454,
+      "l_q": 37686.51926019149,
+      "d_supg": 1520.7292751641482,
+      "f_supg": 14.370310937186382,
+      "closure": 1.4551915228366852e-11,
+      "closure_relative": 3.8613051865838227e-16,
+      "net_supg_over_c": 0.0416349444531062,
+      "t_max": 15.950726577959117,
+      "nodes_below_inlet": 0,
+      "fraction_below_inlet": 0.0,
+      "min_temperature": 0.0,
+      "undershoot_depth": 0.0,
+      "heat": {
+        "mass_in": 0.00019999999999999993,
+        "mass_out": 0.0001999999999999992,
+        "mass_imbalance_rel": 3.659182332138579e-15,
+        "wall_leak_rel": 0.0,
+        "inlet_flux_over_nominal": 0.9999999999999996,
+        "heat_in": 5200.000000000002,
+        "enthalpy_net_out": 5666.383622085084,
+        "conduction_net_out": -34.74205382398909,
+        "energy_imbalance_rel": 0.08300799389636404,
+        "temperature_weighted_divergence": 466.4554585155012,
+        "temperature_weighted_divergence_rel": 0.08970297279144251
+      },
+      "divergence": {
+        "b_f_T_div_u": 466.4554585155012,
+        "b_f_T2_div_u": 4870.49253216055,
+        "enthalpy_excess": 466.3836220850826,
+        "enthalpy_excess_minus_T_div_u": -0.07183643041861387,
+        "advective_part_from_div_u": -2435.246266080275,
+        "advective_part_from_div_u_over_c": -0.06730888548196667,
+        "advective_part_from_boundary": 21000.42228447012,
+        "split_closure_relative": 6.662542780019749e-15
+      },
+      "tau": {
+        "whole_domain": {
+          "n": 83200,
+          "median": 2.8145666406045882e-06,
+          "p10": 2.7593429261318242e-06,
+          "p90": 0.00012863173007098496
+        },
+        "fluid_s_lt_0.5": {
+          "n": 35104,
+          "median": 8.287656485612724e-05,
+          "p10": 5.2467695353035796e-05,
+          "p90": 0.0002457194235074287
+        },
+        "child_over_parent": {
+          "definition": "tau on this thermal mesh / tau of the parent at h, same velocity function, paired element by element",
+          "whole_domain": {
+            "n": 83200,
+            "median": 0.06250020654815108,
+            "p10": 0.06250000955428509,
+            "p90": 0.25788770104918557
+          },
+          "fluid_parent_s_lt_0.5": {
+            "n": 35104,
+            "median": 0.24790312646783236,
+            "p10": 0.14702652163235236,
+            "p90": 0.2918897485913188
+          }
+        }
+      },
+      "peclet": {
+        "definition": "b_f * |u at element centre| * h / (2 k)",
+        "h": 2.5e-05,
+        "whole_domain": {
+          "elements": 83200,
+          "median": 0.0006609124172844282,
+          "p90": 16.250709737798534,
+          "max": 26.305501696565337,
+          "fraction_above_1": 0.3746995192307692
+        },
+        "fluid_s_lt_0.5_incl_tabs": {
+          "elements": 35104,
+          "median": 11.825895116065777,
+          "p90": 19.54559815682221,
+          "max": 26.305501696565337,
+          "fraction_above_1": 0.8880754329990884
+        },
+        "fluid_s_lt_0.5_design_only": {
+          "elements": 31904,
+          "median": 11.304110742631174,
+          "p90": 18.722320873796647,
+          "max": 26.305501696565337,
+          "fraction_above_1": 0.8800150451354062
+        }
+      },
+      "t_build_s": 33.127406999934465,
+      "maps": {
+        "factor": 4,
+        "coarse_elements": 5200,
+        "coarse_nodes": 5371,
+        "fine_elements": 83200,
+        "fine_nodes": 83881,
+        "parents_sha256": "77798593a36bb06b35707d19e4879c1bcf47c795945532236aeecbe0be014ce4",
+        "node_map_sha256": "16f2c702d61d6213e09f3e3382fb774b2fd91b7be8a1598ede336c169eac6a21"
+      },
+      "nesting": {
+        "area_flow_mesh": 5.200000000000002e-05,
+        "area_thermal_mesh": 5.200000000000002e-05,
+        "heat_source_flow_mesh": 5200.000000000002,
+        "heat_source_thermal_mesh": 5200.0,
+        "design_cells_flow_mesh": 5000,
+        "design_cells_thermal_mesh": 80000
+      },
+      "psi": 0.014351143070216225,
+      "j_star": 1.1169194685960773,
+      "cost": {
+        "value_and_grad_first_s": 23.6126699000597,
+        "value_and_grad_repeat_s": 18.147252899827436,
+        "gradient_norm": 0.057558077529213575,
+        "repeat_reproduces_gradient": 0.0,
+        "j_star_through_full_chain": 1.1169194685960773
+      },
+      "peak_working_set_mb_so_far": 4476.69140625
+    }
+  },
+  "design_map_max_abs_diff": 0.0,
+  "flow": {
+    "elements": 5200,
+    "t_flow_solve_s": 7.7742584000807256,
+    "t_flow_solve_repeat_s": 3.0474755000323057,
+    "residual_relative": 1.3185754656555975e-14,
+    "resolved_vs_saved_rel": 0.0,
+    "psi": 0.014351143070216225
+  },
+  "anchors": {
+    "level1_vs_A": 0.0,
+    "level2_vs_C": 6.661338147750939e-16,
+    "level2_vs_D": 0.025710311803867292
+  },
+  "steps": {
+    "1->2": {
+      "compliance": {
+        "abs": 6294.800594376546,
+        "rel": 0.23367447356724358
+      },
+      "c_advective": {
+        "abs": 916.2295049188506,
+        "rel": 0.05264503205285176
+      },
+      "c_diffusive": {
+        "abs": 5378.571089457699,
+        "rel": 0.5641214649492636
+      },
+      "l_q": {
+        "abs": 4436.198043820088,
+        "rel": 0.1389794021080628
+      },
+      "d_supg": {
+        "abs": -1888.3541704098525,
+        "rel": -0.37449466273879817
+      },
+      "f_supg": {
+        "abs": -29.751619853392175,
+        "rel": -0.48841709220192797
+      },
+      "t_max": {
+        "abs": 1.713096308138626,
+        "rel": 0.12389031256866301
+      },
+      "j_star": {
+        "abs": 0.15479335656678128,
+        "rel": 0.17399222704077877
+      }
+    },
+    "2->4": {
+      "compliance": {
+        "abs": 2947.0275068858755,
+        "rel": 0.08867739089148863
+      },
+      "c_advective": {
+        "abs": 245.03451662710359,
+        "rel": 0.013375143232574382
+      },
+      "c_diffusive": {
+        "abs": 2701.992990258772,
+        "rel": 0.18118383751467082
+      },
+      "l_q": {
+        "abs": 1330.497296199821,
+        "rel": 0.03659633877209112
+      },
+      "d_supg": {
+        "abs": -1633.3226506830722,
+        "rel": -0.5178490047351836
+      },
+      "f_supg": {
+        "abs": -16.792439997026595,
+        "rel": -0.5388625680857495
+      },
+      "t_max": {
+        "abs": 0.41010596529356036,
+        "rel": 0.026389291361975875
+      },
+      "j_star": {
+        "abs": 0.07246937736090087,
+        "rel": 0.0693851989377472
+      }
+    }
+  },
+  "gradient_cosines": {
+    "1-2": 0.17146031455028193,
+    "1-4": 0.03635246954890408,
+    "2-4": 0.9760702551091663
+  },
+  "successive_change_ratio": 2.1359829793473026
+}
