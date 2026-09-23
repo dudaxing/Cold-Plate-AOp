@@ -20,7 +20,8 @@ governing equations, objective, constraint — is kept.
 | R1e | fixed-design mesh and heat check | **done** |
 | R1f | thermal space / stabilisation / velocity separation | **done** — closed with the benchmark and label corrections below |
 | R1g | dual-mesh thermal model: differentiable chain, fixed-design h/2 vs h/4 | **done** — h/4 still drifts; stopped as the contract says; record wording corrected in R1h |
-| R1h | fixed design: flow h vs h/2 on the common thermal meshes h/2 and h/4 | **done** — thermal drift unchanged on the fine flow; flow effect −2.5% to −2.7% of C |
+| R1h | fixed design: flow h vs h/2 on the common thermal meshes h/2 and h/4 | **done**, closed in the review of d71ab66 — on this design, refining the flow h → h/2 does not remove the thermal drift (+8.6% against +8.9%); flow replacement −2.5% to −2.7% of C |
+| R1i | fixed design: h_T = h/8 on the saved coarse flow, one thermal state | proposed in the review of d71ab66; awaiting authorisation |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## R1d: the 300-update run
@@ -605,8 +606,10 @@ authorised, and must be adapted before any dual-mesh run.
 
 Decided in the review of 05df809: on the R1d continuous design, replace the flow
 solved at h by the flow solved at h/2, on the common thermal meshes h/2 and h/4.
-One fine flow, two thermal solves; no MMA, no new reference, no change to the
-thermal residual, the stabilisation, the physics or the boundary conditions.
+One fine flow, verified rather than re-solved; two new thermal states (four
+thermal solve calls: each state solved twice, the second for timing); no MMA, no
+new reference, no change to the thermal residual, the stabilisation, the
+physics or the boundary conditions.
 `tfopus/zhao2d_flow_study.py`, `scripts/zhao2d_flow_mesh_check.py`, record
 `results/zhao2d_r1h_matrix.json` (and `.log`).
 
@@ -636,6 +639,15 @@ mesh hashes, flow form, outlet, material, α_max, density hash, Dirichlet hash,
 solver settings — and `load_flow_state` refuses it for any other problem and
 re-gates it on load. The saved file was read back through that check before the
 thermal solves used it.
+
+A rerun takes the cheapest trustworthy source first (`resolve_flow_state`):
+this identity file, then the bare R1f cache verified as above, and a flow solve
+only if neither qualifies; the identity file is never rewritten when it was the
+input. The script also refuses to overwrite R1h records already in its output
+directory without `--overwrite`, so a reproduction goes to a directory of its
+own (`--out DIR`) and the committed records stay what the text cites. (Until
+d71ab66's review the script looked only for the R1f cache, so on a checkout
+without it a rerun would have re-solved the flow and replaced this file.)
 
 ### Same load on both flow meshes
 
@@ -691,12 +703,22 @@ a flow replacement includes every change in the velocity field, not only its
 divergence. These are differences between two meshes, not errors against an
 exact solution.
 
-- **The thermal drift does not come from the coarse flow.** On the fine flow,
-  h/2 → h/4 still moves C by +8.63% (+8.87% on the coarse flow), and the
-  diffusive half again carries 92% of the step.
+- **This flow refinement does not remove the thermal drift.** On the R1d
+  design, with the current thermal residual and these two flow meshes, the
+  thermal step h/2 → h/4 is +8.63% on the fine flow and +8.87% on the coarse
+  one: close, and the largest observed mesh difference is still on the thermal
+  side. That is one design and two flow meshes; u_h/2 is not a known exact
+  flow, so this is not a statement that the drift is independent of the flow
+  mesh. The thermal step also changes two things at once, the temperature space
+  and τ_T recomputed on h_T, as the frozen rules require. Its split — 92% in
+  c_diffusive — is one algebraic decomposition of the objective difference, not
+  an error budget; the same steps are equally ΔL_Q − Δ(D_SUPG − F_SUPG) =
+  1330.50 + 1616.53 (coarse flow) and 1194.72 + 1599.84 (fine flow).
 - **Replacing the flow moves C by −2.5% to −2.7%**, about a third of the thermal
   step, with nearly the same share at both thermal meshes. Most of it is in the
-  advective half. Ψ moves −1.97% (R1e's figure), T_max −1.6%.
+  advective half. Ψ moves −1.97% (R1e's figure), T_max −1.6%. The interaction,
+  −152.47, is 0.4% of C but 18% of the flow replacement at T h/2: nearly
+  additive on this design, not a correction factor to carry to another one.
 
 ### Divergence and the identities, on both flows
 
@@ -715,19 +737,23 @@ of the coarse flow's.
 **The bracket is the Dirichlet reaction.** The Q1 shape functions sum to one,
 so summing the assembled thermal residual over all nodes tests the discrete
 equation with v = 1, which leaves ∫ b_f u·∇T − Q; the free-node residuals
-vanish at convergence, so it equals the reaction at the inlet nodes — the weak
-form's own account of the heat conducted through the inlet (out of the domain,
-~0.07). They agree to 2×10⁻¹² in every cell, and the value barely depends on
-the flow. So in
+vanish at convergence, so it equals r_D, the residual at the inlet (Dirichlet)
+nodes before they are replaced. They agree to 2×10⁻¹² in every cell, and the
+value barely depends on the flow. Writing Q_cond,out = −r_D (about 0.07) for the
+heat the weak form conducts out through the inlet,
 
-    H − Q = D_T + [inlet reaction]
+    H − Q = D_T + r_D,        i.e.        H + Q_cond,out − Q = D_T
 
-and against the continuous balance, H − Q = ∮_inlet k∇T·n, D_T is the part of
-the discrete enthalpy outflow that the balance law has no counterpart for: 7.6–
-9.0% of the source on the coarse flow, 0.7–1.3% on the fine one. That is a
-defect of the discrete energy balance, produced by the velocity's discrete
-divergence in the non-conservative convection term. It is not an error in C and
-not the change in C.
+So D_T/Q is the global heat-balance deficit of the discrete solution as defined
+here: 7.6–9.0% of the source on the coarse flow, 0.7–1.3% on the fine one,
+produced by the velocity's discrete divergence in the non-conservative
+convection term. It is not an error in C and not the change in C, and two
+further limits apply. Q_cond,out is the weak form's own residual reaction, not
+a continuous heat flux checked against anything independent. And the deficit
+is a statement about the global balance — it bears on the flow-weighted mean
+outlet temperature that the balance implies — not an error estimate for the
+outlet temperature field, T_max, C or local fluxes: 1.3% on the fine flow does
+not make that a "1% accurate" model.
 
 **The shares are not the flow's effect on C.** At T h/4, replacing the flow
 lifts −½D_T2 from −2435.2 to −340.6 (+2094.6), but the boundary term
@@ -740,8 +766,8 @@ The one-sided boundary-conduction estimate is recorded per boundary
 (`boundary.*.conduction_out`): at the inlet it is 0.073–0.075 against the
 reaction's 0.065–0.072, and on the adiabatic walls and symmetry plane, where the
 weak form's flux is zero, it is −67 to −70 at T h/2 and −35 to −36 at T h/4 —
-halving with the thermal mesh, on either flow. It is a diagnostic of the one-sided gradient, not
-of the heat balance.
+halving with the thermal mesh, on either flow. It is a diagnostic of the
+one-sided gradient, not of the heat balance, and is never substituted for r_D.
 
 ### Cost
 
@@ -761,29 +787,48 @@ float64, 8 BLAS threads.
 
 ### What R1h says, and what it does not
 
-- The thermal h/2 → h/4 drift is a property of the temperature discretisation:
-  it is +8.6% on the fine flow as on the coarse one, and diffusive both times.
-  Neither thermal mesh is shown adequate.
-- The flow mesh changes C by −2.5% to −2.7% and Ψ by −2.0% at this design, a
-  nearly constant share across the two thermal meshes.
-- The flow mesh dominates the discrete energy balance: D_T falls from 7.6–9.0%
-  to 0.7–1.3% of the source with the fine flow.
+- On the R1d design, with the current thermal residual and these two flow
+  meshes, refining the flow h → h/2 does not remove the h/2 → h/4 thermal drift
+  (+8.6% against +8.9%); the largest observed mesh difference is on the thermal
+  side, where the temperature space and τ_T change together. Neither thermal
+  mesh is shown adequate.
+- The flow replacement changes C by −2.5% to −2.7% and Ψ by −2.0% at this
+  design, a nearly constant share across the two thermal meshes — not a
+  correction factor for other designs.
+- The fine flow closes the discrete global heat balance much better: the
+  deficit D_T/Q falls from 7.6–9.0% to 0.7–1.3%. A balance statement, not an
+  accuracy figure.
 - Not shown: the drift beyond h/4, the fine-flow chain's gradient, any design
   other than R1d's, anything about the optimum. Two meshes per direction are not
   an exact solution or a convergence proof.
 
 **For the choice of the production model (limited evidence, one design).** On
-C and Ψ the flow mesh is not where the uncertainty mainly sits: its effect is a
-third of the thermal step and nearly additive to it, so keeping the flow on the
-design mesh h stays defensible, with the measured offsets stated. The decision
-still open is on the thermal side — h/2 and h/4 differ by 8.6–8.9% on either
-flow. The flow mesh does matter for the discrete energy balance; if the
-reproduction needs that balance (outlet temperature, heat budget) to better
-than ~9%, the options are a finer flow (about 4× the flow dofs plus a new
-gradient chain) or a conservative or skew-symmetric convection form (a
-formulation change). Neither is authorised here. The cheapest evidence for the
-thermal decision would be a fixed-design h_T = h/8 on the saved coarse flow,
-one thermal solve; not run, by the contract.
+C and Ψ, the largest observed mesh difference at this design is thermal; the
+flow replacement is a third of it and nearly additive. Keeping the flow on the
+design mesh h is therefore a reasonable candidate development chain, with the
+offsets stated for this design only — not a validated production flow mesh.
+The decision still open is thermal: h/2 and h/4 differ by 8.6–8.9% on either
+flow.
+
+If the reproduction needs the discrete global heat balance closed better than
+the coarse flow's 7.6–9.0%, the options are a finer flow (about 4× the flow
+dofs, plus a new gradient chain) or a different convection form — and the
+second is not one option. Writing the convection term as
+A_θ = b_f (u·∇T + θ T ∇·u), the same residual sum gives
+
+    H − Q − r_D = (1 − θ) D_T
+
+so the conservative form (θ = 1) closes the balance by construction, while the
+common skew-symmetric split (θ = ½) does not; and since T and D_T change with
+the form, θ = ½ does not predict halving the deficit either. It may help
+stability or divergence pollution, which is a different property. None of this
+is authorised or implemented.
+
+The review of d71ab66 closed R1h and proposed R1i: on the same design and the
+same saved coarse flow, one thermal analysis at h_T = h/8 (332,800 elements,
+334,161 nodes), to see whether the step shrinks from Δ₂₄ = C_h/4 − C_h/2 to
+Δ₄₈ = C_h/8 − C_h/4. The ratio |Δ₄₈|/|Δ₂₄| would be an observation, not an
+error estimate or a pass mark. Not run; it awaits authorisation.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -1034,7 +1079,7 @@ python scripts/zhao2d_thermal_separation.py --binary     # R1f binary controls A
 python scripts/zhao2d_advection_benchmark.py --pe 1000   # R1f accuracy reference
 python scripts/zhao2d_dual_check.py                      # R1g, h / h/2 / h/4 on one flow
 python scripts/zhao2d_gradient_check.py --thermal-refinement 2   # R1g gradients
-python scripts/zhao2d_flow_mesh_check.py                 # R1h, flow h vs h/2 at T h/2 and h/4
+python scripts/zhao2d_flow_mesh_check.py --out DIR       # R1h rerun; keeps results/ unless --overwrite
 ```
 
 `zhao2d_short_run.py` is retired to a pointer: it had its own optimisation loop

@@ -65,13 +65,17 @@ matching finite differences, R1f's rows reproduced to 1e-15), C still moves
 +8.9% from h/2 to h/4, and h/2 and h/4 agree on the design gradient's direction
 (not its size) where h does not.
 
-**The remaining drift is thermal, not the coarse flow.** With the flow solved at
-h/2 instead of h on the same design, C moves −2.5% at h_T = h/2 and −2.7% at
-h/4 — a third of the thermal step, nearly the same share at both — while the
-thermal step itself stays +8.6%. The coarse flow's discrete divergence does
-leave a 7.6–9.0% defect in the discrete energy balance (0.7–1.3% on the fine
-flow), but its algebraic share of C, −6.7% at h/4, is not the flow's effect on
-C: replacing the flow measured −2.7%.
+**Refining the flow does not remove the thermal drift.** On the R1d design, with
+the current thermal residual and these two flow meshes, solving the flow at h/2
+instead of h moves C by −2.5% at h_T = h/2 and −2.7% at h/4, while the thermal
+step h/2 → h/4 stays close: +8.6% on the fine flow, +8.9% on the coarse one. The
+largest observed mesh difference is still on the thermal side. That is one
+design and two flow meshes, not a flow-independence result, and the −2.5% is
+not a correction factor for other designs. The fine flow does close the
+discrete global heat balance much better — the deficit falls from 7.6–9.0% to
+0.7–1.3% of the source, a balance statement rather than an accuracy figure for
+C, T_max or local fluxes — and the coarse flow's −6.7% algebraic share of C is
+not its effect on C: replacing the flow measured −2.7%.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
@@ -119,7 +123,7 @@ python scripts/zhao2d_refine_check.py                   # fixed-design mesh chec
 python scripts/zhao2d_thermal_separation.py             # what moves the compliance
 python scripts/zhao2d_advection_benchmark.py --pe 1000  # analytic accuracy reference
 python scripts/zhao2d_dual_check.py                     # dual-mesh thermal model, h/2 vs h/4
-python scripts/zhao2d_flow_mesh_check.py                # flow h vs h/2 on common thermal meshes
+python scripts/zhao2d_flow_mesh_check.py --out DIR      # flow h vs h/2 on common thermal meshes
 ```
 
 `Zhao2DSpec.provenance()` prints, per field, whether a number comes from the

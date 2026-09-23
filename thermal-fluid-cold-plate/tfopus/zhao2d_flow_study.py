@@ -44,6 +44,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
+import pathlib
 
 import numpy as np
 import jax
@@ -241,6 +242,86 @@ def load_flow_state(path, problem, s, alpha_max: float, tol: float = 1e-8):
         "identity": stored,
         "provenance": provenance,
         "verification": report,
+    }
+
+
+def _file_sha256(path) -> str:
+    return hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
+
+
+def resolve_flow_state(problem, s, alpha_max: float, identity_cache=None,
+                       bare_cache=None, solve=None, reference_psi: float | None = None,
+                       psi_rtol: float = 1e-10, tol: float = 1e-8):
+    """A trusted flow state for `problem`, taking the cheapest evidence first.
+
+    In order:
+
+    1. `identity_cache`, a file written by `save_flow_state`: used if its stored
+       identity is this problem's and it passes the residual gate on load;
+    2. `bare_cache`, a file holding only `press_vel` (R1f's): used if it carries
+       this problem's Dirichlet values, passes the gate and, when
+       `reference_psi` is given, reproduces it -- the identity it cannot state
+       is established by checking instead;
+    3. `solve()`, returning (press_vel, seconds), only when neither cache
+       qualifies, and gated like the rest.
+
+    Nothing is written here, so an input can never be overwritten by the state
+    it supplied; saving a new state is the caller's decision. Returns
+    (press_vel, record): record["source"] is "identity cache", "bare cache" or
+    "solved", and record["rejected"] lists each candidate tried and why it was
+    not used.
+    """
+    rejected = []
+    if identity_cache is not None and pathlib.Path(identity_cache).is_file():
+        try:
+            press_vel, loaded = load_flow_state(identity_cache, problem, s, alpha_max, tol)
+            return press_vel, {
+                "source": "identity cache",
+                "file": str(identity_cache),
+                "sha256": _file_sha256(identity_cache),
+                "verification": loaded["verification"],
+                "provenance": loaded["provenance"],
+                "rejected": rejected,
+            }
+        except (ValueError, KeyError, _r1.NotConverged) as exc:
+            rejected.append({"file": str(identity_cache), "reason": str(exc)})
+
+    if bare_cache is not None and pathlib.Path(bare_cache).is_file():
+        try:
+            with np.load(bare_cache) as f:
+                cached = np.asarray(f["press_vel"])
+            check = verify_flow_state(problem, cached, s, alpha_max, tol)
+            record = {
+                "source": "bare cache",
+                "file": str(bare_cache),
+                "sha256": _file_sha256(bare_cache),
+                "stored_identity": None,
+                "verification": check,
+                "rejected": rejected,
+            }
+            if reference_psi is not None:
+                alpha = _materials.brinkman_penalty(
+                    jnp.asarray(s), _za.build_material(problem.spec, alpha_max)
+                )
+                psi = float(problem.flow.dissipated_power(jnp.asarray(cached), alpha))
+                record.update(psi=psi, psi_vs_reference_relative=psi / reference_psi - 1.0)
+                if abs(psi / reference_psi - 1.0) > psi_rtol:
+                    raise ValueError(f"Psi {psi!r} is not the reference {reference_psi!r}")
+            return jnp.asarray(cached), record
+        except (ValueError, KeyError, _r1.NotConverged) as exc:
+            rejected.append({"file": str(bare_cache), "reason": str(exc)})
+
+    if solve is None:
+        raise RuntimeError(
+            "no trusted flow state, and solving was not allowed; rejected: "
+            + (json.dumps(rejected) if rejected else "no cache present")
+        )
+    press_vel, seconds = solve()
+    return jnp.asarray(press_vel), {
+        "source": "solved",
+        "t_solve_s": seconds,
+        "verification": verify_flow_state(problem, press_vel, s, alpha_max, tol),
+        "rejected": rejected,
     }
 
 

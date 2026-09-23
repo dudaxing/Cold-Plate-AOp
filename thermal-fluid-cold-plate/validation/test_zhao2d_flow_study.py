@@ -6,6 +6,8 @@ Each test targets one way the fixed-design comparison could be silently wrong:
     carried no identity at all);
   - a flow state that is not converged, or does not carry its own Dirichlet
     values, accepted because nobody recomputed its residual;
+  - a rerun that re-solves the fine flow, or overwrites the saved state and the
+    cited records, instead of loading what is already there;
   - an inflow that changes with the flow mesh, so "replacing the flow" also
     changes the load;
   - the h/4 thermal mesh seeing a different density depending on which flow
@@ -111,6 +113,80 @@ def test_a_saved_state_reloads_only_for_its_own_problem(coarse, solved, tmp_path
     s_fine = ref.refine_design(coarse.flow_mesh, fine.flow_mesh, s)
     with pytest.raises(ValueError, match="different problem"):
         fs.load_flow_state(path, fine, s_fine, ALPHA_MAX)
+
+
+# -- where a flow state comes from ------------------------------------------
+
+
+class _ForbiddenSolve:
+    """Stands in for the flow solve where a test forbids it; counts any call."""
+
+    def __init__(self):
+        self.calls = 0
+
+    def __call__(self):
+        self.calls += 1
+        raise AssertionError("the flow solve must not be called here")
+
+
+def test_a_qualified_identity_cache_is_loaded_and_the_solve_never_called(
+        coarse, solved, tmp_path):
+    """Only the R1h-style file, no bare cache: load it, never solve, never rewrite it."""
+    s, press_vel, _ = solved
+    cache = tmp_path / "flow.npz"
+    fs.save_flow_state(cache, press_vel, s, fs.flow_state_identity(coarse, s, ALPHA_MAX),
+                       {"stage": "test"})
+    before = cache.read_bytes()
+    solve = _ForbiddenSolve()
+
+    got, record = fs.resolve_flow_state(coarse, s, ALPHA_MAX, identity_cache=cache,
+                                        bare_cache=tmp_path / "absent.npz", solve=solve)
+    assert solve.calls == 0
+    assert record["source"] == "identity cache" and record["rejected"] == []
+    assert np.array_equal(np.asarray(got), np.asarray(press_vel))
+    assert cache.read_bytes() == before
+
+
+def test_a_foreign_identity_cache_falls_back_to_a_verified_bare_cache(
+        coarse, solved, tmp_path):
+    s, press_vel, _ = solved
+    foreign = tmp_path / "foreign.npz"
+    fs.save_flow_state(foreign, press_vel, s,
+                       fs.flow_state_identity(coarse, s, 2 * ALPHA_MAX), {})
+    bare = tmp_path / "bare.npz"
+    np.savez_compressed(bare, press_vel=np.asarray(press_vel))
+    solve = _ForbiddenSolve()
+
+    _, record = fs.resolve_flow_state(coarse, s, ALPHA_MAX, identity_cache=foreign,
+                                      bare_cache=bare, solve=solve)
+    assert solve.calls == 0 and record["source"] == "bare cache"
+    assert "different problem" in record["rejected"][0]["reason"]
+
+    # a bare cache is only as good as the checks it passes: a stated Psi it does
+    # not reproduce rejects it too
+    with pytest.raises(RuntimeError, match="not the reference"):
+        fs.resolve_flow_state(coarse, s, ALPHA_MAX, bare_cache=bare,
+                              reference_psi=1.0, psi_rtol=1e-10)
+
+
+def test_the_flow_is_solved_once_only_when_no_cache_qualifies(coarse, solved, tmp_path):
+    s, press_vel, _ = solved
+    bare = tmp_path / "bare.npz"
+    np.savez_compressed(bare, press_vel=np.asarray(press_vel) * 1.001)  # not a solution
+    calls = []
+
+    def solve():
+        calls.append(1)
+        return press_vel, 0.0
+
+    _, record = fs.resolve_flow_state(coarse, s, ALPHA_MAX,
+                                      identity_cache=tmp_path / "absent.npz",
+                                      bare_cache=bare, solve=solve)
+    assert len(calls) == 1 and record["source"] == "solved"
+    assert record["rejected"] and record["rejected"][0]["file"] == str(bare)
+
+    with pytest.raises(RuntimeError, match="no trusted flow state"):
+        fs.resolve_flow_state(coarse, s, ALPHA_MAX, identity_cache=tmp_path / "absent.npz")
 
 
 # -- the load does not change with the flow mesh ----------------------------
@@ -226,12 +302,32 @@ def test_every_identity_closes_on_a_solved_state(coarse, solved):
     assert rep["mass"]["wall_and_symmetry_flux"] == 0.0
 
 
+# -- the committed evidence ------------------------------------------------------
+
+
+def test_the_script_will_not_overwrite_records_already_in_its_output_dir(tmp_path):
+    """A rerun stops before any work rather than replace a cited R1h record."""
+    import subprocess
+    import sys
+
+    script = (pathlib.Path(__file__).resolve().parent.parent
+              / "scripts" / "zhao2d_flow_mesh_check.py")
+    record = tmp_path / "zhao2d_r1h_matrix.json"
+    record.write_text("cited", encoding="utf-8")
+    run = subprocess.run([sys.executable, str(script), "--out", str(tmp_path)],
+                         capture_output=True, text=True, timeout=300)
+    assert run.returncode != 0
+    assert "--overwrite" in run.stderr
+    assert record.read_text(encoding="utf-8") == "cited"
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["zhao2d_r1h_matrix.json"]
+
+
 # -- the anchor ------------------------------------------------------------------
 
 
 @pytest.mark.slow
 def test_r1h_fine_flow_reloads_and_reproduces_r1f_row_d():
-    """The saved h/2 flow, through its identity check, gives R1f's D row at h_T = h/2."""
+    """The saved h/2 flow, taken by the dispatch without a solve, gives R1f's D row."""
     results = pathlib.Path(__file__).resolve().parent.parent / "results"
     flow_file = results / "zhao2d_r1h_fine_flow.npz"
     fields = results / "zhao2d_r1d_main_fields.npz"
@@ -243,7 +339,10 @@ def test_r1h_fine_flow_reloads_and_reproduces_r1f_row_d():
     fine = dual.Zhao2DDualProblem(ref.refine_spec(spec, 2), CONFIG, 1, 3)
     s_fine = ref.refine_design(base.flow_mesh, fine.flow_mesh,
                                np.load(fields)["solid_fraction"])
-    press_vel, _ = fs.load_flow_state(flow_file, fine, s_fine, ALPHA_MAX)
+    solve = _ForbiddenSolve()
+    press_vel, record = fs.resolve_flow_state(fine, s_fine, ALPHA_MAX,
+                                              identity_cache=flow_file, solve=solve)
+    assert record["source"] == "identity cache" and solve.calls == 0
     c = fine.thermal.thermal_compliance(
         fine.solve_thermal(press_vel, s_fine, ALPHA_MAX),
         fine.thermal_velocity(press_vel),

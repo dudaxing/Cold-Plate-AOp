@@ -7,13 +7,20 @@
 The coarse-flow row is R1g's saved states. Nothing there is re-solved; every
 number is re-evaluated on them, starting with the residual gate.
 
-The fine flow is R1f's cached h/2 solve, which was saved as a bare array with
-no record of what it solves. It is checked against the problem it must belong
-to -- its shape, the Dirichlet values it carries, its residual under this
-density, alpha, boundary conditions and properties, and its Psi against R1e's
-separate solve of the same problem -- and only then reused, and saved again
-WITH that identity. If any check fails, the flow is solved once instead. The
-two thermal solves then both use that one fine flow.
+The fine flow is taken from the cheapest trustworthy source
+(`zhao2d_flow_study.resolve_flow_state`): first R1h's own saved state,
+`zhao2d_r1h_fine_flow.npz`, which carries its identity and is re-gated on load;
+else R1f's cached h/2 solve, a bare array with no record of what it solves,
+checked against the problem it must belong to -- its shape, the Dirichlet
+values it carries, its residual under this density, alpha, boundary conditions
+and properties, and its Psi against R1e's separate solve of the same problem;
+only if neither qualifies is the flow solved, once. A state that did not come
+from the identity file is saved WITH its identity. The two thermal solves then
+both use that one fine flow.
+
+Inputs are read from --inputs; records are written to --out, and existing
+records there are never overwritten without --overwrite: the committed results
+are cited evidence, so a reproduction belongs in a directory of its own.
 
 The physical density is R1d's, copied from the parent element down to every
 finer mesh: no filter, no projection, no design variable on a fine mesh. Flow
@@ -23,7 +30,7 @@ frozen ones.
 J* divides by the single-mesh frozen Psi_0 and C_0 as a common reporting scale
 only. Nothing here is a reference, an objective or a gradient.
 
-    python scripts/zhao2d_flow_mesh_check.py
+    python scripts/zhao2d_flow_mesh_check.py --out DIR [--inputs results]
 """
 
 from __future__ import annotations
@@ -78,6 +85,8 @@ PSI_SAME_STATE_RTOL = 1e-10
 
 R1F_CACHE = "zhao2d_r1f_fine_flow.npz"
 FINE_FLOW = "zhao2d_r1h_fine_flow.npz"
+MATRIX = "zhao2d_r1h_matrix.json"
+FIELDS = "zhao2d_r1h_fields.npz"
 INPUTS = (
     "zhao2d_r1d_main.json",
     "zhao2d_r1d_main_fields.npz",
@@ -85,6 +94,7 @@ INPUTS = (
     "zhao2d_r1g_fields.npz",
     "zhao2d_r1f_separation.json",
     "zhao2d_r1e_refine.json",
+    FINE_FLOW,
     R1F_CACHE,
 )
 
@@ -187,9 +197,19 @@ def difference(a: dict, b: dict) -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--out", type=pathlib.Path, default=REPO / "results")
+    ap.add_argument("--inputs", type=pathlib.Path, default=REPO / "results",
+                    help="where the R1d/R1e/R1f/R1g records and flow caches are read")
+    ap.add_argument("--out", type=pathlib.Path, default=REPO / "results",
+                    help="where this run's records are written")
+    ap.add_argument("--overwrite", action="store_true",
+                    help="allow replacing R1h records already in --out")
     args = ap.parse_args()
-    out = args.out
+    inputs, out = args.inputs, args.out
+    existing = [n for n in (MATRIX, FIELDS) if (out / n).exists()]
+    if existing and not args.overwrite:
+        sys.exit(f"{out} already holds {', '.join(existing)}, which the docs cite as "
+                 "evidence; write this run elsewhere with --out DIR, or pass --overwrite")
+    out.mkdir(parents=True, exist_ok=True)
     t_start = time.perf_counter()
     memory = {}
 
@@ -203,18 +223,20 @@ def main() -> None:
             "common reporting scale only."
         ),
         "provenance": provenance(),
-        "inputs_sha256": {n: sha256_file(out / n) for n in INPUTS if (out / n).is_file()},
+        "inputs_dir": str(inputs),
+        "inputs_sha256": {n: sha256_file(inputs / n) for n in INPUTS
+                          if (inputs / n).is_file()},
         "reference_file_sha256": sha256_file(r1.REFERENCE_FILE),
         "thermal_quadrature": QUAD,
     }
-    record["inputs_sha256"]["missing"] = [n for n in INPUTS if not (out / n).is_file()]
+    record["inputs_sha256"]["missing"] = [n for n in INPUTS if not (inputs / n).is_file()]
 
     # -- inputs -------------------------------------------------------------
-    meta = json.loads((out / "zhao2d_r1d_main.json").read_text(encoding="utf-8"))
-    r1g_meta = json.loads((out / "zhao2d_r1g_dual.json").read_text(encoding="utf-8"))
+    meta = json.loads((inputs / "zhao2d_r1d_main.json").read_text(encoding="utf-8"))
+    r1g_meta = json.loads((inputs / "zhao2d_r1g_dual.json").read_text(encoding="utf-8"))
     alpha_max, beta = meta["final_alpha_max"], meta["final_beta"]
-    r1d = np.load(out / "zhao2d_r1d_main_fields.npz")
-    r1g = np.load(out / "zhao2d_r1g_fields.npz")
+    r1d = np.load(inputs / "zhao2d_r1d_main_fields.npz")
+    r1g = np.load(inputs / "zhao2d_r1g_fields.npz")
     s_d = np.asarray(r1d["solid_fraction"])
     pv_h = jnp.asarray(r1d["press_vel"])
     if not (np.array_equal(r1g["solid_fraction"], s_d)
@@ -292,55 +314,48 @@ def main() -> None:
     }
     print(f"flow h:   reused R1d/R1g state, |R|/|R0| {check_h['residual_relative']:.1e}")
 
-    # -- the fine flow: R1f's cache if it proves to be this problem's ---------
+    # -- the fine flow: R1h's identity file, else R1f's cache, else one solve ---
     material = za.build_material(spec, alpha_max)
     alpha_f = materials.brinkman_penalty(jnp.asarray(s_f), material)
-    pv_f, fine = None, {}
-    cache = out / R1F_CACHE
-    if cache.is_file():
-        cached = np.asarray(np.load(cache)["press_vel"])
-        fine["cache"] = {"file": f"results/{R1F_CACHE}", "sha256": sha256_file(cache),
-                         "stored_arrays": ["press_vel"], "stored_identity": None}
-        try:
-            check = fs.verify_flow_state(f2, cached, s_f, alpha_max)
-            psi_cached = float(f2.flow.dissipated_power(jnp.asarray(cached), alpha_f))
-            psi_rel = psi_cached / R1E_PSI_FINE - 1.0
-            fine["cache"].update(verification=check, psi=psi_cached,
-                                 psi_vs_r1e_fine_relative=psi_rel)
-            if abs(psi_rel) > PSI_SAME_STATE_RTOL:
-                raise ValueError(f"Psi {psi_cached!r} is not R1e's {R1E_PSI_FINE!r}")
-            pv_f = jnp.asarray(cached)
-            fine["source"] = "R1f cache, verified here against this problem; not re-solved"
-            fine["verification"] = check
-        except (ValueError, r1.NotConverged) as exc:
-            fine["cache"]["rejected"] = str(exc)
-            print(f"fine flow cache rejected: {exc}")
-    if pv_f is None:
-        pv_f, t_solve = timed(tf_solver.modified_newton_raphson_solve,
-                              f2.flow, f2.flow_x0, alpha_f)
-        fine["source"] = "solved here, once"
-        fine["t_flow_solve_first_s"] = t_solve
-        fine["verification"] = fs.verify_flow_state(f2, pv_f, s_f, alpha_max)
-    fine["identity"] = fs.flow_state_identity(f2, s_f, alpha_max)
-    fs.save_flow_state(
-        out / FINE_FLOW, pv_f, s_f, fine["identity"],
-        {"stage": "R1h", "source": fine["source"],
-         "verification": fine["verification"],
-         "density": "R1d solid_fraction copied from the parent element, h -> h/2",
-         "script": "scripts/zhao2d_flow_mesh_check.py"},
+    pv_f, fine = fs.resolve_flow_state(
+        f2, s_f, alpha_max,
+        identity_cache=inputs / FINE_FLOW,
+        bare_cache=inputs / R1F_CACHE,
+        solve=lambda: timed(tf_solver.modified_newton_raphson_solve,
+                            f2.flow, f2.flow_x0, alpha_f),
+        reference_psi=R1E_PSI_FINE,
+        psi_rtol=PSI_SAME_STATE_RTOL,
     )
-    # read back through the identity check: the saved file must be reusable as is
-    pv_back, back = fs.load_flow_state(out / FINE_FLOW, f2, s_f, alpha_max)
-    if not np.array_equal(np.asarray(pv_back), np.asarray(pv_f)):
-        sys.exit("the saved fine flow does not read back bit for bit; stopping")
-    fine["saved"] = {"file": f"results/{FINE_FLOW}", "sha256": sha256_file(out / FINE_FLOW),
-                     "reloaded_through_identity_check": True,
-                     "reload_residual_relative": back["verification"]["residual_relative"]}
+    for rejected in fine["rejected"]:
+        print(f"fine flow candidate rejected: {rejected['file']}: {rejected['reason']}")
+    fine["identity"] = fs.flow_state_identity(f2, s_f, alpha_max)
+    if fine["source"] == "identity cache":
+        # it IS the saved state; rewriting it would only risk the evidence
+        fine["saved"] = "not rewritten: the identity file was this run's input"
+    else:
+        target = out / FINE_FLOW
+        if target.exists() and not args.overwrite:
+            sys.exit(f"{target} exists and was not usable here; not overwriting it "
+                     "without --overwrite")
+        fs.save_flow_state(
+            target, pv_f, s_f, fine["identity"],
+            {"stage": "R1h", "source": fine["source"],
+             "verification": fine["verification"],
+             "density": "R1d solid_fraction copied from the parent element, h -> h/2",
+             "script": "scripts/zhao2d_flow_mesh_check.py"},
+        )
+        # read back through the identity check: the saved file must be reusable
+        pv_back, back = fs.load_flow_state(target, f2, s_f, alpha_max)
+        if not np.array_equal(np.asarray(pv_back), np.asarray(pv_f)):
+            sys.exit("the saved fine flow does not read back bit for bit; stopping")
+        fine["saved"] = {"file": str(target), "sha256": sha256_file(target),
+                         "reloaded_through_identity_check": True,
+                         "reload_residual_relative": back["verification"]["residual_relative"]}
     flows["h2"] = fine
-    print(f"flow h/2: {fine['source']}; |R|/|R0| "
+    print(f"flow h/2: {fine['source']} ({fine.get('file', 'solved here')}); |R|/|R0| "
           f"{fine['verification']['residual_relative']:.1e}"
-          + (f", Psi vs R1e {fine['cache']['psi_vs_r1e_fine_relative']:+.1e}"
-             if "psi_vs_r1e_fine_relative" in fine.get("cache", {}) else ""))
+          + (f", Psi vs R1e {fine['psi_vs_reference_relative']:+.1e}"
+             if "psi_vs_reference_relative" in fine else ""))
     memory["after_flows"] = peak_working_set_mb()
 
     # -- inlet traces --------------------------------------------------------
@@ -398,7 +413,7 @@ def main() -> None:
                      f"{rep['residual_relative']}; stopping")
         rep["thermal_inlet"] = fs.thermal_inlet(problem.thermal_mesh, spec, temperatures[key])
         rep["state"] = {
-            "flow": "h (R1d/R1g)" if rf == 1 else "h/2 (results/" + FINE_FLOW + ")",
+            "flow": "h (R1d/R1g)" if rf == 1 else f"h/2 ({fine['source']})",
             "temperature": cost[key].get("thermal") or "solved in this run",
             "temperature_sha256": fs.digest(np.asarray(temperatures[key])),
         }
@@ -452,9 +467,10 @@ def main() -> None:
     record["cost"] = {
         "build_s": build_s,
         "thermal_solves": {k: v for k, v in cost.items()},
-        "fine_flow": ({"t_flow_solve_first_s": fine["t_flow_solve_first_s"]}
-                      if "t_flow_solve_first_s" in fine else
-                      "not solved in this run: the verified R1f cache was reused"),
+        "fine_flow": ({"t_flow_solve_first_s": fine["t_solve_s"]}
+                      if fine["source"] == "solved" else
+                      f"not solved in this run: reused the {fine['source']} after "
+                      "verifying it"),
         "peak_working_set_mb_cumulative": memory,
         "peak_working_set_note": "this process's peak so far, cumulative across every "
                                  "step before it; not a per-model figure",
@@ -462,9 +478,9 @@ def main() -> None:
     }
 
     # -- save, before anything else can fail ----------------------------------
-    path = out / "zhao2d_r1h_matrix.json"
+    path = out / MATRIX
     path.write_text(json.dumps(record, indent=2), encoding="utf-8")
-    fields = out / "zhao2d_r1h_fields.npz"
+    fields = out / FIELDS
     np.savez_compressed(
         fields,
         temperature_flow_h2_thermal_h2=np.asarray(temperatures["flow_h2__thermal_h2"]),
@@ -508,9 +524,10 @@ def main() -> None:
               f"T_max {d['t_max']['rel']:+.2%}  J* {d['j_star']['rel']:+.2%}")
     print(f"  interaction in C: {comparisons['interaction']['compliance']:+.3f}")
 
-    print(f"\nwrote {path}\nwrote {fields} (the two new temperatures)\n"
-          f"wrote {out / FINE_FLOW} (the fine flow, with its identity)\n"
-          f"total {record['cost']['wall_clock_total_s']:.0f} s")
+    print(f"\nwrote {path}\nwrote {fields} (the two new temperatures)")
+    if isinstance(fine["saved"], dict):
+        print(f"wrote {fine['saved']['file']} (the fine flow, with its identity)")
+    print(f"total {record['cost']['wall_clock_total_s']:.0f} s")
 
 
 if __name__ == "__main__":
