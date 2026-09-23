@@ -1,0 +1,64 @@
+D:\Coding\thermalFluid\thermal-fluid-opus\thermal-fluid-cold-plate\external\TOFLUX\toflux\src\solver.py:21: UserWarning: petsc4py not found; the PETSC linear solver is unavailable.
+  warnings.warn("petsc4py not found; the PETSC linear solver is unavailable.")
+R1d design, alpha_max 1.000e+07, beta 8; flow 2x2, thermal 3x3; J* on the single-mesh reference as a reporting scale
+
+built flow_h__thermal_h2: flow 5200 el, thermal 20800 el (12.0 s)
+built flow_h__thermal_h4: flow 5200 el, thermal 83200 el (32.3 s)
+built flow_h2__thermal_h2: flow 20800 el, thermal 20800 el (19.7 s)
+built flow_h2__thermal_h4: flow 20800 el, thermal 83200 el (41.0 s)
+density: h -> h/2 copied, fluid fractions kept (design 0.3999784674); both thermal columns reach the same mesh and the same density from either flow mesh
+flow h:   reused R1d/R1g state, |R|/|R0| 1.3e-14
+flow h/2: R1f cache, verified here against this problem; not re-solved; |R|/|R0| 1.6e-14, Psi vs R1e +0.0e+00
+inlet: 11 / 21 nodes, inflow/nominal 1.000000000000000 / 1.000000000000000, traces differ by 0.0e+00; wall slip next to the rim 1.0e-04 / 5.0e-05
+
+NR converged in 2 iters, res_norm/res_norm_0: 4.735429920361486e-12
+NR converged in 2 iters, res_norm/res_norm_0: 4.735429920361486e-12
+solved flow_h2__thermal_h2: thermal 5.7 s first, 2.4 s repeat
+NR converged in 3 iters, res_norm/res_norm_0: 4.0772325753095035e-12
+NR converged in 3 iters, res_norm/res_norm_0: 4.0772325753095035e-12
+solved flow_h2__thermal_h4: thermal 12.3 s first, 9.3 s repeat
+reported flow_h__thermal_h2 (6.9 s)
+reported flow_h__thermal_h4 (17.6 s)
+reported flow_h2__thermal_h2 (5.7 s)
+reported flow_h2__thermal_h4 (16.1 s)
+
+anchors (relative difference):
+  flow_h__thermal_h2_vs_r1g_level2     +0.000e+00
+  flow_h__thermal_h2_vs_r1f_C          +6.661e-16
+  flow_h__thermal_h4_vs_r1g_level4     +0.000e+00
+  flow_h2__thermal_h2_vs_r1f_D         +0.000e+00
+  psi_flow_h_vs_r1g                    +0.000e+00
+  psi_flow_h2_vs_r1e_fine              +0.000e+00
+
+                              flow_h__thermal_h2    flow_h__thermal_h4   flow_h2__thermal_h2   flow_h2__thermal_h4
+  C                                 33233.132789          36180.160296          32400.115712          35194.669709
+  c_advective                         18320.1415            18565.1760            17688.6760            17910.6500
+  c_diffusive                         14912.9913            17614.9843            14711.4397            17284.0197
+  L_Q                                 36356.0220            37686.5193            35490.7844            36685.5029
+  D_SUPG - F_SUPG                      3122.8892             1506.3590             3090.6686             1490.8332
+  (D - F)/C                              9.3969%               4.1635%               9.5391%               4.2360%
+  T_max                                15.540621             15.950727             15.288763             15.694987
+  T_min                                -0.098714              0.000000              0.000000              0.000000
+  nodes below inlet                            1                     0                     0                     0
+  Psi                             0.014351143070        0.014351143070        0.014067841749        0.014067841749
+  J* (single-mesh scale)                1.044450              1.116919              1.019480              1.088200
+  D_T / Q                                7.5641%               8.9703%               0.6979%               1.2672%
+  -1/2 D_T2 / C                         -5.8603%              -6.7309%              -0.5275%              -0.9678%
+  int (div u)^2, flow mesh          0.1666594437          0.1666594437          0.0598731542          0.0598731542
+  int b_f u.grad T - Q                 -0.068129             -0.071836             -0.064971             -0.071866
+  Dirichlet reaction                   -0.068129             -0.071836             -0.064971             -0.071866
+  |R|/|R0| flow                          1.3e-14               1.3e-14               1.6e-14               1.6e-14
+  |R|/|R0| thermal                       1.0e-12               3.9e-12               9.9e-13               3.9e-12
+
+mesh changes, complete response (relative):
+  flow_replacement_at_thermal_h2   C   -833.017 (-2.507%)  c_adv -3.45%  c_diff -1.35%  T_max -1.62%  J* -2.39%
+  flow_replacement_at_thermal_h4   C   -985.491 (-2.724%)  c_adv -3.53%  c_diff -1.88%  T_max -1.60%  J* -2.57%
+  thermal_refinement_on_flow_h     C  +2947.028 (+8.868%)  c_adv +1.34%  c_diff +18.12%  T_max +2.64%  J* +6.94%
+  thermal_refinement_on_flow_h2    C  +2794.554 (+8.625%)  c_adv +1.25%  c_diff +17.49%  T_max +2.66%  J* +6.74%
+  interaction in C: -152.474
+
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\thermal-fluid-cold-plate\results\zhao2d_r1h_matrix.json
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\thermal-fluid-cold-plate\results\zhao2d_r1h_fields.npz (the two new temperatures)
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\thermal-fluid-cold-plate\results\zhao2d_r1h_fine_flow.npz (the fine flow, with its identity)
+total 194 s
+exit=0 elapsed=200s

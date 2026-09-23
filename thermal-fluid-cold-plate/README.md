@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified, thermal resolution still open |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal resolution still open |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -63,9 +63,15 @@ in that range, though it does not translate into a cold-plate mesh size.
 on a nested mesh and the chain differentiable end to end (maps exact, gradients
 matching finite differences, R1f's rows reproduced to 1e-15), C still moves
 +8.9% from h/2 to h/4, and h/2 and h/4 agree on the design gradient's direction
-where h does not. Keeping the flow coarse is not free: its discrete divergence
-reaches 9% of the energy balance and -6.7% of C at h/4, and refining the
-temperature exposes that rather than removing it.
+(not its size) where h does not.
+
+**The remaining drift is thermal, not the coarse flow.** With the flow solved at
+h/2 instead of h on the same design, C moves −2.5% at h_T = h/2 and −2.7% at
+h/4 — a third of the thermal step, nearly the same share at both — while the
+thermal step itself stays +8.6%. The coarse flow's discrete divergence does
+leave a 7.6–9.0% defect in the discrete energy balance (0.7–1.3% on the fine
+flow), but its algebraic share of C, −6.7% at h/4, is not the flow's effect on
+C: replacing the flow measured −2.7%.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
@@ -107,6 +113,7 @@ python scripts/zhao2d_refine_check.py                   # fixed-design mesh chec
 python scripts/zhao2d_thermal_separation.py             # what moves the compliance
 python scripts/zhao2d_advection_benchmark.py --pe 1000  # analytic accuracy reference
 python scripts/zhao2d_dual_check.py                     # dual-mesh thermal model, h/2 vs h/4
+python scripts/zhao2d_flow_mesh_check.py                # flow h vs h/2 on common thermal meshes
 ```
 
 `Zhao2DSpec.provenance()` prints, per field, whether a number comes from the

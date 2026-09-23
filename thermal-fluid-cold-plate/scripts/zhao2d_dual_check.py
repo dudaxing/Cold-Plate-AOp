@@ -132,16 +132,24 @@ def divergence_integrals(problem, press_vel, temperature, b_f) -> dict:
     """integral b_f T div u and integral b_f T^2 div u on the thermal mesh.
 
     With u_T = P u_F these are properties of the COARSE velocity's discrete
-    divergence, sampled by the temperature. The first is the whole gap between
-    the boundary enthalpy flux and the heat source, because the residual uses
-    the non-conservative form u.grad T. The second enters C directly: element
-    by element,
+    divergence, sampled by the temperature. What holds exactly, for these
+    polynomial fields at 3x3 quadrature, is the divergence theorem:
+
+        H = boundary integral b_f T u.n = integral b_f u.grad T + D_T,
+        H - Q = D_T + [integral b_f u.grad T - Q],
+
+    with D_T the first integral here. The bracket is the discrete equation
+    tested with v = 1, i.e. the reaction at the Dirichlet inlet: small (-0.036,
+    -0.068, -0.072 at h, h/2, h/4) but not zero, so D_T is close to H - Q
+    without being it. The second integral enters C: element by element,
 
         integral b_f T u.grad T = 1/2 boundary integral b_f T^2 u.n
                                   - 1/2 integral b_f T^2 div u,
 
-    exactly for these polynomial fields at 3x3 quadrature, so the second term
-    is the part of C's advective half that exists only because div u != 0.
+    so -1/2 D_T2 is the part of C's advective half written as a volume term in
+    div u. That is an algebraic split of ONE solution. It is not what C would
+    change by if the velocity were divergence-free: T, the boundary term and
+    the SUPG terms all move with the flow.
     """
     mesh = problem.thermal_mesh.mesh
     shp = jax.vmap(mesh.elem_template.shape_functions)(mesh.gauss_pts)
