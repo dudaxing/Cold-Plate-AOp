@@ -392,8 +392,12 @@ printed it in three. The routing proposed in the conformal-cooling repository,
 upstream's spsolve on one dedicated thread, was evaluated and not adopted: the
 anchors are bit-identical with it, but the solves never overlap, so it leaves
 the slot count unchanged, and a pool of 24 still printed the warning. The
-mechanism is read from the source and fits every failure seen, but no crash has
-been caught with a native stack. `tfopus/_threads.py` has the detail.
+conformal-cooling repository has since adopted the same default and reports,
+not re-run here, that re-gating a saved 5200-element state -- no sparse solve --
+died in three of three runs at 24 and ran clean at 8, and that its full suite
+(193 passed) then printed no warning. The mechanism is read from the source and
+fits every failure seen, but no crash has been caught with a native stack.
+`tfopus/_threads.py` has the detail.
 
 ## R1g: the temperature on a mesh of its own
 

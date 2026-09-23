@@ -21,6 +21,12 @@ inside `jax.pure_callback` -- over the R1d and R1h anchors, 34 solves landed on
 three runs; a pool of 24 printed it in both of two, and one of them, after
 writing its results, segfaulted at exit. The numbers were identical throughout.
 
+Reported by the conformal-cooling repository after it adopted this default, not
+re-run here: re-gating a saved 5200-element state -- residual assembly only, no
+sparse solve -- had died in three of three runs with a pool of 24; with 8 it ran
+clean (exit 0, no warning), and its coupled check, a mutation run and its full
+suite (193 passed) printed no warning either.
+
 Read from OpenBLAS 0.3.30's source (driver/others/memory.c, the allocator that
 prints the warning), which accounts for that: a table of 50 buffer slots. Each
 call to an optimised LAPACK routine such as dgetrf holds one while it runs, and
