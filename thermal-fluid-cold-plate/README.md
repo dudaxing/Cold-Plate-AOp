@@ -96,12 +96,18 @@ pytest                                   # add -m "not slow" to skip refinement 
 suite uses SciPy's sparse direct solver, so PETSc and PARDISO are not needed.
 
 On Windows, `tfopus` sets a default of 8 BLAS threads at import
-(`tfopus/_threads.py`). Without it, repeated large sparse solves through
-`jax.pure_callback` crashed the interpreter on a 32-core machine with heap
-corruption and no traceback, after OpenBLAS reported exceeding its precompiled
-thread count. It is a default, not a cap -- a value already in the environment
-wins -- and it only takes effect if `tfopus` is imported before NumPy, since
-OpenBLAS reads the variable once at startup; it warns if it comes too late.
+(`tfopus/_threads.py`). SciPy's bundled OpenBLAS would otherwise run a pool of
+24 threads on a 32-core machine, and each pool thread keeps one of the 50
+buffer slots that LAPACK calls from XLA's threads also need. When none is
+free, OpenBLAS prints "precompiled NUM_THREADS exceeded"; on the R1d/R1h anchors
+that happened with 24 threads and never with 8, and processes have died after
+it -- heap corruption, or a segfault at exit -- with no traceback. The mechanism
+is read from the OpenBLAS source, not caught in a crash. Routing upstream's
+sparse solve through one thread was tried and not adopted: bit-identical, but it
+does not change the slot count. The default is not a cap -- a value already in
+the environment wins -- and it only takes effect if `tfopus` is imported before
+NumPy, since OpenBLAS reads the variable once at startup; it warns if it comes
+too late. Run one heavy JAX process at a time.
 
 ## Reproducing the reported studies
 

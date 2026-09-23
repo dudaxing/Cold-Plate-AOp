@@ -1,4 +1,5 @@
-"""The BLAS thread default: what it sets, what it leaves alone, when it is late.
+"""The BLAS thread default: what it sets, what it leaves alone, when it is late,
+and that it reaches the OpenBLAS pools themselves.
 
 Each case runs in a fresh interpreter. The variables are read once, when the
 BLAS library loads, and this process loaded NumPy long ago -- so checking
@@ -10,6 +11,8 @@ import os
 import pathlib
 import subprocess
 import sys
+
+import pytest
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 VARS = ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS",
@@ -76,3 +79,28 @@ def test_no_warning_when_it_runs_first():
     out = _fresh(code)
     assert out.returncode == 0, out.stderr
     assert out.stdout.strip() == "0"
+
+
+POOLS = (
+    "import scipy.linalg, threadpoolctl\n"
+    "print(' '.join(str(d['num_threads']) for d in threadpoolctl.threadpool_info()\n"
+    "               if d['internal_api'] == 'openblas'))\n"
+)
+
+
+def test_the_openblas_pools_themselves_get_the_default():
+    """The pools, not just the variables -- SciPy's included.
+
+    SciPy's OpenBLAS is the one jaxlib's CPU LAPACK and upstream's SuperLU call,
+    and each worker of its pool keeps a buffer slot for life (see _threads.py).
+    Without tfopus a pool is min(cores, the build's MAX_THREADS); with it, that
+    or 8, whichever is smaller.
+    """
+    pytest.importorskip("threadpoolctl")
+    bare = _fresh(POOLS)
+    ours = _fresh("import tfopus\n" + POOLS)
+    assert bare.returncode == 0, bare.stderr
+    assert ours.returncode == 0, ours.stderr
+    natural = [int(n) for n in bare.stdout.split()]
+    assert natural, "no OpenBLAS pool loaded"
+    assert [int(n) for n in ours.stdout.split()] == [min(8, n) for n in natural]

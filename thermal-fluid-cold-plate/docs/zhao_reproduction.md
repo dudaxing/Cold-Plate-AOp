@@ -379,6 +379,21 @@ before the BLAS library starts, since OpenBLAS reads the variable once; if NumPy
 was imported first it warns rather than pretend. This is a mitigation that has
 worked on this machine, not a root-cause proof.
 
+Revisited after R1h. The warning comes from a table of 50 buffer slots in
+OpenBLAS 0.3.30's allocator: each LAPACK call in flight holds one -- jaxlib's
+CPU LAPACK, behind the element Jacobian inverse, is SciPy's OpenBLAS -- and each
+worker of OpenBLAS's own pool holds one for life, 23 at the build's default of
+24 threads and 7 at 8. Once the table has overflowed, each further overflow
+adds a record to a 512-entry heap array that has no bound check, so enough of
+them write past it. On the R1d/R1h anchors a pool of 24 printed the
+warning in both of two runs and one segfaulted at exit; a pool of 8 never
+printed it in three. The routing proposed in the conformal-cooling repository,
+upstream's spsolve on one dedicated thread, was evaluated and not adopted: the
+anchors are bit-identical with it, but the solves never overlap, so it leaves
+the slot count unchanged, and a pool of 24 still printed the warning. The
+mechanism is read from the source and fits every failure seen, but no crash has
+been caught with a native stack. `tfopus/_threads.py` has the detail.
+
 ## R1g: the temperature on a mesh of its own
 
 Decided in the review of df39ce6: the design variables and the flow stay on the

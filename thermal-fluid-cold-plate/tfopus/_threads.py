@@ -1,17 +1,47 @@
 """Default the BLAS thread count before NumPy loads. Import this FIRST.
 
-On a 32-core Windows machine, repeated large sparse solves through
-`jax.pure_callback` crashed the process with heap corruption
-(Windows 0xC0000374), immediately after OpenBLAS printed
+On a 32-core Windows machine, a run of repeated large sparse solves through
+`jax.pure_callback` crashed with heap corruption (Windows 0xC0000374),
+immediately after OpenBLAS printed
 
     precompiled NUM_THREADS exceeded, adding auxiliary array for thread metadata
 
 The crash is silent from Python's side: no traceback, no non-zero exit from the
 shell pipeline, just a truncated log. It killed an R1f run after the first of
 four analyses had already printed, which is exactly the failure mode that looks
-like a hang or a clean stop. Setting a thread count removed it on that machine;
-that is a local mitigation that has been observed to work, not a root-cause
-proof, and it has not been reproduced elsewhere.
+like a hang or a clean stop.
+
+Measured here (SciPy 1.17.1, jaxlib 0.11.0, 32 CPUs). SciPy bundles OpenBLAS
+0.3.30 built with MAX_THREADS=24, so its thread pool is 24 by default; this
+module makes it 8. XLA's threads call that OpenBLAS two ways: jaxlib's CPU
+LAPACK is bound to it through `scipy.linalg.cython_lapack` (the `jnp.linalg.inv`
+in tfopus/elements.py runs at every Gauss point), and upstream's spsolve runs
+inside `jax.pure_callback` -- over the R1d and R1h anchors, 34 solves landed on
+21 different threads. On that anchor workload a pool of 8 printed no warning in
+three runs; a pool of 24 printed it in both of two, and one of them, after
+writing its results, segfaulted at exit. The numbers were identical throughout.
+
+Read from OpenBLAS 0.3.30's source (driver/others/memory.c, the allocator that
+prints the warning), which accounts for that: a table of 50 buffer slots. Each
+call to an optimised LAPACK routine such as dgetrf holds one while it runs, and
+each worker of OpenBLAS's own pool holds one for life -- 23 at a pool of 24, 7
+at 8. The warning means no slot was free. After it, every call that finds the
+table full maps a new buffer and appends a record to a 512-entry heap array
+with no bound check, so a process that keeps overflowing writes past it. Slots
+belong to calls, not threads: what counts is how many calls are in flight at
+once, not which threads make them.
+
+Not established: that this is what crashed -- no crash has been caught with a
+native stack; and that 8 is always enough -- it leaves 43 slots for calls in
+flight, which more concurrent XLA work could still exceed, and a larger explicit
+OPENBLAS_NUM_THREADS, which wins over this default, shrinks.
+
+Evaluated and not adopted: sending upstream's spsolve to one dedicated thread,
+as proposed in the conformal-cooling repository. It is bit-identical on the
+anchors (C, Psi, the flow and temperature states, the design gradient), but the
+solves never overlap one another, so it does not change how many slots are in
+use, and with it a pool of 24 still printed the warning. It also moves the solve from XLA's threads, which
+flush subnormals, to one that does not: identical here, not guaranteed.
 
 What this module does, and what it does not:
 
