@@ -1,0 +1,50 @@
+D:\Coding\thermalFluid\thermal-fluid-opus\thermal-fluid-cold-plate\external\TOFLUX\toflux\src\solver.py:21: UserWarning: petsc4py not found; the PETSC linear solver is unavailable.
+  warnings.warn("petsc4py not found; the PETSC linear solver is unavailable.")
+R1d design, alpha_max 1.000e+07, beta 8; saved coarse flow; thermal h/8, 3x3
+
+built: flow 5200 el, thermal 332800 el, 334161 nodes (132.0 s)
+coarse flow: |R|/|R0| 1.3e-14, identity as in R1h
+NR converged in 40 iters, res_norm/res_norm_0: 1.5296636145307757e-11
+thermal h/8: solved once, 219.6 s (includes compilation)
+reported (50.0 s)
+
+anchors (relative):
+  h2_vs_r1g_level2                     +0.000e+00
+  h4_vs_r1g_level4                     +0.000e+00
+  psi_vs_r1g                           +0.000e+00
+  div_u_squared_thermal_vs_flow_mesh   -6.661e-16
+
+                                       T h/2             T h/4             T h/8
+  C                             33233.132789      36180.160296      37337.738736
+  c_advective                     18320.1415        18565.1760        18623.9041
+  c_diffusive                     14912.9913        17614.9843        18713.8346
+  L_Q                             36356.0220        37686.5193        38063.5352
+  D_SUPG - F_SUPG                  3122.8892         1506.3590          725.7965
+  (D - F)/C                          9.3969%           4.1635%           1.9439%
+  T_max                            15.540621         15.950727         16.060381
+  T_min                            -0.098714          0.000000          0.000000
+  nodes below inlet                        1                 0                 0
+  J* (single-mesh scale)            1.044450          1.116919          1.145385
+  D_T / Q                            7.5641%           8.9703%           9.3721%
+  -1/2 D_T2 / C                     -5.8603%          -6.7309%          -6.8859%
+  Dirichlet reaction               -0.068129         -0.071836         -0.072757
+  |R|/|R0| thermal                   1.0e-12           3.9e-12           1.5e-11
+
+steps (Delta_24 = h/2 -> h/4, Delta_48 = h/4 -> h/8):
+  compliance             +2947.0275 ->     +1157.5784   |ratio| 0.3928
+  c_advective             +245.0345 ->       +58.7281   |ratio| 0.2397
+  c_diffusive            +2701.9930 ->     +1098.8503   |ratio| 0.4067
+  l_q                    +1330.4973 ->      +377.0160   |ratio| 0.2834
+  net_supg               -1616.5302 ->      -780.5625   |ratio| 0.4829
+  t_max                     +0.4101 ->        +0.1097   |ratio| 0.2674
+  j_star                    +0.0725 ->        +0.0285   |ratio| 0.3928
+  D_T                      +73.1235 ->       +20.8924   |ratio| 0.2857
+  minus_half_D_T2         -487.6796 ->      -135.7831   |ratio| 0.2784
+  H                        +73.1198 ->       +20.8915   |ratio| 0.2857
+  bracket                   -0.0037 ->        -0.0009   |ratio| 0.2484
+  (C from h: Delta_12 +6294.8006; |Delta_24|/|Delta_12| 0.4682)
+
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\thermal-fluid-cold-plate\results\zhao2d_r1i_h8.json
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\thermal-fluid-cold-plate\results\zhao2d_r1i_fields.npz
+total 407 s
+exit=0 elapsed=411s

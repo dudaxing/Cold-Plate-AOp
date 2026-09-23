@@ -21,7 +21,7 @@ governing equations, objective, constraint — is kept.
 | R1f | thermal space / stabilisation / velocity separation | **done** — closed with the benchmark and label corrections below |
 | R1g | dual-mesh thermal model: differentiable chain, fixed-design h/2 vs h/4 | **done** — h/4 still drifts; stopped as the contract says; record wording corrected in R1h |
 | R1h | fixed design: flow h vs h/2 on the common thermal meshes h/2 and h/4 | **done**, closed in the review of d71ab66 — on this design, refining the flow h → h/2 does not remove the thermal drift (+8.6% against +8.9%); flow replacement −2.5% to −2.7% of C |
-| R1i | fixed design: h_T = h/8 on the saved coarse flow, one thermal state | proposed in the review of d71ab66; awaiting authorisation |
+| R1i | fixed design: h_T = h/8 on the saved coarse flow, one thermal state | **done** — the thermal step shrinks: +8.87% (h/2 → h/4) then +3.20% (h/4 → h/8), ratio 0.39; stopped with a model recommendation |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## R1d: the 300-update run
@@ -828,11 +828,104 @@ the form, θ = ½ does not predict halving the deficit either. It may help
 stability or divergence pollution, which is a different property. None of this
 is authorised or implemented.
 
-The review of d71ab66 closed R1h and proposed R1i: on the same design and the
-same saved coarse flow, one thermal analysis at h_T = h/8 (332,800 elements,
-334,161 nodes), to see whether the step shrinks from Δ₂₄ = C_h/4 − C_h/2 to
-Δ₄₈ = C_h/8 − C_h/4. The ratio |Δ₄₈|/|Δ₂₄| would be an observation, not an
-error estimate or a pass mark. Not run; it awaits authorisation.
+The review of d71ab66 closed R1h and proposed R1i, below.
+
+## R1i: one more thermal level, h_T = h/8
+
+Authorised after the review of d71ab66: on the R1d design and the saved coarse
+flow u_h, one thermal analysis at h_T = h/8 (332,800 elements, 334,161 nodes),
+to see whether the thermal step keeps shrinking. Everything else is held — the
+density copied from the parent, u_h re-gated and not re-solved, α = 10⁷,
+materials, source, boundaries, the thermal residual, τ_T by its rule on the h/8
+mesh, 3×3. One thermal solve: no repeated timing, no flow solve, no gradient,
+no other level. `scripts/zhao2d_thermal_h8_check.py`; record
+`results/zhao2d_r1i_h8.json` (and `.log`), temperature
+`results/zhao2d_r1i_fields.npz`. The h/2 and h/4 columns are R1h's reports of
+R1g's states, so the three levels are compared field for field.
+
+| thermal mesh (coarse flow u_h) | h/2 | h/4 | **h/8** |
+|---|---|---|---|
+| **C** | 33233.132789 | 36180.160296 | **37337.738736** |
+| c_advective | 18320.1415 | 18565.1760 | 18623.9041 |
+| c_diffusive | 14912.9913 | 17614.9843 | 18713.8346 |
+| L_Q | 36356.0220 | 37686.5193 | 38063.5352 |
+| D_SUPG − F_SUPG | 3122.8892 | 1506.3590 | 725.7965 |
+| (D − F)/C | 9.40% | 4.16% | 1.94% |
+| T_max | 15.540621 | 15.950727 | 16.060381 |
+| T_min (nodes below inlet) | −0.0987 (1) | 0 (0) | 0 (0) |
+| J* (single-mesh scale) | 1.044450 | 1.116919 | 1.145385 |
+| D_T / Q | 7.56% | 8.97% | 9.37% |
+| −½ D_T2 / C | −5.86% | −6.73% | −6.89% |
+| Dirichlet reaction | −0.06813 | −0.07184 | −0.07276 |
+| fluid Pe_e median (s < 0.5, tabs incl.) | 23.6 | 11.8 | 5.9 |
+| \|R\|/\|R₀\| thermal | 1.0e-12 | 3.9e-12 | 1.5e-11 |
+
+| | Δ₂₄ = h/2 → h/4 | Δ₄₈ = h/4 → h/8 | \|Δ₄₈\| / \|Δ₂₄\| |
+|---|---|---|---|
+| **C** | +2947.03 (+8.87%) | **+1157.58 (+3.20%)** | **0.393** |
+| c_advective | +245.03 | +58.73 | 0.240 |
+| c_diffusive | +2701.99 | +1098.85 | 0.407 |
+| L_Q | +1330.50 | +377.02 | 0.283 |
+| D_SUPG − F_SUPG | −1616.53 | −780.56 | 0.483 |
+| T_max | +0.410 | +0.110 | 0.267 |
+| J* | +0.0725 | +0.0285 | 0.393 |
+
+For context, h → h/2 was Δ₁₂ = +6294.80, so C's successive steps shrink by
+0.468 and then 0.393. These ratios are observations, not an error estimate and
+not a pass mark: three differences on one design do not establish an
+asymptotic rate, and no extrapolated limit is claimed.
+
+Checks: h/2 and h/4 against R1g, 0; Ψ against R1g, 0; ∫(∇·u)² on the h/8 mesh
+equals the flow mesh's to 7×10⁻¹⁶, so the factor-8 map is exact (nine r = 8
+cases added to `validation/test_zhao2d_dual.py` pin it on a small mesh);
+identity closures ≤ 2×10⁻¹⁴; bracket = Dirichlet reaction to 1.5×10⁻¹²; mass
+4×10⁻¹⁵; inlet T and u_T exact; heat source 5200; coarse-flow identity as R1h
+recorded it.
+
+**The solve reached Newton's iteration cap.** The thermal problem is linear,
+and the coarser levels stopped after 2–3 iterations. At 334,161 dofs the
+relative residual floors at 1.53×10⁻¹¹, just above upstream's stopping
+threshold of 10⁻¹¹, so the loop ran all 40 iterations; the residual it recorded
+before its last step and the one recomputed afterwards agree to four parts in
+10⁹, which is a floor, not a slow solve. The state is accepted by the stage's
+recomputed-residual gate, 10⁻⁸, met about 650-fold, with the free-node residual
+sum at 1.3×10⁻¹⁴ — not by the iteration limit having been reached. What the cap
+costs is time: the 219.6 s solve (one call, including compilation) is some 40
+assemblies and factorisations where three would do. A model that solves at h/8
+routinely would need that threshold revisited; it is a solver setting and is
+not changed here.
+
+Cost: build 132.0 s, thermal solve 219.6 s as above, report 50.0 s, 407 s in
+all. Peak working set 5035 MiB — this process built only the h/8 problem (with
+its h flow side), so unlike R1g's and R1h's cumulative figures it is close to
+what h/8 itself needs. For comparison, the h/4 thermal solve repeats in 9.5 s
+and h/4's value-and-gradient in 18.1 s (R1g); nothing at h/8 was timed beyond
+this one call.
+
+### What R1i says, and what it does not
+
+- On the R1d design and the saved coarse flow, the thermal step keeps
+  shrinking: +8.87% from h/2 to h/4, then +3.20% from h/4 to h/8, a ratio of
+  0.39. (D − F)/C halves again to 1.9%, T_max moves +0.7%, no node undershoots.
+- In C, h/4 is 3.1% below h/8 and h/2 is 11.0% below it; in T_max, 0.7% and
+  3.2%.
+- The coarse flow's heat-balance deficit keeps growing slowly as the
+  temperature resolves it (7.56% → 8.97% → 9.37%); that is the flow side's
+  matter (R1h), separate from how C converges in h_T.
+- Not shown: anything beyond h/8, other designs, the fine flow at h/8, the
+  gradient at h/8, the optimum. Three thermal levels are not a convergence
+  proof and h/8 is not declared adequate.
+
+**For the choice of the production model (limited evidence, one design).** The
+thermal h/4 is a reasonable economical development mesh: on this design it is
+3.1% below h/8 in C, with (D − F)/C at 4%, against h/2's 11%, at a quarter
+of h/8's size and without its 5 GB and multi-minute build and solve. h/8 is a
+sensible check level for a design that matters. The flow stays on h as the
+candidate development chain (R1h). These are candidates, not validated
+production meshes. Before an optimisation uses them, a separate stage has to
+fix the combination, freeze a versioned reference for exactly that model, make
+`zhao2d_driver` dual-mesh aware, and verify the gradient of that chain at the
+production point; that stage is not authorised.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -1084,6 +1177,7 @@ python scripts/zhao2d_advection_benchmark.py --pe 1000   # R1f accuracy referenc
 python scripts/zhao2d_dual_check.py                      # R1g, h / h/2 / h/4 on one flow
 python scripts/zhao2d_gradient_check.py --thermal-refinement 2   # R1g gradients
 python scripts/zhao2d_flow_mesh_check.py --out DIR       # R1h rerun; keeps results/ unless --overwrite
+python scripts/zhao2d_thermal_h8_check.py --out DIR      # R1i, h_T = h/8 on the saved coarse flow
 ```
 
 `zhao2d_short_run.py` is retired to a pointer: it had its own optimisation loop

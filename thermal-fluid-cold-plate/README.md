@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal resolution still open |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -77,6 +77,12 @@ discrete global heat balance much better — the deficit falls from 7.6–9.0% t
 C, T_max or local fluxes — and the coarse flow's −6.7% algebraic share of C is
 not its effect on C: replacing the flow measured −2.7%.
 
+**One more thermal level shows the step shrinking.** On the same design and
+saved coarse flow, h_T = h/8 moves C by another +3.2%, against +8.9% from h/2 to
+h/4 (a ratio of 0.39) — an observation on three levels, not a convergence proof.
+That makes h_T = h/4 a reasonable economical development mesh (3.1% below h/8
+in C here), with h/8 as a check level; neither is a validated production mesh.
+
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
 as source substitutions against a pristine checkout rather than a fork, so the
@@ -124,6 +130,7 @@ python scripts/zhao2d_thermal_separation.py             # what moves the complia
 python scripts/zhao2d_advection_benchmark.py --pe 1000  # analytic accuracy reference
 python scripts/zhao2d_dual_check.py                     # dual-mesh thermal model, h/2 vs h/4
 python scripts/zhao2d_flow_mesh_check.py --out DIR      # flow h vs h/2 on common thermal meshes
+python scripts/zhao2d_thermal_h8_check.py --out DIR     # one more thermal level, h_T = h/8
 ```
 
 `Zhao2DSpec.provenance()` prints, per field, whether a number comes from the

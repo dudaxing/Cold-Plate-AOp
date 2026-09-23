@@ -38,7 +38,7 @@ def _meshes(r):
     return coarse, fine, dual.build_nested_maps(coarse, fine, r)
 
 
-@pytest.fixture(scope="module", params=[2, 4], ids=["r2", "r4"])
+@pytest.fixture(scope="module", params=[2, 4, 8], ids=["r2", "r4", "r8"])  # r8: R1i
 def nested(request):
     return _meshes(request.param)
 
