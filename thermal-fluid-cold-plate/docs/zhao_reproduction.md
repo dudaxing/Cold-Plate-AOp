@@ -21,8 +21,39 @@ governing equations, objective, constraint — is kept.
 | R1f | thermal space / stabilisation / velocity separation | **done** — closed with the benchmark and label corrections below |
 | R1g | dual-mesh thermal model: differentiable chain, fixed-design h/2 vs h/4 | **done** — h/4 still drifts; stopped as the contract says; record wording corrected in R1h |
 | R1h | fixed design: flow h vs h/2 on the common thermal meshes h/2 and h/4 | **done**, closed in the review of d71ab66 — on this design, refining the flow h → h/2 does not remove the thermal drift (+8.6% against +8.9%); flow replacement −2.5% to −2.7% of C |
-| R1i | fixed design: h_T = h/8 on the saved coarse flow, one thermal state | **done** — the thermal step shrinks: +8.87% (h/2 → h/4) then +3.20% (h/4 → h/8), ratio 0.39; stopped with a model recommendation |
+| R1i | fixed design: h_T = h/8 on the saved coarse flow, one thermal state | **done**, closed in the review of 2a9bfea — the thermal step shrinks: +8.87% (h/2 → h/4) then +3.20% (h/4 → h/8), ratio 0.39 |
+| R1j | development model flow h / thermal h/4: versioned reference, dual-mesh driver entry, directional gradient at x₃₀₀; 0 MMA updates | proposed in the review of 2a9bfea; awaiting authorisation |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
+
+## Figures
+
+Drawn from the saved results only (`scripts/zhao2d_figures.py`; nothing is
+re-solved), so each shows exactly the state the records describe.
+
+![The R1d design: density, velocity and temperature on the half model](figures/zhao2d_r1d_fields.png)
+
+The R1d design in the layout of Zhao's Figs. 8 and 11 — half model, symmetry
+plane on the left. (a) Fluid fraction per element. (b) |u| of the flow the
+optimiser used (flow mesh h). (c) The temperature of the model R1d optimised
+(thermal mesh h, 2×2), including its 18 nodes below the inlet temperature.
+(d) The same design and flow with the temperature on h/8 (R1i). (c) and (d)
+share one scale: the finer temperature is hotter through the solid, and C is
+38% higher. The run is budget-limited, not converged.
+
+![The R1d optimisation history](figures/zhao2d_r1d_history.png)
+
+The 300 updates on the frozen self scale, with the α ramp and the β stages.
+
+![Where the reproduction stands](figures/zhao2d_status.png)
+
+(a) The R1d result against Zhao's Tables 4 and 7 on the paper-interpreted
+scale. Like-for-like is the filled point, on the paper's 5200-element mesh
+(R1d's own 2×2 model). The arrow is the same design with only the thermal mesh
+refined to h/8 (3×3), which moves C/C₀ from 1.30 to 1.79. The parametrisation,
+the stabilisation details and the convergence state all differ from the
+paper's, so this places the result; it does not rank the two methods. (b) C
+against the thermal mesh at the fixed design, on the coarse and the fine flow
+(R1g, R1h, R1i).
 
 ## R1d: the 300-update run
 
@@ -396,7 +427,8 @@ conformal-cooling repository has since adopted the same default and reports,
 not re-run here, that re-gating a saved 5200-element state -- no sparse solve --
 died in three of three runs at 24 and ran clean at 8, and that its full suite
 (193 passed) then printed no warning. The mechanism is read from the source and
-fits every failure seen, but no crash has been caught with a native stack.
+fits every failure seen, but no crash has been caught with a native stack, and
+8 threads is not shown to be enough for every workload.
 `tfopus/_threads.py` has the detail.
 
 ## R1g: the temperature on a mesh of its own
@@ -883,24 +915,32 @@ identity closures ≤ 2×10⁻¹⁴; bracket = Dirichlet reaction to 1.5×10⁻�
 recorded it.
 
 **The solve reached Newton's iteration cap.** The thermal problem is linear,
-and the coarser levels stopped after 2–3 iterations. At 334,161 dofs the
-relative residual floors at 1.53×10⁻¹¹, just above upstream's stopping
-threshold of 10⁻¹¹, so the loop ran all 40 iterations; the residual it recorded
-before its last step and the one recomputed afterwards agree to four parts in
-10⁹, which is a floor, not a slow solve. The state is accepted by the stage's
-recomputed-residual gate, 10⁻⁸, met about 650-fold, with the free-node residual
-sum at 1.3×10⁻¹⁴ — not by the iteration limit having been reached. What the cap
-costs is time: the 219.6 s solve (one call, including compilation) is some 40
-assemblies and factorisations where three would do. A model that solves at h/8
-routinely would need that threshold revisited; it is a solver setting and is
-not changed here.
+and the coarser levels stopped after 2–3 iterations. Here the loop ran all 40,
+and the returned state's relative residual, 1.53×10⁻¹¹, is above upstream's
+internal stopping threshold of 10⁻¹¹. Upstream prints "NR converged in …" on
+exit whatever the reason, so that log line does not show its own criterion was
+met, and it was not. The state is accepted by the stage's recomputed-residual
+gate instead, 10⁻⁸, met about 650-fold, with the free-node residual sum at
+1.3×10⁻¹⁴ — not by the iteration limit having been reached.
 
-Cost: build 132.0 s, thermal solve 219.6 s as above, report 50.0 s, 407 s in
-all. Peak working set 5035 MiB — this process built only the h/8 problem (with
-its h flow side), so unlike R1g's and R1h's cumulative figures it is close to
-what h/8 itself needs. For comparison, the h/4 thermal solve repeats in 9.5 s
-and h/4's value-and-gradient in 18.1 s (R1g); nothing at h/8 was timed beyond
-this one call.
+What the record supports beyond that is limited. The residual the loop stored
+before its last update and the one recomputed on the returned state agree to
+four parts in 10⁹, consistent with a residual plateau at the end; without the
+iteration history it does not say where the plateau began, so it does not show
+how many iterations a different threshold would have needed. Each loop
+iteration evaluates the residual and tangent three times (current point, half
+step, full step) and solves once; how much of that compiled work is eliminated
+was not profiled. And the 219.6 s is one call including compilation, so it
+cannot be set against h/4's 9.5 s repeat time to derive a cost ratio. If h/8 is
+ever solved routinely, the stopping rule and the iteration history are worth a
+limited look then; nothing is changed here.
+
+Cost: build 132.0 s, thermal solve 219.6 s (one call, including compilation),
+report 50.0 s, 407 s in all. Peak working set 5035 MiB for the whole script
+process — coarse flow side, meshes, compilation, solve and report — not the
+thermal solver's own memory and not a budget for a gradient at h/8. For
+comparison, the h/4 thermal solve repeats in 9.5 s and h/4's value-and-gradient
+in 18.1 s (R1g); nothing at h/8 was timed beyond this one call.
 
 ### What R1i says, and what it does not
 
@@ -919,7 +959,7 @@ this one call.
 **For the choice of the production model (limited evidence, one design).** The
 thermal h/4 is a reasonable economical development mesh: on this design it is
 3.1% below h/8 in C, with (D − F)/C at 4%, against h/2's 11%, at a quarter
-of h/8's size and without its 5 GB and multi-minute build and solve. h/8 is a
+of h/8's size (h/8's single run here took minutes and a 5 GB process). h/8 is a
 sensible check level for a design that matters. The flow stays on h as the
 candidate development chain (R1h). These are candidates, not validated
 production meshes. Before an optimisation uses them, a separate stage has to
@@ -1178,6 +1218,7 @@ python scripts/zhao2d_dual_check.py                      # R1g, h / h/2 / h/4 on
 python scripts/zhao2d_gradient_check.py --thermal-refinement 2   # R1g gradients
 python scripts/zhao2d_flow_mesh_check.py --out DIR       # R1h rerun; keeps results/ unless --overwrite
 python scripts/zhao2d_thermal_h8_check.py --out DIR      # R1i, h_T = h/8 on the saved coarse flow
+python scripts/zhao2d_figures.py                         # docs/figures/ from the saved results, no solves
 ```
 
 `zhao2d_short_run.py` is retired to a pointer: it had its own optimisation loop

@@ -16,7 +16,12 @@ governing equations, objective, constraint) is kept.
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
-[`docs/zhao_reproduction.md`](docs/zhao_reproduction.md).
+[`docs/zhao_reproduction.md`](docs/zhao_reproduction.md). Figures of where the
+Zhao reproduction stands — the optimised design's density, velocity and
+temperature fields, the optimisation history, and the mesh study — are in the
+latter's [Figures](docs/zhao_reproduction.md#figures) section.
+
+![The R1d design: density, velocity and temperature](docs/figures/zhao2d_r1d_fields.png)
 
 ## Layout
 
@@ -131,6 +136,7 @@ python scripts/zhao2d_advection_benchmark.py --pe 1000  # analytic accuracy refe
 python scripts/zhao2d_dual_check.py                     # dual-mesh thermal model, h/2 vs h/4
 python scripts/zhao2d_flow_mesh_check.py --out DIR      # flow h vs h/2 on common thermal meshes
 python scripts/zhao2d_thermal_h8_check.py --out DIR     # one more thermal level, h_T = h/8
+python scripts/zhao2d_figures.py                        # docs/figures/, drawn from the saved results
 ```
 
 `Zhao2DSpec.provenance()` prints, per field, whether a number comes from the
