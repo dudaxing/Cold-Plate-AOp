@@ -1,0 +1,30 @@
+--- a/tfopus/_callback_solve.py
++++ b/tfopus/_callback_solve.py
+@@ -6,17 +6,16 @@
+ In the JAX this project runs, the callback receives jax.Arrays, so each of them
+ dispatches a new computation from inside the one that is running the callback.
+ 
+-Forward solves have never hung: there the Newton loop is one compiled
+-computation and the main thread only waits for it. An eager backward pass is
+-different. The main thread keeps dispatching the pass's next operation, which
+-needs the callback's result, while the callback dispatches its own, and the two
+-can end up waiting on each other with no CPU in use. R1j's check hung twice,
+-both times in a reverse pass after its first; in the second, faulthandler
+-caught the two threads blocked in dispatch together -- the callback at
+-`A.indices[:, 0]`, the main thread at the next transposed dot
+-(results/zhao2d_r1j_check_attempt2_stacks.log). It is a race: every reverse
+-pass of the earlier stages completed, R1d's 300 among them, and why R1j's later
+-ones lost it is not established.
++In a forward solve that is harmless: the Newton loop is one compiled
++computation and the main thread only waits for it. In an eager backward pass it
++is not. The main thread keeps dispatching the pass's next operation, which
++needs the callback's result, and on the CPU client the callback's own slice can
++be queued behind it: each waits for the other, with no CPU in use. R1j's check
++hung that way twice, both times in the second thermal adjoint of the run, and
++faulthandler caught the two frames -- the callback in `A.indices[:, 0]`, the
++main thread in the next transposed dot, both blocked in dispatch
++(results/zhao2d_r1j_check_attempt2_stacks.log). It is a race, which is why
++first backward passes, slowed by compilation, have mostly survived it.
+ 
+ JAX's rule for host callbacks is to stay out of JAX inside them. `solve` below
+ converts the callback's inputs to NumPy before touching them and is otherwise

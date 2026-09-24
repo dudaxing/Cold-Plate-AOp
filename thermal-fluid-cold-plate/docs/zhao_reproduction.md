@@ -22,7 +22,8 @@ governing equations, objective, constraint — is kept.
 | R1g | dual-mesh thermal model: differentiable chain, fixed-design h/2 vs h/4 | **done** — h/4 still drifts; stopped as the contract says; record wording corrected in R1h |
 | R1h | fixed design: flow h vs h/2 on the common thermal meshes h/2 and h/4 | **done**, closed in the review of d71ab66 — on this design, refining the flow h → h/2 does not remove the thermal drift (+8.6% against +8.9%); flow replacement −2.5% to −2.7% of C |
 | R1i | fixed design: h_T = h/8 on the saved coarse flow, one thermal state | **done**, closed in the review of 2a9bfea — the thermal step shrinks: +8.87% (h/2 → h/4) then +3.20% (h/4 → h/8), ratio 0.39 |
-| R1j | development model flow h / thermal h/4: versioned reference, dual-mesh driver entry, directional gradient at x₃₀₀; 0 MMA updates | **done** — reference frozen (C₀ ×1.0005), driver one-solve entry refuses other models' references, gradient check PASS (worst 2.8×10⁻⁹); a deadlock in upstream's solve callback found and fixed |
+| R1j | development model flow h / thermal h/4: versioned reference, dual-mesh driver entry, directional gradient at x₃₀₀; no MMA update on the main mesh | **done**, closed in the review of 6d675da — reference frozen (C₀ ×1.0005); the driver takes value, gradient and states from one forward evaluation and refuses other models' references; gradient check PASS at every step (largest relative error 7.5×10⁻⁷); a deadlock in upstream's solve callback found and fixed |
+| R1k | warm start from x₃₀₀ on the development model, α_max = 10⁷ and β = 8 fixed, at most 30 MMA updates; first an explicit initial-design entry, and stop reasons that keep upstream's mixed-point KKT a proxy | proposed in the review of 6d675da; awaiting authorisation |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -1004,7 +1005,8 @@ production point; that stage is not authorised.
 Authorised after the review of 2a9bfea: the development model — design and flow
 on h (2×2), temperature on h/4 (3×3) — gets its own reference and a driver
 entry that evaluates it consistently, and its gradient is checked at the R1d
-design. No MMA update. `scripts/zhao2d_freeze_dual_reference.py`,
+design. No MMA update on the main mesh; the only MMA updates are the six of a
+wiring test on a 208-cell mesh. `scripts/zhao2d_freeze_dual_reference.py`,
 `scripts/zhao2d_r1j_check.py`; records `tfopus/zhao2d_reference_dual_r4q3_v1.json`,
 `results/zhao2d_r1j_check.json` (and `.log`), `results/zhao2d_r1j_reference.log`.
 
@@ -1046,7 +1048,9 @@ divided by the reference without checking whose it was. `Zhao2DProblem` gains
 `thermal_velocity`, `residual_norms_at` and `check_reference`, which the dual
 model overrides where it differs. The single-mesh model is unchanged: its
 driver tests pass as they were, now with one forward solve per iterate instead
-of three.
+of three. "One solve" here and in the heading means one high-level forward
+evaluation, flow then thermal; the Newton iterations and the adjoints still
+make their own sparse linear solves.
 
 `validation/test_zhao2d_dual_driver.py` (208-cell mesh): the reference's
 identity includes the thermal mesh and reproduces itself, both ratios
@@ -1092,9 +1096,16 @@ terminal record with the saved design.
 The criterion, fixed before the run and the small-mesh one, is 10⁻⁵ on the
 best-step relative error: **pass**. No derivative is near zero, so no relative
 error is inflated by a small denominator; every step's values are in the
-record. Cost: build 36 s, baseline value
-and gradient 43 s, the two component passes 34 s, a perturbed evaluation 20 s
-on average, 368 s in all; cumulative peak working set 3.5 GB.
+record. The pass does not rest on the best step alone: the largest relative
+error over all 24 direction–step–quantity combinations is 7.5×10⁻⁷ (C, seed
+11, step 10⁻⁴), also inside 10⁻⁵. The 2.8×10⁻⁹ quoted as the worst is the
+largest of the eight best-step errors: a statement about two directions, not a
+bound on the error of the full gradient vector. Cost of the successful attempt
+(the two hung attempts and the reference freeze not included): build 36 s,
+baseline value and gradient 43 s, the two component passes 34 s, a perturbed
+evaluation 20 s on average, 368 s in all; cumulative peak working set
+3519 MiB. Five unrelated background processes were each using a full core on
+this machine at the time, so this is not an isolated-machine throughput.
 
 **Two attempts hung first.** The check ran three times. Attempts 1 and 2 each
 stopped dead — CPU time frozen, no warning — in a reverse pass after the
@@ -1113,8 +1124,10 @@ The record's file hashes are of this machine's working copies, byte for byte.
 One file changed after the run: `tfopus/_callback_solve.py`, whose docstring
 was corrected (it had placed both hangs in "the second thermal adjoint" and
 explained the race by compilation time, neither of which the evidence shows).
-Restoring the old paragraph reproduces the recorded hash; the code is the code
-that ran. Twelve others — among them `fe_flow.py`, `fe_thermal.py`,
+`results/zhao2d_r1j_callback_solve_at_run.patch` restores the old paragraph:
+applied to the committed file with `patch -p1`, it gives back the recorded
+hash, so the code is the code that ran. The patch was added after the review of
+6d675da, which could not rebuild those bytes without it. Twelve others — among them `fe_flow.py`, `fe_thermal.py`,
 `zhao2d_driver.py`, `zhao2d_dual.py`, the reference file and R1d's saved
 record — are CRLF here while the repository stores LF (`.gitattributes`:
 `eol=lf`), so their committed bytes hash differently; converting LF to CRLF
@@ -1129,17 +1142,53 @@ corrected while it ran.
 ### What R1j says, and what it does not
 
 - The development model has its own frozen reference, and the driver
-  evaluates, normalises and differentiates exactly that model from one solve;
-  another model's reference is refused before any work.
-- Its gradient at x₃₀₀ matches central differences to about 10⁻⁹ in two fixed
-  directions. That says the implementation is right at that point — not that
-  the model is physically accurate, and nothing about an optimisation.
+  evaluates, normalises and differentiates exactly that model from one forward
+  evaluation; another model's reference is refused before any work.
+- Its gradient at x₃₀₀ matches central differences in two fixed directions, to
+  about 10⁻⁹ at the best step and within 7.5×10⁻⁷ at every step. That says the
+  implementation is right at that point — not that the model is physically
+  accurate or mesh independent, and nothing about an optimisation.
 - The deadlock-prone callback in upstream's solve is replaced, with
-  bit-identical numbers.
-- Not done, by the contract: any MMA update, h/16, a gradient at h/8, a
-  fine-flow gradient chain, a change of formulation, 3D. A short optimisation
-  on this model needs its own decision on the start (x₃₀₀ is a warm start, not a
-  resumed MMA state), the continuation and the budget.
+  bit-identical numbers on the SciPy path. That removes the JAX call the
+  captured stack shows blocked; it does not prove every race gone, and why R1d
+  never hit it is still not known.
+- Not done, by the contract: any MMA update on the main mesh, h/16, a gradient
+  at h/8, a fine-flow gradient chain, a change of formulation, 3D.
+
+The review of 6d675da closed R1j with no numerical blocker.
+
+### Next: R1k, as proposed (awaiting authorisation)
+
+A bounded warm-start experiment on the model R1j wired up, to see how the
+design, J, Ψ, C and the constraint respond, not to chase a better number.
+
+- Start from R1d's saved raw design x₃₀₀ (the 5000 design variables, not the
+  5200-element s), with MMA's history reinitialised: a new experiment, not a
+  resumed R1d.
+- Keep the model: design and flow h, thermal h/4, 2×2 and 3×3, this reference,
+  w = 0.5; α_max = 10⁷ and β = 8 fixed, no continuation restarted.
+- At most 30 MMA updates at `move_limit` 0.1, every state through the existing
+  10⁻⁸ gate, and a same-point evaluation of the terminal design.
+- Report the initial and terminal x, s, u, p, T; J, raw Ψ and C, g and v_f,
+  residuals, step sizes and the actual stop reason. A "best verified feasible
+  point", if reported, keeps its own design.
+- Stop at the budget, a failed gate or a named proxy criterion; nothing is added
+  automatically, whether J improves, trades Ψ against C, oscillates or stalls.
+
+Two prerequisites, both small:
+
+1. **An explicit initial design.** `zhao2d_driver.run` has no initial-design
+   argument: it starts MMA from 1 − γ_ref (0.6) everywhere, so calling it
+   after loading x₃₀₀ would not start from x₃₀₀. It needs an `initial_design`
+   input — checked for shape, finiteness and [0, 1], its source recorded, never
+   clipped or resampled — and a small test that the first evaluation receives
+   it.
+2. **Stop reasons that do not overclaim.** Upstream's `update_mma` forms its
+   KKT residual from the new design and multipliers but the old point's
+   objective gradient, constraint value and constraint gradient, and `step_tol`
+   is a step-size test; the driver reports either as "converged". The run
+   should tell apart the budget ending, a proxy criterion firing and
+   convergence verified at one point, and claim no convergence on a proxy.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 

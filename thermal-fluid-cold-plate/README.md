@@ -92,10 +92,12 @@ in C here), with h/8 as a check level; neither is a validated production mesh.
 it yet.** Flow h with temperature h/4 now has its own frozen, versioned
 reference (C₀ ×1.0005 over the single-mesh one, so the same w = 0.5 is a
 slightly different objective), and the driver takes J, its gradient and the
-reported states from one solve of that model, refusing any other model's
-reference before it solves. At the R1d design the gradient matches central
-differences in two fixed directions to 3 × 10⁻⁹ or better. Getting there
-exposed a deadlock in upstream's linear-solve callback — see Setup.
+reported states from one forward evaluation of that model, refusing any other
+model's reference before it solves. At the R1d design the gradient matches
+central differences in two fixed directions, to 3 × 10⁻⁹ at the best step and
+within 10⁻⁶ at every step. Getting there exposed a deadlock in upstream's
+linear-solve callback — see Setup. The next step proposed is a warm start from
+the R1d design, at most 30 MMA updates with the model held fixed.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
