@@ -22,7 +22,7 @@ governing equations, objective, constraint — is kept.
 | R1g | dual-mesh thermal model: differentiable chain, fixed-design h/2 vs h/4 | **done** — h/4 still drifts; stopped as the contract says; record wording corrected in R1h |
 | R1h | fixed design: flow h vs h/2 on the common thermal meshes h/2 and h/4 | **done**, closed in the review of d71ab66 — on this design, refining the flow h → h/2 does not remove the thermal drift (+8.6% against +8.9%); flow replacement −2.5% to −2.7% of C |
 | R1i | fixed design: h_T = h/8 on the saved coarse flow, one thermal state | **done**, closed in the review of 2a9bfea — the thermal step shrinks: +8.87% (h/2 → h/4) then +3.20% (h/4 → h/8), ratio 0.39 |
-| R1j | development model flow h / thermal h/4: versioned reference, dual-mesh driver entry, directional gradient at x₃₀₀; 0 MMA updates | proposed in the review of 2a9bfea; awaiting authorisation |
+| R1j | development model flow h / thermal h/4: versioned reference, dual-mesh driver entry, directional gradient at x₃₀₀; 0 MMA updates | **done** — reference frozen (C₀ ×1.0005), driver one-solve entry refuses other models' references, gradient check PASS (worst 2.8×10⁻⁹); a deadlock in upstream's solve callback found and fixed |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -427,9 +427,41 @@ conformal-cooling repository has since adopted the same default and reports,
 not re-run here, that re-gating a saved 5200-element state -- no sparse solve --
 died in three of three runs at 24 and ran clean at 8, and that its full suite
 (193 passed) then printed no warning. The mechanism is read from the source and
-fits every failure seen, but no crash has been caught with a native stack, and
-8 threads is not shown to be enough for every workload.
+fits every failure that followed the warning, but no crash has been caught with
+a native stack, and 8 threads is not shown to be enough for every workload.
 `tfopus/_threads.py` has the detail.
+
+**A second, separate fault: a deadlock in upstream's solve callback** (found in
+R1j). `toflux.src.solver.solve` hands the matrix to SciPy through
+`jax.pure_callback`, and the callback's first lines -- `jax.lax.stop_gradient
+(A.data)`, `A.indices[:, 0]` -- are JAX operations: in JAX 0.11 the callback
+receives jax.Arrays, so they dispatch new computations from inside the running
+one. Forward solves, each one compiled Newton loop, have never hung. In an eager
+backward pass the main thread meanwhile dispatches the next operation, which
+needs the callback's result, while the callback dispatches its own. R1j's check
+hung twice, with no CPU in use and no warning, both times in a reverse pass
+after the baseline gradient had completed. In the second, faulthandler caught
+the two threads blocked in dispatch together: the callback at `A.indices[:, 0]`,
+the main thread at the next transposed `dot_general`
+(`results/zhao2d_r1j_check_attempt2_stacks.log`). The first had no dump; it
+matches only in where and how it stopped. It is a race, not a certainty: each
+attempt's first reverse pass completed, as did every reverse pass of the
+earlier stages -- R1d's 300, one per iterate, among them -- and why R1j's later
+ones lost it is not established. This is not the OpenBLAS fault above and
+printed nothing of it.
+
+`tfopus/_callback_solve.py` installs over upstream's `solve` a copy whose
+callback converts its inputs to NumPy before touching them -- JAX's rule for
+host callbacks -- and is otherwise upstream's function for SciPy's sparse solve,
+the only solver used here. It is installed from `fe_flow`, `fe_thermal` and
+`validation/conftest.py`, never by editing the extracted checkout, and it
+refuses to install if upstream's `solve` is not byte for byte the version it
+was written against. Values, the transposed solve and a Newton-solved design
+gradient are bit-identical with upstream's (`validation/test_callback_solve.py`),
+and R1j's check, which had hung twice, then ran through. One clean run proves
+little against a race; the argument is that the replacement makes no JAX call
+inside the callback at all, and a JAX call there is what the dump shows
+blocked.
 
 ## R1g: the temperature on a mesh of its own
 
@@ -967,6 +999,148 @@ fix the combination, freeze a versioned reference for exactly that model, make
 `zhao2d_driver` dual-mesh aware, and verify the gradient of that chain at the
 production point; that stage is not authorised.
 
+## R1j: the development model through the driver
+
+Authorised after the review of 2a9bfea: the development model — design and flow
+on h (2×2), temperature on h/4 (3×3) — gets its own reference and a driver
+entry that evaluates it consistently, and its gradient is checked at the R1d
+design. No MMA update. `scripts/zhao2d_freeze_dual_reference.py`,
+`scripts/zhao2d_r1j_check.py`; records `tfopus/zhao2d_reference_dual_r4q3_v1.json`,
+`results/zhao2d_r1j_check.json` (and `.log`), `results/zhao2d_r1j_reference.log`.
+
+### A. This model's reference
+
+The configured physical density set directly — γ = 0.4 in the design domain,
+the tabs fluid — at α_max = 10⁶, never through the filter or the projection;
+solved once and gated on the states that solve returned. Written to a new,
+versioned file: the single-mesh `tfopus/zhao2d_reference.json` is untouched and
+stays the J* scale. `zhao2d_dual.load_reference` returns it only to a model
+whose identity — spec, config and the thermal mesh (refinement, quadrature,
+element-length mode) — is the one it was frozen for.
+
+| | single mesh (h, 2×2) | this model (flow h, thermal h/4, 3×3) |
+|---|---|---|
+| Ψ₀ | 0.03157912835073678 | 0.03157912835073678 — the same flow problem |
+| C₀ | 20332.91587569144 | **20343.13770002236** (×1.0005) |
+| \|R\|/\|R₀\| flow, thermal | 2.2e-14, 3.8e-14 | 2.2e-14, 5.5e-13 |
+
+The reference state is a uniform grey medium with a smooth temperature
+(T_max 9.53): the thermal mesh moves its C by 0.05%, where between the same two
+discretisations it moves the R1d design's by +34% (27002 → 36180). At w = 0.5
+the C term keeps 0.9995 of its former weight against Ψ.
+It is still a different objective from R1d's: this model's J is not comparable
+with R1d's J_self. Raw Ψ and C are, and J* on the single-mesh scale is recorded
+beside J.
+
+### B. One solve per iterate, for either model
+
+`zhao2d_driver.evaluate` now takes J, its gradient and the reported states from
+one traced solve (`jax.value_and_grad` with the states as auxiliary output),
+applies the residual gate to those states, forms C through
+`problem.thermal_velocity`, and checks the reference with
+`problem.check_reference` before anything is solved; `run` checks it at entry
+too. Before, the gate ran on one solve, the reported values came from a second
+and the gradient from a third through a different function; C used the flow
+mesh's velocity layout, which fails on shape for any thermal refinement; and J
+divided by the reference without checking whose it was. `Zhao2DProblem` gains
+`thermal_velocity`, `residual_norms_at` and `check_reference`, which the dual
+model overrides where it differs. The single-mesh model is unchanged: its
+driver tests pass as they were, now with one forward solve per iterate instead
+of three.
+
+`validation/test_zhao2d_dual_driver.py` (208-cell mesh): the reference's
+identity includes the thermal mesh and reproduces itself, both ratios
+separately; it round-trips and is refused by another refinement, quadrature or
+spec; the driver refuses the single-mesh reference and another thermal mesh's
+before any solve; its record equals the direct API's and is recomputable from
+the states it returns; its gradient matches the direct API's (to 10⁻¹⁰) and
+central differences taken through the driver; and a six-update run starts at
+J = 1 to 10⁻¹² — the first iterate is the reference state — and pairs its
+terminal record with the saved design.
+
+### C. The check at x₃₀₀
+
+α_max = 10⁷, β = 8; the design map reproduces R1d's saved s exactly.
+
+- **Refusals at the driver entry**: the single-mesh reference, and this
+  model's reference relabelled as frozen for thermal refinement 2 or for
+  quadrature 2, each through `evaluate` and through `run`: 6 of 6 refused, no
+  solve before any of them.
+- **Baseline**, one driver solve (43 s): J = 1.1164724 (J* 1.1169195),
+  Ψ = 0.014351143070, C = 36180.160296 — against R1g's level-4 record of the
+  same design, flow and thermal mesh, C −2.2×10⁻¹⁶ and Ψ 2.2×10⁻¹⁶ — g = −5.4×10⁻⁵;
+  residuals 1.3×10⁻¹⁴ / 3.9×10⁻¹². The driver's record, the direct API on the
+  returned states and the reporter agree exactly; the reporter's three
+  identity closures (enthalpy, advective half, stabilisation) are below 10⁻¹⁴.
+- **The driver's dJ** against w dΨ/Ψ₀ + (1 − w) dC/C₀ from two separate scalar
+  passes: 5.4×10⁻¹³.
+- **Directional derivatives** against central differences: 2 directions × 3
+  steps × 2 signs = 12 perturbed evaluations through the driver, each gated.
+  Directions are random signs (seeds 11, 12) on the 4992 of 5000 variables at
+  least 10⁻⁴ from both bounds, zero elsewhere, fixed before the run — so every
+  perturbed design stays in [0, 1] with no clipping.
+
+| | Ψ | C | g | J |
+|---|---|---|---|---|
+| **seed 11** — AD derivative along d | 2.443×10⁻³ | 1483.73 | −1.963×10⁻² | 7.514×10⁻² |
+| best-step absolute error (step) | 3.2×10⁻¹⁶ (10⁻⁶) | 4.1×10⁻⁶ (10⁻⁶) | 8.5×10⁻¹² (10⁻⁵) | 9.4×10⁻¹¹ (10⁻⁶) |
+| best-step relative error | 1.3×10⁻¹³ | 2.8×10⁻⁹ | 4.3×10⁻¹⁰ | 1.3×10⁻⁹ |
+| **seed 12** — AD derivative along d | 3.225×10⁻³ | 1385.80 | −1.464×10⁻² | 8.512×10⁻² |
+| best-step absolute error (step) | 8.4×10⁻¹³ (10⁻⁵) | 8.6×10⁻⁷ (10⁻⁶) | 6.0×10⁻¹² (10⁻⁴) | 2.1×10⁻¹¹ (10⁻⁵) |
+| best-step relative error | 2.6×10⁻¹⁰ | 6.2×10⁻¹⁰ | 4.1×10⁻¹⁰ | 2.4×10⁻¹⁰ |
+
+The criterion, fixed before the run and the small-mesh one, is 10⁻⁵ on the
+best-step relative error: **pass**. No derivative is near zero, so no relative
+error is inflated by a small denominator; every step's values are in the
+record. Cost: build 36 s, baseline value
+and gradient 43 s, the two component passes 34 s, a perturbed evaluation 20 s
+on average, 368 s in all; cumulative peak working set 3.5 GB.
+
+**Two attempts hung first.** The check ran three times. Attempts 1 and 2 each
+stopped dead — CPU time frozen, no warning — in a reverse pass after the
+baseline gradient had completed: attempt 1 in that of a joint `jax.vjp`
+linearisation of (Ψ, C), where it sat unnoticed for about 1 h 50 min; attempt 2
+in the gradient of C alone, after Ψ's alone had returned. The second's stack
+dump shows the deadlock in upstream's solve callback described under the
+environment fault above. Both were stopped by hand; their logs are kept as
+`results/zhao2d_r1j_check_attempt{1,2}_hang.log`, with the stack dump of the
+second, and neither wrote a record. Splitting the linearisation into two scalar
+passes did not help. Replacing the callback removed the operation the dump
+shows blocked, and attempt 3, with it, ran through: the record above. The
+check now arms a faulthandler dump every 10 minutes.
+
+The record's file hashes are of this machine's working copies, byte for byte.
+One file changed after the run: `tfopus/_callback_solve.py`, whose docstring
+was corrected (it had placed both hangs in "the second thermal adjoint" and
+explained the race by compilation time, neither of which the evidence shows).
+Restoring the old paragraph reproduces the recorded hash; the code is the code
+that ran. Twelve others — among them `fe_flow.py`, `fe_thermal.py`,
+`zhao2d_driver.py`, `zhao2d_dual.py`, the reference file and R1d's saved
+record — are CRLF here while the repository stores LF (`.gitattributes`:
+`eol=lf`), so their committed bytes hash differently; converting LF to CRLF
+reproduces every recorded hash. R1h's and R1i's records show the same
+line-ending effect, ten files each, and otherwise match the trees they ran on.
+
+**Full suite**, once, after the check, with no other heavy JAX process
+running: 233 passed in 939 s; the one warning is upstream's optional petsc4py
+import. It ran on the committed code, that docstring apart, which was
+corrected while it ran.
+
+### What R1j says, and what it does not
+
+- The development model has its own frozen reference, and the driver
+  evaluates, normalises and differentiates exactly that model from one solve;
+  another model's reference is refused before any work.
+- Its gradient at x₃₀₀ matches central differences to about 10⁻⁹ in two fixed
+  directions. That says the implementation is right at that point — not that
+  the model is physically accurate, and nothing about an optimisation.
+- The deadlock-prone callback in upstream's solve is replaced, with
+  bit-identical numbers.
+- Not done, by the contract: any MMA update, h/16, a gradient at h/8, a
+  fine-flow gradient chain, a change of formulation, 3D. A short optimisation
+  on this model needs its own decision on the start (x₃₀₀ is a warm start, not a
+  resumed MMA state), the continuation and the budget.
+
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
 Section 4.1 reports, for a uniform γ = 0.4 reference model,
@@ -1218,6 +1392,8 @@ python scripts/zhao2d_dual_check.py                      # R1g, h / h/2 / h/4 on
 python scripts/zhao2d_gradient_check.py --thermal-refinement 2   # R1g gradients
 python scripts/zhao2d_flow_mesh_check.py --out DIR       # R1h rerun; keeps results/ unless --overwrite
 python scripts/zhao2d_thermal_h8_check.py --out DIR      # R1i, h_T = h/8 on the saved coarse flow
+python scripts/zhao2d_freeze_dual_reference.py --write   # R1j reference, flow h / thermal h/4; never overwrites
+python scripts/zhao2d_r1j_check.py --out DIR             # R1j refusals and directional gradient at x300
 python scripts/zhao2d_figures.py                         # docs/figures/ from the saved results, no solves
 ```
 

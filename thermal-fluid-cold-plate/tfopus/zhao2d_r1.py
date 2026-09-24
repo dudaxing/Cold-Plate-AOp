@@ -375,12 +375,22 @@ class Zhao2DProblem:
         )
         return press_vel, temperature, alpha, kappa
 
+    def thermal_velocity(self, press_vel):
+        """The velocity the thermal solve sees, in the thermal solver's layout.
+
+        Here the flow's own element velocities; the dual-mesh subclass maps the
+        flow onto its thermal mesh instead. Everything that forms C goes through
+        this one method, so no caller can hand the thermal side the wrong mesh's
+        velocity.
+        """
+        return self.flow.element_velocities(press_vel)
+
     def metrics(self, s, alpha_max: float):
         """(Psi, C) as JAX scalars. Zhao equations 24 and 23."""
         press_vel, temperature, alpha, kappa = self.solve_states(s, alpha_max)
         psi = self.flow.dissipated_power(press_vel, alpha)
         c = self.thermal.thermal_compliance(
-            temperature, self.flow.element_velocities(press_vel), kappa
+            temperature, self.thermal_velocity(press_vel), kappa
         )
         return psi, c
 
@@ -391,16 +401,24 @@ class Zhao2DProblem:
         residual from before its last step, so this is the only honest measure.
         """
         press_vel, temperature, alpha, kappa = self.solve_states(s, alpha_max)
+        return self.residual_norms_at(press_vel, temperature, alpha, kappa)
+
+    def residual_norms_at(self, press_vel, temperature, alpha, kappa) -> dict:
+        """The same measure for states already in hand, without re-solving.
+
+        What a gate needs when the states it judges are the ones a caller is
+        about to use: a second solve would gate a different computation.
+        """
         press_vel = jax.lax.stop_gradient(press_vel)
         temperature = jax.lax.stop_gradient(temperature)
-        elem_vel = self.flow.element_velocities(press_vel)
+        vel_t = self.thermal_velocity(press_vel)
         fr, _ = self.flow.get_residual_and_tangent_stiffness(press_vel, alpha)
         f0, _ = self.flow.get_residual_and_tangent_stiffness(self.flow_x0, alpha)
         tr, _ = self.thermal.get_residual_and_tangent_stiffness(
-            temperature, elem_vel, kappa, self.q_source
+            temperature, vel_t, kappa, self.q_source
         )
         t0, _ = self.thermal.get_residual_and_tangent_stiffness(
-            self.thermal_x0, elem_vel, kappa, self.q_source
+            self.thermal_x0, vel_t, kappa, self.q_source
         )
         return {
             "flow": float(jnp.linalg.norm(fr) / jnp.maximum(jnp.linalg.norm(f0), 1e-300)),
@@ -428,12 +446,21 @@ class Zhao2DProblem:
 
     # -- objective ----------------------------------------------------------
 
+    def check_reference(self, reference: ReferenceValues) -> None:
+        """Raise unless `reference` was frozen for THIS model.
+
+        Subclasses whose model is more than the spec and the R1 config -- the
+        dual-mesh one adds a thermal mesh -- override it, so a caller such as
+        the driver checks the right identity without knowing which model it has.
+        """
+        reference.check(self.config, self.spec)
+
     def objective_and_constraint(self, x, reference: ReferenceValues, alpha_max: float):
         """(J, g) as JAX scalars, differentiable end to end in `x`.
 
         g <= 0 is feasible:  g = v_f / v_f_max - 1.
         """
-        reference.check(self.config, self.spec)
+        self.check_reference(reference)
         s = self.solid_fraction(x)
         psi, c = self.metrics(s, alpha_max)
         w = self.config.weight

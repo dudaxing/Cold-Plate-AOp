@@ -1,0 +1,16 @@
+dual-mesh reference: flow on h = 0.0001 (2x2), temperature on h/4 (3x3); reference state tabs_fluid, alpha_max 1e+06
+
+NR converged in 8 iters, res_norm/res_norm_0: 2.4839787741716462e-14
+NR converged in 2 iters, res_norm/res_norm_0: 2.070985371280182e-12
+  Psi_0 = 0.03157912835073678
+  C_0   = 20343.13770002236
+  |R|/|R0| flow 2.15e-14, thermal 5.46e-13  (gate 1e-8)
+  v_f design 0.400000, whole 0.423077; T_max 9.534640; 83200 thermal elements; 64.5 s
+
+against the single-mesh reference (h, 2x2), which stays the J* scale:
+  Psi_0 ratio 1.000000000000000  (same flow problem)
+  C_0 ratio   1.000503
+  so at w = 0.5 the C term of J weighs 0.9995 of what it did against Psi: a different objective, not a change of units
+
+written to tfopus\zhao2d_reference_dual_r4q3_v1.json; read back through the identity check
+exit=0 elapsed=69s

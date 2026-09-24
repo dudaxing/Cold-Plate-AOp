@@ -35,6 +35,16 @@ and code that reads the documented name sees a number that never moves.
 then steps with alpha_max pinned at its cap. `validate_schedule` refuses a
 schedule that moves both across a phase boundary, because a jump in J would
 then be unattributable.
+
+**One solve per iterate, for any model.** `evaluate` takes J, its gradient and
+the reported states from a single traced solve and gates THOSE states; it forms
+C through `problem.thermal_velocity` and checks the reference with
+`problem.check_reference`. So the same driver serves the single-mesh model and
+the dual-mesh one, and a reference frozen for another model -- for a dual-mesh
+problem, the single-mesh one -- is refused at the entry. Earlier, the gate ran
+on one solve, the reported values came from a second, the gradient from a
+third through a different function, and C used the flow mesh's velocity layout
+whatever the thermal mesh was.
 """
 
 from __future__ import annotations
@@ -194,19 +204,56 @@ class RunResult:
     final_phase: str
 
 
-def _evaluate(problem, reference, x, alpha_max, beta):
-    """Solve, gate, and return every reported quantity for one iterate."""
+def evaluate(problem, reference, x, alpha_max, beta, gradient: bool = True,
+             tol: float = 1e-8):
+    """Every reported quantity for one iterate, and its gradients, from ONE solve.
+
+    One traced forward solve produces J and, as auxiliary output, the states it
+    solved; `jax.value_and_grad` differentiates that same solve. So the value
+    MMA sees, the gradient it is given and the states that are reported and
+    saved cannot come from different solves -- nor from different
+    discretisations: C is formed through `problem.thermal_velocity`, which for a
+    dual-mesh problem maps the flow onto the thermal mesh.
+
+    The reference is checked against THIS problem before anything is solved
+    (for a dual-mesh problem the identity includes the thermal mesh), and the
+    residual gate is applied to the states that solve returned: an unconverged
+    state raises `NotConverged`, and its gradient is never used.
+
+    Returns (record, (s, press_vel, temperature), dJ, dg); the gradients are
+    None when `gradient` is False.
+    """
+    problem.check_reference(reference)
     config = problem.config
-    s = problem.solid_fraction(x, beta)
-    norms = problem.require_converged(s, alpha_max)
-    press_vel, temperature, alpha, kappa = problem.solve_states(s, alpha_max)
-    psi = problem.flow.dissipated_power(press_vel, alpha)
-    c = problem.thermal.thermal_compliance(
-        temperature, problem.flow.element_velocities(press_vel), kappa
-    )
-    g = problem.fluid_fraction(x, beta) / config.max_fluid_fraction - 1.0
     w = config.weight
-    j = w * psi / reference.psi_0 + (1.0 - w) * c / reference.c_0
+
+    def objective(v):
+        s = problem.solid_fraction(v, beta)
+        press_vel, temperature, alpha, kappa = problem.solve_states(s, alpha_max)
+        psi = problem.flow.dissipated_power(press_vel, alpha)
+        c = problem.thermal.thermal_compliance(
+            temperature, problem.thermal_velocity(press_vel), kappa
+        )
+        j = w * psi / reference.psi_0 + (1.0 - w) * c / reference.c_0
+        return j, (s, press_vel, temperature, alpha, kappa, psi, c)
+
+    def constraint(v):
+        return problem.fluid_fraction(v, beta) / config.max_fluid_fraction - 1.0
+
+    if gradient:
+        (j, aux), dj = jax.value_and_grad(objective, has_aux=True)(x)
+        g, dg = jax.value_and_grad(constraint)(x)
+    else:
+        (j, aux), g, dj, dg = objective(x), constraint(x), None, None
+    s, press_vel, temperature, alpha, kappa, psi, c = aux
+
+    norms = problem.residual_norms_at(press_vel, temperature, alpha, kappa)
+    bad = {k: v for k, v in norms.items() if not v <= tol}
+    if bad:
+        raise _r1.NotConverged(
+            f"relative residual above {tol:g}: {bad}; this iterate's value and "
+            "gradient are not used"
+        )
 
     fractions = _z.fluid_fractions(problem.flow_mesh, s)
     record = {
@@ -232,6 +279,13 @@ def _evaluate(problem, reference, x, alpha_max, beta):
         "thermal_residual_relative": norms["thermal"],
     }
     state = (np.asarray(s), np.asarray(press_vel), np.asarray(temperature))
+    return record, state, dj, dg
+
+
+def _evaluate(problem, reference, x, alpha_max, beta):
+    """(record, state) for one iterate, without gradients. See `evaluate`."""
+    record, state, _, _ = evaluate(problem, reference, x, alpha_max, beta,
+                                   gradient=False)
     return record, state
 
 
@@ -257,21 +311,6 @@ def _mma_convergence(state, params) -> str | None:
     return None
 
 
-def _gradients(problem, reference, x, alpha_max, beta):
-    config = problem.config
-
-    def objective(v):
-        s = problem.solid_fraction(v, beta)
-        psi, c = problem.metrics(s, alpha_max)
-        w = config.weight
-        return w * psi / reference.psi_0 + (1.0 - w) * c / reference.c_0
-
-    def constraint(v):
-        return problem.fluid_fraction(v, beta) / config.max_fluid_fraction - 1.0
-
-    return jax.grad(objective)(x), jax.grad(constraint)(x)
-
-
 def run(
     problem: "_r1.Zhao2DProblem",
     reference: "_r1.ReferenceValues",
@@ -280,8 +319,13 @@ def run(
     budget: int | None = None,
     on_iteration: Callable[[dict], None] | None = None,
 ) -> RunResult:
-    """Run the phased schedule. Every state is gated before MMA sees it."""
+    """Run the phased schedule. Every state is gated before MMA sees it.
+
+    A reference not frozen for `problem` is refused here, before the first
+    solve -- for a dual-mesh problem that includes the single-mesh reference.
+    """
     spec = problem.spec
+    problem.check_reference(reference)
     validate_schedule(phases, spec)
     budget = budget or sum(p.iterations for p in phases)
 
@@ -312,8 +356,7 @@ def run(
             x = jnp.asarray(state.x.reshape(-1))
             t0 = time.time()
 
-            record, _ = _evaluate(problem, reference, x, alpha_max, phase.beta)
-            dj, dg = _gradients(problem, reference, x, alpha_max, phase.beta)
+            record, _, dj, dg = evaluate(problem, reference, x, alpha_max, phase.beta)
 
             record.update(
                 iteration=step,
@@ -362,8 +405,8 @@ def run(
     final_phase = history[-1]["phase"]
 
     x_final = jnp.asarray(state.x.reshape(-1))
-    terminal, (s, press_vel, temperature) = _evaluate(
-        problem, reference, x_final, final_alpha_max, final_beta
+    terminal, (s, press_vel, temperature), _, _ = evaluate(
+        problem, reference, x_final, final_alpha_max, final_beta, gradient=False
     )
     terminal.update(iteration=step, phase=final_phase, terminal=True)
 

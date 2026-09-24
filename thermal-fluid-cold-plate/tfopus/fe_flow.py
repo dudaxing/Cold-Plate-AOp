@@ -44,6 +44,9 @@ import jax.experimental.sparse as jsparse
 
 import toflux.src.solver as _solver
 
+# Replaces upstream's solve with one whose host callback never calls JAX; the
+# original can deadlock an eager backward pass. See tfopus/_callback_solve.py.
+from tfopus import _callback_solve  # noqa: F401
 from tfopus import elements as _elements
 from tfopus import sparse_bc as _sparse_bc
 

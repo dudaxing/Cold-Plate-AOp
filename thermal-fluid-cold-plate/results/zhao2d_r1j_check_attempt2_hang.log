@@ -1,0 +1,26 @@
+D:\Coding\thermalFluid\thermal-fluid-opus\thermal-fluid-cold-plate\external\TOFLUX\toflux\src\solver.py:21: UserWarning: petsc4py not found; the PETSC linear solver is unavailable.
+  warnings.warn("petsc4py not found; the PETSC linear solver is unavailable.")
+built: flow 5200 el, thermal 83200 el (36.6 s)
+references: this model's loaded; 6 refusals at the driver entry, no solve before any of them
+NR converged in 8 iters, res_norm/res_norm_0: 1.5244551419481028e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.125310723756668e-12
+baseline: J 1.1164724235, Psi 0.014351143070, C 36180.160296, g -5.383e-05; |R| 1.3e-14 / 3.9e-12; C vs R1g level 4 -2.2e-16 (45.3 s)
+  gradient of Psi alone ...
+NR converged in 8 iters, res_norm/res_norm_0: 1.5244551419481028e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.125310723756668e-12
+  gradient of C alone ...
+NR converged in 8 iters, res_norm/res_norm_0: 1.5244551419481028e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.125310723756668e-12
+exit=127 elapsed=774s
+
+--- recorded by the session after this attempt (not written by the script) ---
+Attempt 2 hung at the same place in kind: after the baseline gradient, the
+reporter, and the gradient of Psi alone (flow adjoint only), the gradient of C
+alone (thermal adjoint) never returned. The session's watchdog saw the CPU time
+frozen at 1041.8 s for 3 min (17:44:46); faulthandler's 10-minute dump,
+zhao2d_r1j_check_attempt2_stacks.log, shows the two threads: the host callback
+of upstream solver.solve inside solver_wrapper at `A.indices[:, 0]` -- a JAX
+slice dispatched from inside the callback -- and the main thread dispatching
+the next transposed dot_general of the backward pass, both blocked in
+jax/_src/dispatch.py apply_primitive. Stopped by the session at 17:50 (PID
+24616, 127 threads, 2611 MB). No record was written by this attempt.

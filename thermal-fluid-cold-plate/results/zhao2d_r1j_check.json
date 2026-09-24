@@ -1,0 +1,594 @@
+{
+  "note": "R1j: the flow h / thermal h/4 development model through the driver, at x_300. A check of wiring, normalisation and gradient -- no MMA update. J uses this model's own frozen reference; J* the single-mesh one, as a reporting scale only.",
+  "provenance": {
+    "git_head": "76fb1e6621d57ace013abc2d89c9b2a1cd09598f",
+    "git_status_porcelain": [
+      "M thermal-fluid-cold-plate/tfopus/fe_flow.py",
+      " M thermal-fluid-cold-plate/tfopus/fe_thermal.py",
+      " M thermal-fluid-cold-plate/tfopus/zhao2d_driver.py",
+      " M thermal-fluid-cold-plate/tfopus/zhao2d_dual.py",
+      " M thermal-fluid-cold-plate/tfopus/zhao2d_r1.py",
+      "?? thermal-fluid-cold-plate/.claude/",
+      "?? thermal-fluid-cold-plate/scripts/zhao2d_freeze_dual_reference.py",
+      "?? thermal-fluid-cold-plate/scripts/zhao2d_r1j_check.py",
+      "?? thermal-fluid-cold-plate/tfopus/_callback_solve.py",
+      "?? thermal-fluid-cold-plate/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+      "?? thermal-fluid-cold-plate/validation/test_callback_solve.py",
+      "?? thermal-fluid-cold-plate/validation/test_zhao2d_dual_driver.py"
+    ],
+    "source_sha256": {
+      "tfopus/__init__.py": "4f8f07278ef09f9943b1a75b5c6651abc0a774ba8f9bcefd873f3410766500f6",
+      "tfopus/_callback_solve.py": "28f1b4de0d3780a5b27f7a8041441fee4f2724af27d46442220ff97ec40a7d7b",
+      "tfopus/_threads.py": "46202a99056e2e7bd334a28fc7cd07c307f9a25293aa5c5d0a30e5a9315f4104",
+      "tfopus/advection_benchmark.py": "0164cd07368eacccb9f2145d5cac3f1db3c15a708ff4a63f906f100dbd69a40f",
+      "tfopus/bc3d.py": "425269329418f787a1bc8617fedea48cb83ec4269a03bd0cb8d00f1580af76fb",
+      "tfopus/design.py": "8541421386305329195472d8aa0fd6a42da90b38c95dd61f69fba441a5120138",
+      "tfopus/elements.py": "db2c62c44de30ec17dfce5b9d2af1e415fdec8f070c3c3e41690b7d9093a2a80",
+      "tfopus/fe_flow.py": "8faf45037fdb760c9d778474333720c84e3474dbe0dc7e880ddc12696a9265df",
+      "tfopus/fe_thermal.py": "6a13b8b82e84fc67e87078bde9bb5146b99f981979832be087bce80f47e5bcc0",
+      "tfopus/geometry.py": "6b2586d988667e7ee317fb6e864a43f5fb60b1a472ff68963cf813654f188505",
+      "tfopus/materials.py": "117b4a36676c9f2272ddd153e9e69fb08d3ef27b0e0c51b7097a80fc5f9daa11",
+      "tfopus/mesh.py": "a1aa2881c06ce45be42730a2c21bea1c48a9abd7cc3885e438f7b79bf948fe42",
+      "tfopus/sparse_bc.py": "22d37784a86fd5e62e320df7f99e14d531892b638839e733310213c0d7b2583b",
+      "tfopus/zhao2d.py": "60f1205b533d4dcb0d49dd9d2d36a4364d1c0da9f02a457a57d25ed18724ebe6",
+      "tfopus/zhao2d_analysis.py": "543a42633426fdd885ed8c7881d8d616c868a04aee472455b35484490752d2df",
+      "tfopus/zhao2d_driver.py": "01e9985fabfe4bcf196f9275036e49ada29ecda1137b135c783581a629e5e127",
+      "tfopus/zhao2d_dual.py": "a2fc719f033058365dba159b1af8d0ee04286ee90f7366d7a6277cb3d4cef047",
+      "tfopus/zhao2d_flow_study.py": "2a451ecfc5a2d4053fbc177248592c8596f91b556fe95b55c9ccc7f575e8e33f",
+      "tfopus/zhao2d_r1.py": "56d411d6a367062032e15adc76182069e58d0a94c227b4469c738898052e79d1",
+      "tfopus/zhao2d_refine.py": "5070a9ad93645aaba55bea2936946f82cc948fafda9a0996463311a535e93d0f",
+      "tfopus/zhao2d_thermal_study.py": "b57e419c4e9ba546e3cd2447638b2cf64e469e4c1fc760e26446c41accd21941",
+      "scripts/zhao2d_flow_mesh_check.py": "51ccb9afe1eec6f964cb2fb6714520df056375b8e07cd044b9fcce455ea9539e",
+      "scripts/zhao2d_dual_check.py": "ed480a4bffca0137d7643c158d6263cefd3ab1c1af183e19ee2690002c311ac0",
+      "scripts/zhao2d_r1j_check.py": "900d3d5c2182ce18f08deffad70f50c70e4f740ae88ce0ce68dbb8adbe320741"
+    },
+    "toflux_src_sha256": {
+      "__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bc.py": "a3fc663f26d1d8ad4813ba02d4cb344d3b34b855b0647d99077f7160e1babecd",
+      "constrained_loss.py": "846b464db6ad182eefddfa30995831606698f6a71a989c33cca4be390c1d75e2",
+      "element.py": "ae8f5367dbfdb21f615682e525c6ff7cd7063b1632794870d659638fcafee3a4",
+      "fe_fluid.py": "8b012b6f1a1e644f809d10e946db3d52d496f8569ae1817a46d9272dc9407ade",
+      "fe_struct.py": "8c8224edc0c36fcb5796aa1d39f57769bdc6cb92556a2c38993daf38c31e7c8b",
+      "fe_thermal.py": "ffef199d9a2608f66077c19f369a6d1851125ba11b55faf9011385d2758e8461",
+      "geometry.py": "4bf21900872eb6c3733a124746acf6744d30ebc89a43d03683b78e62d4656a7f",
+      "material.py": "504a9e02d75a3978d2ce624139c62002a20e7dbb8db32fcff10083a84d002351",
+      "mesher.py": "e60c691a8f1680ed30988ac48fc32263a53a2cfd2026d5735e167221a3f5b458",
+      "mma.py": "619952b8585a29b39930d12291da5338c585210d79030c8cbf3130d592ae829f",
+      "solver.py": "df36a4e0d62304c8329dcb782f839451f2bc381002225c1f745865a754aa8b4b",
+      "utils.py": "9c788175c2ec1987daebc7f429b2681a20f344f6e772b602557d191393da970c",
+      "viz.py": "eb40ea7f4661d667a76133032bc41da4ae0802b0ae265c016d9c7223dc6afbbb"
+    },
+    "environment": {
+      "python": "3.13.6",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "jax": "0.11.0",
+      "numpy": "2.4.6",
+      "scipy": "1.17.1",
+      "x64": true,
+      "threads": {
+        "OPENBLAS_NUM_THREADS": "8",
+        "OMP_NUM_THREADS": "8",
+        "MKL_NUM_THREADS": "8",
+        "NUMEXPR_NUM_THREADS": "8"
+      },
+      "cpu_count": 32
+    }
+  },
+  "inputs_sha256": {
+    "zhao2d_r1d_main.json": "45107abdd3123ef8cb893e66238b835f0b0823cbc4a4ac8b63efc7f12e00220e",
+    "zhao2d_r1d_main_fields.npz": "f47de5bd7709908fdb7e44173c1f5b260f306084774e34c9870344a23156c93b"
+  },
+  "alpha_max": 10000000.0,
+  "beta": 8.0,
+  "model": {
+    "h_flow": 0.0001,
+    "flow_quadrature": 2,
+    "thermal_refinement": 4,
+    "thermal_quadrature": 3
+  },
+  "criterion": {
+    "steps": [
+      0.0001,
+      1e-05,
+      1e-06
+    ],
+    "best_step_relative_tolerance": 1e-05,
+    "seeds": [
+      11,
+      12
+    ],
+    "fixed_before_the_run": true
+  },
+  "reference": {
+    "file": "tfopus/zhao2d_reference_dual_r4q3_v1.json",
+    "sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622",
+    "psi_0": 0.03157912835073678,
+    "c_0": 20343.13770002236,
+    "identity": {
+      "config": {
+        "alpha_max_reference": 1000000.0,
+        "element_length_mode": "min_edge",
+        "flow_form": {
+          "brinkman_in_supg_residual": true,
+          "brinkman_in_tau": true,
+          "viscous_form": "symmetric"
+        },
+        "outlet": "traction",
+        "reference": "tabs_fluid",
+        "source": "whole_domain",
+        "thermal_form": {
+          "stabilise_source": true,
+          "supg_heat_capacity": true,
+          "tau": "two_limit",
+          "tau_velocity_floor": 1e-12
+        }
+      },
+      "spec": {
+        "design_half_width": 0.005,
+        "design_height": 0.01,
+        "element_size": 0.0001,
+        "fluid_conductivity": 0.61,
+        "fluid_density": 1000.0,
+        "fluid_heat_capacity": 4180.0,
+        "fluid_viscosity": 0.001,
+        "heat_source": 100000000.0,
+        "inlet_half_width": 0.001,
+        "inlet_speed": 0.2,
+        "inlet_temperature": 0.0,
+        "q_alpha": 0.2,
+        "q_kappa": 0.2,
+        "reference_gamma": 0.4,
+        "solid_conductivity": 237.0,
+        "tab_length": 0.001
+      },
+      "thermal_mesh": {
+        "element_length_mode": "min_edge",
+        "quadrature": 3,
+        "refinement": 4
+      }
+    },
+    "single_mesh_scale": {
+      "psi_0": 0.03157912835073678,
+      "c_0": 20332.91587569144
+    }
+  },
+  "refusals": {
+    "refused": {
+      "single-mesh reference / evaluate": "this reference was not frozen for the dual-mesh thermal model (refinement 4, quadrature 3); the single-mesh Psi_0/C_0 are a reporting scale here, not a normalisation. Freeze a new, versioned reference for this model before optimising with it.",
+      "single-mesh reference / run": "this reference was not frozen for the dual-mesh thermal model (refinement 4, quadrature 3); the single-mesh Psi_0/C_0 are a reporting scale here, not a normalisation. Freeze a new, versioned reference for this model before optimising with it.",
+      "thermal refinement 2 / evaluate": "this reference was not frozen for the dual-mesh thermal model (refinement 4, quadrature 3); the single-mesh Psi_0/C_0 are a reporting scale here, not a normalisation. Freeze a new, versioned reference for this model before optimising with it.",
+      "thermal refinement 2 / run": "this reference was not frozen for the dual-mesh thermal model (refinement 4, quadrature 3); the single-mesh Psi_0/C_0 are a reporting scale here, not a normalisation. Freeze a new, versioned reference for this model before optimising with it.",
+      "thermal quadrature 2 / evaluate": "this reference was not frozen for the dual-mesh thermal model (refinement 4, quadrature 3); the single-mesh Psi_0/C_0 are a reporting scale here, not a normalisation. Freeze a new, versioned reference for this model before optimising with it.",
+      "thermal quadrature 2 / run": "this reference was not frozen for the dual-mesh thermal model (refinement 4, quadrature 3); the single-mesh Psi_0/C_0 are a reporting scale here, not a normalisation. Freeze a new, versioned reference for this model before optimising with it."
+    },
+    "solves_before_refusing": 0
+  },
+  "baseline": {
+    "record": {
+      "alpha_max": 10000000.0,
+      "beta": 8.0,
+      "J_self": 1.116472423534761,
+      "psi": 0.014351143070216229,
+      "compliance": 36180.16029596453,
+      "psi_over_psi0_self": 0.45445025938727024,
+      "c_over_c0_self": 1.7784945876822515,
+      "J_paper_interpreted": 1.0264059190117776,
+      "psi_over_paper": 0.3147180497854436,
+      "c_over_paper": 1.7380937882381116,
+      "constraint_g": -5.3831532892845146e-05,
+      "grey_fraction": 0.0640384629368782,
+      "v_f_whole_domain": 0.42305621864119497,
+      "v_f_design_domain": 0.3999784673868429,
+      "flow_residual_relative": 1.299474460893381e-14,
+      "thermal_residual_relative": 3.900479490657646e-12
+    },
+    "j_star_single_mesh_scale": 1.1169194685960773,
+    "consistency": {
+      "design_map_vs_saved_s_max_abs": 0.0,
+      "psi_record_vs_state": 0.0,
+      "c_record_vs_state": 0.0,
+      "psi_record_vs_reporter": 0.0,
+      "c_record_vs_reporter": 0.0,
+      "g_record_vs_direct": 0.0,
+      "residuals_record": {
+        "flow": 1.299474460893381e-14,
+        "thermal": 3.900479490657646e-12
+      },
+      "residuals_reporter": {
+        "flow": 1.299474460893381e-14,
+        "thermal": 3.900479490657646e-12
+      },
+      "c_vs_r1g_level4": -2.220446049250313e-16,
+      "psi_vs_r1g": 2.220446049250313e-16
+    },
+    "reporter_identities": {
+      "enthalpy": 6.580790369955317e-15,
+      "advective_half": 7.005467776050181e-15,
+      "source": null,
+      "stabilisation": 1.9306525932919113e-16
+    },
+    "t_value_and_gradient_s": 43.138258600010886,
+    "gradient_norm_J": 0.05753195839639964,
+    "gradient_norm_g": 0.015643556862985256
+  },
+  "component_gradients": {
+    "method": "two scalar reverse passes through problem.metrics",
+    "t_two_value_and_gradient_s": 33.599199899996165,
+    "psi_c_vs_baseline": [
+      0.0,
+      0.0
+    ],
+    "driver_dJ_vs_composed_relative": 5.358383746148177e-13
+  },
+  "design_variables": {
+    "total": 5000,
+    "at_least_largest_step_from_both_bounds": 4992
+  },
+  "directions": [
+    {
+      "seed": 11,
+      "active_components": 4992,
+      "sha256": "3b11a83a15583f37a24104d2505042f6626cf3e05e099369264e961ae6626b1e",
+      "ad": {
+        "psi": 0.002442789965098289,
+        "compliance": 1483.7252861409904,
+        "constraint_g": -0.019633046968881535,
+        "J_self": 0.07514475018331268
+      },
+      "fd": [
+        {
+          "step": 0.0001,
+          "psi": {
+            "fd": 0.0024427897814174176,
+            "abs_error": 1.8368087129419508e-10,
+            "rel_error": 7.519307338334087e-08
+          },
+          "compliance": {
+            "fd": 1483.7264038942521,
+            "abs_error": 0.0011177532617239194,
+            "rel_error": 7.533418956420915e-07
+          },
+          "constraint_g": {
+            "fd": -0.019633046058342707,
+            "abs_error": 9.105388283636717e-10,
+            "rel_error": 4.637786850078492e-08
+          },
+          "J_self": {
+            "fd": 0.07514477474712677,
+            "abs_error": 2.4563814093880865e-08,
+            "rel_error": 3.268865224034767e-07
+          }
+        },
+        {
+          "step": 1e-05,
+          "psi": {
+            "fd": 0.002442789963190417,
+            "abs_error": 1.907871863965349e-12,
+            "rel_error": 7.810216566771727e-10
+          },
+          "compliance": {
+            "fd": 1483.7252976576563,
+            "abs_error": 1.1516665836097673e-05,
+            "rel_error": 7.761993311213962e-09
+          },
+          "constraint_g": {
+            "fd": -0.019633046960398914,
+            "abs_error": 8.482620855732037e-12,
+            "rel_error": 4.320582980747723e-10
+          },
+          "J_self": {
+            "fd": 0.07514475044434477,
+            "abs_error": 2.61032084836188e-10,
+            "rel_error": 3.4737234908979955e-09
+          }
+        },
+        {
+          "step": 1e-06,
+          "psi": {
+            "fd": 0.002442789965098613,
+            "abs_error": 3.2395960913866872e-16,
+            "rel_error": 1.3261869164653736e-13
+          },
+          "compliance": {
+            "fd": 1483.7252820143476,
+            "abs_error": 4.126642807023018e-06,
+            "rel_error": 2.781271477305132e-09
+          },
+          "constraint_g": {
+            "fd": -0.01963304702146118,
+            "abs_error": 5.257964549865157e-11,
+            "rel_error": 2.6781194707666092e-09
+          },
+          "J_self": {
+            "fd": 0.0751447500890734,
+            "abs_error": 9.423928304386209e-11,
+            "rel_error": 1.2541033529575231e-09
+          }
+        }
+      ],
+      "best_relative_error": {
+        "psi": 1.3261869164653736e-13,
+        "compliance": 2.781271477305132e-09,
+        "constraint_g": 4.320582980747723e-10,
+        "J_self": 1.2541033529575231e-09
+      },
+      "pass": {
+        "psi": true,
+        "compliance": true,
+        "constraint_g": true,
+        "J_self": true
+      }
+    },
+    {
+      "seed": 12,
+      "active_components": 4992,
+      "sha256": "0bf2b569c3052812dce690e02e6e6da05338623df76f18b3122827cf32a3d945",
+      "ad": {
+        "psi": 0.0032250713568208918,
+        "compliance": 1385.7995355089745,
+        "constraint_g": -0.01464190995939215,
+        "J_self": 0.08512395151126581
+      },
+      "fd": [
+        {
+          "step": 0.0001,
+          "psi": {
+            "fd": 0.0032250712839795165,
+            "abs_error": 7.284137529262047e-11,
+            "rel_error": 2.2585973728537008e-08
+          },
+          "compliance": {
+            "fd": 1385.799693671288,
+            "abs_error": 0.00015816231348253496,
+            "rel_error": 1.1413071759564921e-07
+          },
+          "constraint_g": {
+            "fd": -0.014641909953372334,
+            "abs_error": 6.019816589653004e-12,
+            "rel_error": 4.1113602042515744e-10
+          },
+          "J_self": {
+            "fd": 0.08512395424431496,
+            "abs_error": 2.733049148107014e-09,
+            "rel_error": 3.2106698665135633e-08
+          }
+        },
+        {
+          "step": 1e-05,
+          "psi": {
+            "fd": 0.003225071355979214,
+            "abs_error": 8.416778558839599e-13,
+            "rel_error": 2.6097960726466006e-10
+          },
+          "compliance": {
+            "fd": 1385.7995367288822,
+            "abs_error": 1.2199077445984585e-06,
+            "rel_error": 8.802916383404169e-10
+          },
+          "constraint_g": {
+            "fd": -0.014641909951151886,
+            "abs_error": 8.240264373626793e-12,
+            "rel_error": 5.627861666352161e-10
+          },
+          "J_self": {
+            "fd": 0.0851239515320401,
+            "abs_error": 2.0774285069968812e-11,
+            "rel_error": 2.440474707303679e-10
+          }
+        },
+        {
+          "step": 1e-06,
+          "psi": {
+            "fd": 0.003225071355805742,
+            "abs_error": 1.0151497698007717e-12,
+            "rel_error": 3.1476815791170294e-10
+          },
+          "compliance": {
+            "fd": 1385.7995363650844,
+            "abs_error": 8.561098638892872e-07,
+            "rel_error": 6.177732359002232e-10
+          },
+          "constraint_g": {
+            "fd": -0.014641909906742967,
+            "abs_error": 5.264918362390958e-11,
+            "rel_error": 3.5957866124871667e-09
+          },
+          "J_self": {
+            "fd": 0.08512395155424457,
+            "abs_error": 4.297875944025975e-11,
+            "rel_error": 5.048961973161205e-10
+          }
+        }
+      ],
+      "best_relative_error": {
+        "psi": 2.6097960726466006e-10,
+        "compliance": 6.177732359002232e-10,
+        "constraint_g": 4.1113602042515744e-10,
+        "J_self": 2.440474707303679e-10
+      },
+      "pass": {
+        "psi": true,
+        "compliance": true,
+        "constraint_g": true,
+        "J_self": true
+      }
+    }
+  ],
+  "evaluations": [
+    {
+      "direction": 0,
+      "step": 0.0001,
+      "sign": 1.0,
+      "seconds": 18.674058000004152,
+      "residual_flow": 1.335485186002529e-14,
+      "residual_thermal": 3.9345749448055165e-12,
+      "psi": 0.014351387554209661,
+      "compliance": 36180.30871761529,
+      "constraint_g": -5.5794853644153264e-05,
+      "J_self": 1.1164799424628846
+    },
+    {
+      "direction": 0,
+      "step": 0.0001,
+      "sign": -1.0,
+      "seconds": 19.313753299997188,
+      "residual_flow": 1.2956792357397186e-14,
+      "residual_thermal": 3.96986332398831e-12,
+      "psi": 0.014350898996253377,
+      "compliance": 36180.01197233451,
+      "constraint_g": -5.186824443248472e-05,
+      "J_self": 1.1164649135079352
+    },
+    {
+      "direction": 0,
+      "step": 1e-05,
+      "sign": 1.0,
+      "seconds": 18.98554090000107,
+      "residual_flow": 1.3082656327525926e-14,
+      "residual_thermal": 3.884980391754871e-12,
+      "psi": 0.01435116750016601,
+      "compliance": 36180.17513370762,
+      "constraint_g": -5.402786352370903e-05,
+      "J_self": 1.116473175026772
+    },
+    {
+      "direction": 0,
+      "step": 1e-05,
+      "sign": -1.0,
+      "seconds": 19.377711599998293,
+      "residual_flow": 1.3484402592766812e-14,
+      "residual_thermal": 3.884351702609429e-12,
+      "psi": 0.014351118644366747,
+      "compliance": 36180.14545920167,
+      "constraint_g": -5.363520258450105e-05,
+      "J_self": 1.1164716721317631
+    },
+    {
+      "direction": 0,
+      "step": 1e-06,
+      "sign": 1.0,
+      "seconds": 19.597131100003025,
+      "residual_flow": 1.3034425228435008e-14,
+      "residual_thermal": 3.8716769538780406e-12,
+      "psi": 0.014351145513026693,
+      "compliance": 36180.16177969474,
+      "constraint_g": -5.385116594136541e-05,
+      "J_self": 1.1164724986799566
+    },
+    {
+      "direction": 0,
+      "step": 1e-06,
+      "sign": -1.0,
+      "seconds": 19.369491599994944,
+      "residual_flow": 1.27559552454047e-14,
+      "residual_thermal": 3.898960889116546e-12,
+      "psi": 0.014351140627446763,
+      "compliance": 36180.158812244175,
+      "constraint_g": -5.3811899847322486e-05,
+      "J_self": 1.1164723483904564
+    },
+    {
+      "direction": 1,
+      "step": 0.0001,
+      "sign": 1.0,
+      "seconds": 19.454524699991453,
+      "residual_flow": 1.345461219804722e-14,
+      "residual_thermal": 3.885209213519665e-12,
+      "psi": 0.014351465738145436,
+      "compliance": 36180.29881146971,
+      "constraint_g": -5.5295573006985954e-05,
+      "J_self": 1.1164809368917625
+    },
+    {
+      "direction": 1,
+      "step": 0.0001,
+      "sign": -1.0,
+      "seconds": 19.473115399989183,
+      "residual_flow": 1.3303001582888305e-14,
+      "residual_thermal": 4.130573409463634e-12,
+      "psi": 0.01435082072388864,
+      "compliance": 36180.02165153097,
+      "constraint_g": -5.236719101631149e-05,
+      "J_self": 1.1164639121009137
+    },
+    {
+      "direction": 1,
+      "step": 1e-05,
+      "sign": 1.0,
+      "seconds": 20.541300800003228,
+      "residual_flow": 1.3106169150315233e-14,
+      "residual_thermal": 3.856866808564384e-12,
+      "psi": 0.0143511753225378,
+      "compliance": 36180.17415331529,
+      "constraint_g": -5.397795048345255e-05,
+      "J_self": 1.1164732747838928
+    },
+    {
+      "direction": 1,
+      "step": 1e-05,
+      "sign": -1.0,
+      "seconds": 20.040365000008023,
+      "residual_flow": 1.3045007577280504e-14,
+      "residual_thermal": 3.983309044947998e-12,
+      "psi": 0.01435111082111068,
+      "compliance": 36180.146437324554,
+      "constraint_g": -5.3685112284429515e-05,
+      "J_self": 1.1164715723048622
+    },
+    {
+      "direction": 1,
+      "step": 1e-06,
+      "sign": 1.0,
+      "seconds": 20.481449799990514,
+      "residual_flow": 1.2622976990219582e-14,
+      "residual_thermal": 3.873338704244761e-12,
+      "psi": 0.014351146295303666,
+      "compliance": 36180.16168175764,
+      "constraint_g": -5.3846174787541834e-05,
+      "J_self": 1.1164725086588092
+    },
+    {
+      "direction": 1,
+      "step": 1e-06,
+      "sign": -1.0,
+      "seconds": 20.63693899998907,
+      "residual_flow": 1.2826103099111924e-14,
+      "residual_thermal": 3.902385505296743e-12,
+      "psi": 0.014351139845160954,
+      "compliance": 36180.15891015857,
+      "constraint_g": -5.381689096772835e-05,
+      "J_self": 1.116472338410906
+    }
+  ],
+  "verdict": {
+    "all_pass": true,
+    "perturbed_evaluations": 12,
+    "worst_best_step_relative_error": 2.781271477305132e-09
+  },
+  "cost": {
+    "t_build_s": 35.885259600006975,
+    "t_baseline_value_and_gradient_s": 43.138258600010886,
+    "t_component_linearisation_s": 33.599199899996165,
+    "t_perturbed_evaluation_s": [
+      18.674058000004152,
+      19.313753299997188,
+      18.98554090000107,
+      19.377711599998293,
+      19.597131100003025,
+      19.369491599994944,
+      19.454524699991453,
+      19.473115399989183,
+      20.541300800003228,
+      20.040365000008023,
+      20.481449799990514,
+      20.63693899998907
+    ],
+    "peak_working_set_mb_cumulative": {
+      "after_build": 771.2734375,
+      "after_baseline": 2703.1796875,
+      "after_linearisation": 3257.80859375,
+      "after_differences": 3518.70703125
+    },
+    "wall_clock_total_s": 368.36136739999347
+  }
+}

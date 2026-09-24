@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient, not yet optimised |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -88,6 +88,15 @@ h/4 (a ratio of 0.39) — an observation on three levels, not a convergence proo
 That makes h_T = h/4 a reasonable economical development mesh (3.1% below h/8
 in C here), with h/8 as a check level; neither is a validated production mesh.
 
+**The development model is ready to optimise, and nothing has been optimised on
+it yet.** Flow h with temperature h/4 now has its own frozen, versioned
+reference (C₀ ×1.0005 over the single-mesh one, so the same w = 0.5 is a
+slightly different objective), and the driver takes J, its gradient and the
+reported states from one solve of that model, refusing any other model's
+reference before it solves. At the R1d design the gradient matches central
+differences in two fixed directions to 3 × 10⁻⁹ or better. Getting there
+exposed a deadlock in upstream's linear-solve callback — see Setup.
+
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
 as source substitutions against a pristine checkout rather than a fork, so the
@@ -124,6 +133,14 @@ the environment wins -- and it only takes effect if `tfopus` is imported before
 NumPy, since OpenBLAS reads the variable once at startup; it warns if it comes
 too late. Run one heavy JAX process at a time.
 
+Separately, upstream's `solve` calls JAX from inside its SciPy callback, and an
+eager reverse pass can then hang for good with no CPU in use: two threads
+blocked on each other in JAX's dispatch. `tfopus/_callback_solve.py` replaces
+that function with one whose callback works on NumPy arrays only; it is
+installed by `fe_flow`, `fe_thermal` and `validation/conftest.py`, refuses to
+install over any other version of upstream's `solve`, and gives bit-identical
+results (`validation/test_callback_solve.py`).
+
 ## Reproducing the reported studies
 
 ```bash
@@ -136,6 +153,8 @@ python scripts/zhao2d_advection_benchmark.py --pe 1000  # analytic accuracy refe
 python scripts/zhao2d_dual_check.py                     # dual-mesh thermal model, h/2 vs h/4
 python scripts/zhao2d_flow_mesh_check.py --out DIR      # flow h vs h/2 on common thermal meshes
 python scripts/zhao2d_thermal_h8_check.py --out DIR     # one more thermal level, h_T = h/8
+python scripts/zhao2d_freeze_dual_reference.py --write  # the development model's own reference
+python scripts/zhao2d_r1j_check.py --out DIR            # its driver entry and gradient at the R1d design
 python scripts/zhao2d_figures.py                        # docs/figures/, drawn from the saved results
 ```
 

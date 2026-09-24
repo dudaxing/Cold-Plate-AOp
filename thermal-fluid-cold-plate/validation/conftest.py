@@ -34,6 +34,12 @@ TOFLUX_ROOT = pathlib.Path(os.environ.get("TOFLUX_ROOT", REPO / "external" / "TO
 if (TOFLUX_ROOT / "toflux" / "src" / "fe_fluid.py").is_file():
     sys.path.insert(0, str(TOFLUX_ROOT))
     sys.path.insert(0, str(REPO))  # our own tfopus package
+    # Every test gets upstream's solve with a host callback that never calls
+    # JAX -- including the ones that reach upstream's solver through
+    # validation/harness.py without importing a tfopus kernel, which would
+    # otherwise run the original, deadlock-prone callback when run on their
+    # own. See tfopus/_callback_solve.py.
+    import tfopus._callback_solve  # noqa: E402,F401
 else:
     pytest.skip(
         f"upstream TOFLUX not found at {TOFLUX_ROOT}. "

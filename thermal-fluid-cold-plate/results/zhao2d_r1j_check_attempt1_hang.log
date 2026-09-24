@@ -1,0 +1,20 @@
+D:\Coding\thermalFluid\thermal-fluid-opus\thermal-fluid-cold-plate\external\TOFLUX\toflux\src\solver.py:21: UserWarning: petsc4py not found; the PETSC linear solver is unavailable.
+  warnings.warn("petsc4py not found; the PETSC linear solver is unavailable.")
+built: flow 5200 el, thermal 83200 el (35.5 s)
+references: this model's loaded; 6 refusals at the driver entry, no solve before any of them
+NR converged in 8 iters, res_norm/res_norm_0: 1.5244551419481028e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.125310723756668e-12
+baseline: J 1.1164724235, Psi 0.014351143070, C 36180.160296, g -5.383e-05; |R| 1.3e-14 / 3.9e-12; C vs R1g level 4 -2.2e-16 (45.2 s)
+NR converged in 8 iters, res_norm/res_norm_0: 1.5244551419481028e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.125310723756668e-12
+exit=127 elapsed=6964s
+
+--- recorded by the session after this attempt (not written by the script) ---
+Attempt 1 hung. Process 40424 started 15:41:34; the lines above were all it
+printed. At 17:36 its CPU time was frozen at 832.2 s (unchanged over 5 s),
+125 threads, working set 2571 MB: idle for about 1 h 50 min, in the step after
+the baseline -- the linearisation of (Psi, C) with jax.vjp. Both forward solves
+of that linearisation had printed; the hang is in the backward (adjoint) pass
+that followed. No OpenBLAS warning appears. Stopped by the session with
+Stop-Process at 17:36; the "exit=" line above is the wrapper's, after the stop.
+No record (zhao2d_r1j_check.json) was written by this attempt.

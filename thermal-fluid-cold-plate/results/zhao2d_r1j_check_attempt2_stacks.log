@@ -1,0 +1,34 @@
+Timeout (0:10:00)!
+Thread 0x0000a7a4 (most recent call first):
+  File "C:\Python313\Lib\site-packages\jax\_src\dispatch.py", line 88 in apply_primitive
+  File "C:\Python313\Lib\site-packages\jax\_src\lax\slicing.py", line 1494 in _slice_impl
+  File "C:\Python313\Lib\site-packages\jax\_src\core.py", line 1316 in process_primitive
+  File "C:\Python313\Lib\site-packages\jax\_src\core.py", line 735 in bind_with_trace
+  File "C:\Python313\Lib\site-packages\jax\_src\core.py", line 727 in bind
+  File "C:\Python313\Lib\site-packages\jax\_src\lax\slicing.py", line 111 in slice
+  File "C:\Python313\Lib\site-packages\jax\_src\numpy\indexing.py", line 1163 in _static_slice
+  File "C:\Python313\Lib\site-packages\jax\_src\numpy\indexing.py", line 1126 in rewriting_take
+  File "C:\Python313\Lib\site-packages\jax\_src\array.py", line 342 in __getitem__
+  File "D:\Coding\thermalFluid\thermal-fluid-opus\thermal-fluid-cold-plate\external\TOFLUX\toflux\src\solver.py", line 142 in solver_wrapper
+  File "C:\Python313\Lib\site-packages\jax\_src\callback.py", line 71 in __call__
+  File "C:\Python313\Lib\site-packages\jax\_src\callback.py", line 93 in pure_callback_impl
+  File "C:\Python313\Lib\site-packages\jax\_src\callback.py", line 226 in _callback
+  File "C:\Python313\Lib\site-packages\jax\_src\callback.py", line 816 in _wrapped_callback
+
+Thread 0x00000d0c (most recent call first):
+  File "C:\Python313\Lib\site-packages\jax\_src\dispatch.py", line 88 in apply_primitive
+  File "C:\Python313\Lib\site-packages\jax\_src\core.py", line 1316 in process_primitive
+  File "C:\Python313\Lib\site-packages\jax\_src\core.py", line 735 in bind_with_trace
+  File "C:\Python313\Lib\site-packages\jax\_src\core.py", line 727 in bind
+  File "C:\Python313\Lib\site-packages\jax\_src\lax\lax.py", line 2624 in dot
+  File "C:\Python313\Lib\site-packages\jax\_src\lax\lax.py", line 2541 in dot_general
+  File "C:\Python313\Lib\site-packages\jax\_src\lax\lax.py", line 5864 in _dot_general_transpose_lhs
+  File "C:\Python313\Lib\site-packages\jax\_src\interpreters\ad.py", line 1138 in fancy_bilinear_transpose
+  File "C:\Python313\Lib\site-packages\jax\_src\interpreters\ad.py", line 416 in backward_pass3
+  File "C:\Python313\Lib\site-packages\jax\_src\api.py", line 1789 in _vjp3_bwd
+  File "C:\Python313\Lib\site-packages\jax\_src\tree_util.py", line 498 in __call__
+  File "C:\Python313\Lib\site-packages\jax\_src\api.py", line 1947 in __call__
+  File "C:\Python313\Lib\site-packages\jax\_src\api.py", line 561 in value_and_grad_f
+  File "C:\Python313\Lib\site-packages\jax\_src\traceback_util.py", line 195 in reraise_with_filtered_traceback
+  File "D:\Coding\thermalFluid\thermal-fluid-opus\thermal-fluid-cold-plate\scripts\zhao2d_r1j_check.py", line 238 in main
+  File "D:\Coding\thermalFluid\thermal-fluid-opus\thermal-fluid-cold-plate\scripts\zhao2d_r1j_check.py", line 337 in <module>

@@ -1,0 +1,9 @@
+{
+  "c_0": 20343.13770002236,
+  "flow_residual_relative": 2.1507597413587175e-14,
+  "identity": "{\"config\": {\"alpha_max_reference\": 1000000.0, \"element_length_mode\": \"min_edge\", \"flow_form\": {\"brinkman_in_supg_residual\": true, \"brinkman_in_tau\": true, \"viscous_form\": \"symmetric\"}, \"outlet\": \"traction\", \"reference\": \"tabs_fluid\", \"source\": \"whole_domain\", \"thermal_form\": {\"stabilise_source\": true, \"supg_heat_capacity\": true, \"tau\": \"two_limit\", \"tau_velocity_floor\": 1e-12}}, \"spec\": {\"design_half_width\": 0.005, \"design_height\": 0.01, \"element_size\": 0.0001, \"fluid_conductivity\": 0.61, \"fluid_density\": 1000.0, \"fluid_heat_capacity\": 4180.0, \"fluid_viscosity\": 0.001, \"heat_source\": 100000000.0, \"inlet_half_width\": 0.001, \"inlet_speed\": 0.2, \"inlet_temperature\": 0.0, \"q_alpha\": 0.2, \"q_kappa\": 0.2, \"reference_gamma\": 0.4, \"solid_conductivity\": 237.0, \"tab_length\": 0.001}, \"thermal_mesh\": {\"element_length_mode\": \"min_edge\", \"quadrature\": 3, \"refinement\": 4}}",
+  "psi_0": 0.03157912835073678,
+  "run_fingerprint": "{\"alpha_max_reference\": 1000000.0, \"element_length_mode\": \"min_edge\", \"filter_radius_elements\": 2.0, \"flow_form\": {\"brinkman_in_supg_residual\": true, \"brinkman_in_tau\": true, \"viscous_form\": \"symmetric\"}, \"max_fluid_fraction\": 0.4, \"outlet\": \"traction\", \"projection_beta\": 0.0, \"reference\": \"tabs_fluid\", \"source\": \"whole_domain\", \"thermal_form\": {\"stabilise_source\": true, \"supg_heat_capacity\": true, \"tau\": \"two_limit\", \"tau_velocity_floor\": 1e-12}, \"volume_domain\": \"design\", \"weight\": 0.5}",
+  "spec_element_size": 0.0001,
+  "thermal_residual_relative": 5.458428483980018e-13
+}

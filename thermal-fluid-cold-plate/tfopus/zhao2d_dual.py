@@ -40,8 +40,10 @@ of the gradient.
 **Reference values.** Psi_0 and C_0 were frozen on the single-mesh model. They
 are not this model's normalisation, and `objective_and_constraint` refuses them
 rather than silently accepting a reference whose identity does not mention the
-thermal mesh. Until a production thermal model is chosen and its own versioned
-reference frozen, they are used only as a stated common reporting scale, via
+thermal mesh. For a model to be optimised, `freeze_reference` computes its own
+Psi_0 and C_0 into a versioned file beside the single-mesh one, and
+`load_reference` returns them only to the model they were frozen for. The
+single-mesh values stay a stated common reporting scale, via
 `reporting_objective`.
 """
 
@@ -50,6 +52,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
+import pathlib
 
 import numpy as np
 import jax
@@ -387,30 +390,8 @@ class Zhao2DDualProblem(_r1.Zhao2DProblem):
         )
         return psi, c
 
-    def residual_norms(self, s, alpha_max: float) -> dict:
-        """Recomputed relative residuals of both states. NOT differentiable."""
-        press_vel, temperature, alpha, kappa_t = self.solve_states(s, alpha_max)
-        return self.residual_norms_at(press_vel, temperature, alpha, kappa_t)
-
-    def residual_norms_at(self, press_vel, temperature, alpha, kappa_t) -> dict:
-        """The same measure for states already in hand, without re-solving."""
-        press_vel = jax.lax.stop_gradient(press_vel)
-        temperature = jax.lax.stop_gradient(temperature)
-        vel_t = self.thermal_velocity(press_vel)
-        fr, _ = self.flow.get_residual_and_tangent_stiffness(press_vel, alpha)
-        f0, _ = self.flow.get_residual_and_tangent_stiffness(self.flow_x0, alpha)
-        tr, _ = self.thermal.get_residual_and_tangent_stiffness(
-            temperature, vel_t, kappa_t, self.q_source
-        )
-        t0, _ = self.thermal.get_residual_and_tangent_stiffness(
-            self.thermal_x0, vel_t, kappa_t, self.q_source
-        )
-        return {
-            "flow": float(jnp.linalg.norm(fr) / jnp.maximum(jnp.linalg.norm(f0), 1e-300)),
-            "thermal": float(
-                jnp.linalg.norm(tr) / jnp.maximum(jnp.linalg.norm(t0), 1e-300)
-            ),
-        }
+    # `residual_norms` and `residual_norms_at` are the parent's: they measure
+    # the thermal residual through `thermal_velocity`, which is this class's.
 
     def evaluate(self, x, alpha_max: float, beta: float | None = None) -> dict:
         """Psi, C, g and both residuals from ONE solve. Reporting, not traced.
@@ -445,12 +426,12 @@ class Zhao2DDualProblem(_r1.Zhao2DProblem):
         }
         return json.dumps(payload, sort_keys=True)
 
-    def objective_and_constraint(self, x, reference: _r1.ReferenceValues, alpha_max: float):
-        """(J, g), refusing any reference not frozen for THIS thermal model.
+    def check_reference(self, reference: _r1.ReferenceValues) -> None:
+        """Refuse any reference not frozen for THIS thermal model.
 
         The inherited check compares only the spec and the R1 config, neither of
         which mentions the thermal mesh -- so it would accept the single-mesh
-        denominators here without complaint.
+        denominators, or another thermal mesh's, without complaint.
         """
         if reference.identity != self.reference_identity():
             raise ValueError(
@@ -460,9 +441,92 @@ class Zhao2DDualProblem(_r1.Zhao2DProblem):
                 "reporting scale here, not a normalisation. Freeze a new, "
                 "versioned reference for this model before optimising with it."
             )
+
+    def objective_and_constraint(self, x, reference: _r1.ReferenceValues, alpha_max: float):
+        """(J, g), refusing any reference not frozen for THIS thermal model."""
+        self.check_reference(reference)
         s = self.solid_fraction(x)
         psi, c = self.metrics(s, alpha_max)
         w = self.config.weight
         j = w * psi / reference.psi_0 + (1.0 - w) * c / reference.c_0
         g = self.fluid_fraction(x) / self.config.max_fluid_fraction - 1.0
         return j, g
+
+
+# --------------------------------------------------------------------------
+# This model's own reference, versioned
+# --------------------------------------------------------------------------
+
+
+def reference_file(thermal_refinement: int, thermal_quadrature: int,
+                   version: int = 1) -> pathlib.Path:
+    """Where a dual-mesh model's frozen reference lives -- never the single-mesh file.
+
+    The name carries the thermal mesh and a version, so a refrozen reference
+    for the same model is a new file beside the old one, not an overwrite.
+    """
+    return (pathlib.Path(__file__).resolve().parent
+            / f"zhao2d_reference_dual_r{thermal_refinement}q{thermal_quadrature}"
+              f"_v{version}.json")
+
+
+def freeze_reference(spec: _z.Zhao2DSpec, config: _r1.R1Config = _r1.R1Config(),
+                     thermal_refinement: int = 4, thermal_quadrature: int = 3,
+                     solver_settings: dict | None = None, tol: float = 1e-8):
+    """Psi_0 and C_0 for THIS dual-mesh model, bound to its identity.
+
+    The reference state is the configured physical density -- gamma = 0.4 in
+    the design domain, the tabs fluid -- set directly, never through the filter
+    or the projection, at alpha_max_reference. It is solved ONCE; the gate is
+    applied to the states that solve returned, and Psi_0 and C_0 are taken from
+    those same states.
+
+    With w fixed, a new C_0 changes how C is weighed against Psi in J: it is a
+    different objective, not the old one in new units.
+
+    Returns (ReferenceValues, report, problem).
+    """
+    problem = Zhao2DDualProblem(spec, config, thermal_refinement, thermal_quadrature,
+                                solver_settings)
+    s = _z.reference_solid_fraction(problem.flow_mesh, spec, config.reference_field)
+    alpha_max = config.alpha_max_reference
+    press_vel, temperature, alpha, kappa_t = problem.solve_states(s, alpha_max)
+    norms = problem.residual_norms_at(press_vel, temperature, alpha, kappa_t)
+    bad = {k: v for k, v in norms.items() if not v <= tol}
+    if bad:
+        raise _r1.NotConverged(
+            f"the reference state did not converge ({bad}); nothing frozen"
+        )
+    psi = float(problem.flow.dissipated_power(press_vel, alpha))
+    c = float(problem.thermal.thermal_compliance(
+        temperature, problem.thermal_velocity(press_vel), kappa_t))
+    values = _r1.ReferenceValues(
+        psi_0=psi,
+        c_0=c,
+        identity=problem.reference_identity(),
+        run_fingerprint=config.fingerprint(),
+        spec_element_size=spec.element_size,
+        flow_residual_relative=norms["flow"],
+        thermal_residual_relative=norms["thermal"],
+    )
+    report = {
+        "psi_0": psi,
+        "c_0": c,
+        **{f"residual_{k}": v for k, v in norms.items()},
+        **_z.fluid_fractions(problem.flow_mesh, s),
+        "t_max": float(jnp.max(temperature)),
+        "thermal_elements": int(problem.thermal_mesh.num_elems),
+    }
+    return values, report, problem
+
+
+def load_reference(problem: Zhao2DDualProblem, path: pathlib.Path | None = None):
+    """A frozen dual-mesh reference, only if it belongs to `problem`."""
+    path = path or reference_file(problem.thermal_refinement, problem.thermal_quadrature)
+    if not pathlib.Path(path).is_file():
+        raise FileNotFoundError(
+            f"{path} not found; freeze it with scripts/zhao2d_freeze_dual_reference.py"
+        )
+    values = _r1.ReferenceValues.from_json(pathlib.Path(path).read_text(encoding="utf-8"))
+    problem.check_reference(values)
+    return values

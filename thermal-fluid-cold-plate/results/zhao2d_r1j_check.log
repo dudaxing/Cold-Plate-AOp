@@ -1,0 +1,52 @@
+D:\Coding\thermalFluid\thermal-fluid-opus\thermal-fluid-cold-plate\external\TOFLUX\toflux\src\solver.py:21: UserWarning: petsc4py not found; the PETSC linear solver is unavailable.
+  warnings.warn("petsc4py not found; the PETSC linear solver is unavailable.")
+built: flow 5200 el, thermal 83200 el (35.9 s)
+references: this model's loaded; 6 refusals at the driver entry, no solve before any of them
+NR converged in 8 iters, res_norm/res_norm_0: 1.5244551419481028e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.125310723756668e-12
+baseline: J 1.1164724235, Psi 0.014351143070, C 36180.160296, g -5.383e-05; |R| 1.3e-14 / 3.9e-12; C vs R1g level 4 -2.2e-16 (43.1 s)
+  gradient of Psi alone ...
+NR converged in 8 iters, res_norm/res_norm_0: 1.5244551419481028e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.125310723756668e-12
+  gradient of C alone ...
+NR converged in 8 iters, res_norm/res_norm_0: 1.5244551419481028e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.125310723756668e-12
+components: driver dJ vs w dPsi/Psi0 + (1-w) dC/C0: relative 5.4e-13 (33.6 s)
+NR converged in 8 iters, res_norm/res_norm_0: 1.526186184901538e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.1106878379656155e-12
+NR converged in 8 iters, res_norm/res_norm_0: 1.5133048606614773e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.095538327183616e-12
+  direction 0 step 1e-04: psi 7.5e-08  compliance 7.5e-07  constraint_g 4.6e-08  J_self 3.3e-07
+NR converged in 8 iters, res_norm/res_norm_0: 1.534608824345568e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.117945974176446e-12
+NR converged in 8 iters, res_norm/res_norm_0: 1.5105463419845286e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.137317566512014e-12
+  direction 0 step 1e-05: psi 7.8e-10  compliance 7.8e-09  constraint_g 4.3e-10  J_self 3.5e-09
+NR converged in 8 iters, res_norm/res_norm_0: 1.529195626986807e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.134453355096715e-12
+NR converged in 8 iters, res_norm/res_norm_0: 1.5362017897025534e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.124260078073654e-12
+  direction 0 step 1e-06: psi 1.3e-13  compliance 2.8e-09  constraint_g 2.7e-09  J_self 1.3e-09
+NR converged in 8 iters, res_norm/res_norm_0: 1.506652049244872e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.1502714544467354e-12
+NR converged in 8 iters, res_norm/res_norm_0: 1.521636663540442e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.130572991517161e-12
+  direction 1 step 1e-04: psi 2.3e-08  compliance 1.1e-07  constraint_g 4.1e-10  J_self 3.2e-08
+NR converged in 8 iters, res_norm/res_norm_0: 1.5410543642197707e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.118892282334822e-12
+NR converged in 8 iters, res_norm/res_norm_0: 1.5319225751468834e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.137673199352327e-12
+  direction 1 step 1e-05: psi 2.6e-10  compliance 8.8e-10  constraint_g 5.6e-10  J_self 2.4e-10
+NR converged in 8 iters, res_norm/res_norm_0: 1.5185838783076555e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.12944664105705e-12
+NR converged in 8 iters, res_norm/res_norm_0: 1.529914243059565e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.100026299729608e-12
+  direction 1 step 1e-06: psi 3.1e-10  compliance 6.2e-10  constraint_g 3.6e-09  J_self 5.0e-10
+
+best-step relative error, per direction:
+  seed 11 (4992 active): psi 1.3e-13  compliance 2.8e-09  constraint_g 4.3e-10  J_self 1.3e-09
+  seed 12 (4992 active): psi 2.6e-10  compliance 6.2e-10  constraint_g 4.1e-10  J_self 2.4e-10
+verdict: PASS at 1e-05 (12 perturbed evaluations)
+
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\thermal-fluid-cold-plate\results\zhao2d_r1j_check.json; total 368 s
+exit=0 elapsed=377s
