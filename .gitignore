@@ -1,7 +1,14 @@
+# Upstream TOFLUX is checked out here by scripts/setup_toflux.py.
+# It ships without a LICENSE file, so it is deliberately not vendored.
+external/
+
 # The conformal-cooling project is its own repository (Cooling-conformal-AOp),
 # nested here for convenience. The shared tfopus kernel is COPIED into it, not
 # moved, so neither project depends on the other checkout.
 thermal-fluid-conformal/
+
+# Claude Code session worktrees are never part of the project.
+**/.claude/worktrees/
 
 __pycache__/
 *.py[cod]
@@ -9,3 +16,6 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+.variants/
+
+results/
