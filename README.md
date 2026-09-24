@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done here; the work continues in its own repository, Cooling-conformal-AOp |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient, not yet optimised |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9%, budget-limited, not converged |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -96,8 +96,16 @@ reported states from one forward evaluation of that model, refusing any other
 model's reference before it solves. At the R1d design the gradient matches
 central differences in two fixed directions, to 3 × 10⁻⁹ at the best step and
 within 10⁻⁶ at every step. Getting there exposed a deadlock in upstream's
-linear-solve callback — see Setup. The next step proposed is a warm start from
-the R1d design, at most 30 MMA updates with the model held fixed.
+linear-solve callback — see Setup.
+
+**A first optimisation on it moves the design, and has not settled.** Thirty
+MMA updates from the R1d design, α_max and β held fixed, lower this model's J
+by 10.9%: thermal compliance −18.9% for 20.4% more dissipation. Every state
+passed the residual gate and the constraint, and the lowest J is the terminal
+design's. It is budget-limited, not converged: the move limit binds on every
+update from the fourth, and the driver now reports upstream's stopping tests
+as proxies rather than convergence. The gain has not yet been re-measured on a
+finer thermal mesh or on a thresholded design.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
@@ -157,6 +165,7 @@ python scripts/zhao2d_flow_mesh_check.py --out DIR      # flow h vs h/2 on commo
 python scripts/zhao2d_thermal_h8_check.py --out DIR     # one more thermal level, h_T = h/8
 python scripts/zhao2d_freeze_dual_reference.py --write  # the development model's own reference
 python scripts/zhao2d_r1j_check.py --out DIR            # its driver entry and gradient at the R1d design
+python scripts/zhao2d_r1k_warm_start.py --out DIR       # 30 MMA updates on it from the R1d design
 python scripts/zhao2d_figures.py                        # docs/figures/, drawn from the saved results
 ```
 

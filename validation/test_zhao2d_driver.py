@@ -1,4 +1,4 @@
-"""The optimisation driver: schedule shape, terminal pairing, stop reasons.
+"""The optimisation driver: schedule, terminal pairing, stop reasons, warm starts.
 
 These are the things a silent bug would turn into a plausible-looking result.
 """
@@ -7,11 +7,13 @@ import dataclasses
 
 import numpy as np
 import jax
+import jax.numpy as jnp
 import pytest
 
 jax.config.update("jax_enable_x64", True)
 
 from tfopus import zhao2d as z, zhao2d_driver as drv, zhao2d_r1 as r1  # noqa: E402
+from tfopus import materials, zhao2d_analysis as za  # noqa: E402
 
 SPEC = dataclasses.replace(z.Zhao2DSpec(), element_size=5.0e-4)
 
@@ -169,3 +171,106 @@ def test_both_normalisations_are_reported(setup):
     assert rec["c_over_paper"] == pytest.approx(
         rec["compliance"] / drv.PAPER_C_0_INTERPRETED, rel=1e-12
     )
+
+
+# -- warm start and stop reasons (the prerequisites of R1k) --------------------
+
+
+def _fixed(iterations):
+    return [drv.Phase("fixed", iterations, beta=8.0, alpha_max=1.0e7)]
+
+
+def test_run_starts_from_the_given_initial_design(setup, monkeypatch):
+    """The first evaluation must receive exactly the design passed in.
+
+    Without the argument run() starts MMA from 1 - gamma_ref everywhere, so a
+    script that loads a saved design and then calls run() would not start there.
+    """
+    problem, reference = setup
+    x0 = np.random.default_rng(3).uniform(0.2, 0.8, problem.num_design)
+    seen = []
+    original = drv.evaluate
+
+    def spy(problem_, reference_, x, *args, **kwargs):
+        seen.append(np.array(x))
+        return original(problem_, reference_, x, *args, **kwargs)
+
+    monkeypatch.setattr(drv, "evaluate", spy)
+    result = drv.run(problem, reference, _fixed(2), move_limit=0.1, initial_design=x0)
+
+    assert np.array_equal(seen[0], x0)
+    assert np.array_equal(result.initial_design, x0)
+    # every record is paired with the design it was evaluated at
+    assert len(result.designs) == len(result.history) == 2
+    assert np.array_equal(result.designs[0], x0)
+    assert np.array_equal(result.designs[1], seen[1])
+    # and the initial state is the one history[0] was computed on: its metrics
+    # recompute from it exactly as the record states them
+    material = za.build_material(SPEC, 1.0e7)
+    s0 = jnp.asarray(result.initial_solid_fraction)
+    pv0, t0 = jnp.asarray(result.initial_press_vel), jnp.asarray(result.initial_temperature)
+    assert result.history[0]["psi"] == pytest.approx(float(problem.flow.dissipated_power(
+        pv0, materials.brinkman_penalty(s0, material))), rel=1e-13)
+    assert result.history[0]["compliance"] == pytest.approx(float(
+        problem.thermal.thermal_compliance(t0, problem.thermal_velocity(pv0),
+                                           materials.conductivity(s0, material))), rel=1e-13)
+    # A re-solve agrees only to rounding: s traced under value_and_grad and s
+    # from a plain forward pass differ by an ulp in some entries (measured:
+    # 1.1e-16 in 103 of 208), and the states and J by ~1e-15 relative.
+    rec, (s, press_vel, temperature) = drv._evaluate(
+        problem, reference, jnp.asarray(x0), 1.0e7, 8.0)
+    assert rec["J_self"] == pytest.approx(result.history[0]["J_self"], rel=1e-12)
+    assert np.allclose(result.initial_solid_fraction, s, rtol=1e-12, atol=1e-15)
+    assert np.allclose(result.initial_press_vel, press_vel, rtol=1e-12, atol=1e-12)
+    assert np.allclose(result.initial_temperature, temperature, rtol=1e-12, atol=1e-12)
+
+
+def test_run_refuses_a_bad_initial_design_before_any_solve(setup, monkeypatch):
+    """Refused, never clipped or resampled -- and before anything is solved."""
+    problem, reference = setup
+    monkeypatch.setattr(problem, "solve_states",
+                        lambda *a, **k: pytest.fail("solved before refusing"))
+    n = problem.num_design
+    for bad in (np.full(problem.flow_mesh.num_elems, 0.5),  # s's length, not x's
+                np.full((n, 2), 0.5),
+                np.where(np.arange(n) == 7, np.nan, 0.5),
+                np.full(n, 1.0 + 1e-12),
+                np.full(n, -1e-12)):
+        with pytest.raises(ValueError, match="initial_design"):
+            drv.run(problem, reference, _fixed(1), initial_design=bad)
+
+
+def test_a_proxy_criterion_is_not_reported_as_convergence(setup, monkeypatch):
+    """Upstream's step_tol and mixed-point KKT are proxies, and the run says so."""
+    problem, reference = setup
+    monkeypatch.setattr(drv, "_mma_proxy_criterion", lambda state, params: "kkt_tol")
+    result = drv.run(problem, reference, _fixed(3), move_limit=0.1)
+
+    assert result.stop_reason == "proxy_criterion"
+    assert result.proxy_criterion == "kkt_tol"
+    assert result.proxy_fired_at_final_stage is True
+    assert len(result.history) == 1
+    assert result.history[0]["proxy_criterion"] == "kkt_tol"
+    assert result.terminal["iteration"] == 1
+
+
+def test_a_failed_gate_keeps_the_run_so_far(setup, monkeypatch):
+    """A state that fails the gate stops the run -- with its history, not without."""
+    problem, reference = setup
+    norms = problem.residual_norms_at
+    calls = []
+
+    def second_state_fails(*args, **kwargs):
+        calls.append(1)
+        out = norms(*args, **kwargs)
+        return {k: 1.0 for k in out} if len(calls) == 2 else out
+
+    monkeypatch.setattr(problem, "residual_norms_at", second_state_fails)
+    with pytest.raises(r1.NotConverged) as info:
+        drv.run(problem, reference, _fixed(3), move_limit=0.1)
+
+    partial = info.value.partial
+    assert len(partial["history"]) == 1
+    assert partial["designs"].shape == (1, problem.num_design)
+    assert partial["failed_iteration"] == 1
+    assert partial["failed_design"].shape == (problem.num_design,)

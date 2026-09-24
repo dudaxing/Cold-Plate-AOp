@@ -1,0 +1,104 @@
+D:\Coding\thermalFluid\thermal-fluid-opus\external\TOFLUX\toflux\src\solver.py:21: UserWarning: petsc4py not found; the PETSC linear solver is unavailable.
+  warnings.warn("petsc4py not found; the PETSC linear solver is unavailable.")
+built: flow 5200 el, thermal 83200 el (34.9 s)
+NR converged in 8 iters, res_norm/res_norm_0: 1.5244551419481028e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.125310723756668e-12
+  0  J 1.11647242  J* 1.11691947  Psi 1.435114e-02  C 36180.160  g -5.38e-05  grey 0.0640  |R| 3.9e-12  44.4 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.5593700003186202e-14
+NR converged in 3 iters, res_norm/res_norm_0: 3.985866469078897e-12
+  1  J 1.10140689  J* 1.10184277  Psi 1.480171e-02  C 35276.945  g -3.36e-03  grey 0.0667  |R| 3.8e-12  23.1 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.6151862657570506e-14
+NR converged in 3 iters, res_norm/res_norm_0: 3.799689561017619e-12
+  2  J 1.08245375  J* 1.08287861  Psi 1.499033e-02  C 34384.305  g -3.20e-03  grey 0.0677  |R| 3.7e-12  23.4 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.628148846952202e-14
+NR converged in 3 iters, res_norm/res_norm_0: 3.4300614546866022e-12
+  3  J 1.06429966  J* 1.06471268  Psi 1.532993e-02  C 33426.912  g -3.32e-03  grey 0.0694  |R| 3.2e-12  23.5 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.6581894333717685e-14
+NR converged in 3 iters, res_norm/res_norm_0: 3.407434212509596e-12
+  4  J 1.04785943  J* 1.04825957  Psi 1.591101e-02  C 32383.694  g -3.52e-03  grey 0.0713  |R| 3.2e-12  25.3 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.6994659367024323e-14
+NR converged in 3 iters, res_norm/res_norm_0: 3.307282246199861e-12
+  5  J 1.03892603  J* 1.03931377  Psi 1.690432e-02  C 31380.339  g -3.92e-03  grey 0.0748  |R| 3.1e-12  26.4 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7267451829906783e-14
+NR converged in 3 iters, res_norm/res_norm_0: 3.2499577732775627e-12
+  6  J 1.03216529  J* 1.03254799  Psi 1.711050e-02  C 30972.448  g -3.04e-03  grey 0.0760  |R| 3.1e-12  26.5 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.713188228372971e-14
+NR converged in 3 iters, res_norm/res_norm_0: 3.1098581879338514e-12
+  7  J 1.02908939  J* 1.02946907  Psi 1.729546e-02  C 30728.152  g -2.95e-03  grey 0.0771  |R| 2.9e-12  26.4 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.8209552539964742e-14
+NR converged in 3 iters, res_norm/res_norm_0: 3.025586023686304e-12
+  8  J 1.03232378  J* 1.03269109  Psi 1.905340e-02  C 29727.294  g -4.95e-03  grey 0.0812  |R| 2.9e-12  26.5 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7138546227318004e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.960497129359706e-12
+  9  J 1.02189408  J* 1.02226689  Psi 1.770487e-02  C 30171.662  g -4.37e-03  grey 0.0796  |R| 2.8e-12  24.9 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7473705101012593e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.8662579684653034e-12
+ 10  J 1.01775447  J* 1.01812137  Psi 1.818553e-02  C 29693.600  g -2.27e-03  grey 0.0810  |R| 2.7e-12  24.2 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7410470660021844e-14
+NR converged in 3 iters, res_norm/res_norm_0: 3.0363969903580756e-12
+ 11  J 1.01570634  J* 1.01607962  Psi 1.725487e-02  C 30209.793  g -2.46e-03  grey 0.0804  |R| 2.9e-12  24.3 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7221137729290448e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.8486155963217224e-12
+ 12  J 1.01731736  J* 1.01768218  Psi 1.841792e-02  C 29526.111  g -3.37e-03  grey 0.0819  |R| 2.7e-12  24.3 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.741004317082548e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.9505383355696794e-12
+ 13  J 1.01378613  J* 1.01415225  Psi 1.803267e-02  C 29630.612  g -3.78e-03  grey 0.0856  |R| 2.8e-12  23.8 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7536920761625283e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.89095810954497e-12
+ 14  J 1.00906815  J* 1.00943269  Psi 1.793334e-02  C 29502.643  g -1.97e-03  grey 0.0858  |R| 2.7e-12  24.5 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7482548110359208e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.902589235811592e-12
+ 15  J 1.00635537  J* 1.00672250  Psi 1.743682e-02  C 29712.129  g -9.18e-04  grey 0.0854  |R| 2.8e-12  24.8 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7307541432339724e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.861473760191781e-12
+ 16  J 1.00446385  J* 1.00482837  Psi 1.764491e-02  C 29501.116  g -8.17e-04  grey 0.0871  |R| 2.7e-12  23.9 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7187894246001964e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.89620891289348e-12
+ 17  J 1.00276664  J* 1.00313033  Psi 1.764154e-02  C 29434.237  g -7.83e-04  grey 0.0883  |R| 2.7e-12  23.9 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7337830895636338e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.8647445911237377e-12
+ 18  J 1.00155626  J* 1.00192025  Psi 1.752822e-02  C 29457.990  g -4.86e-04  grey 0.0887  |R| 2.7e-12  24.7 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7161325699067902e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.869591959945801e-12
+ 19  J 1.00081672  J* 1.00118042  Psi 1.751725e-02  C 29434.967  g -3.97e-04  grey 0.0887  |R| 2.9e-12  24.8 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.716711981309903e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.881807925771283e-12
+ 20  J 1.00045665  J* 1.00082037  Psi 1.749185e-02  C 29436.679  g -5.05e-04  grey 0.0902  |R| 2.7e-12  23.0 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7553052184535033e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.8630667963667925e-12
+ 21  J 0.99976953  J* 1.00013210  Psi 1.759403e-02  C 29342.900  g -6.59e-04  grey 0.0910  |R| 2.7e-12  24.1 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7106114753637207e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.8829387035560154e-12
+ 22  J 0.99896536  J* 0.99932926  Psi 1.737458e-02  C 29451.551  g -4.83e-04  grey 0.0912  |R| 2.9e-12  25.1 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7283744689665276e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.8508812062004743e-12
+ 23  J 0.99855799  J* 0.99892071  Psi 1.749747e-02  C 29355.809  g -4.63e-04  grey 0.0902  |R| 2.7e-12  24.7 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7031105692264317e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.8658669220962015e-12
+ 24  J 0.99800346  J* 0.99836612  Psi 1.746956e-02  C 29351.227  g -5.29e-04  grey 0.0917  |R| 2.7e-12  24.3 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.716679373304299e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.869042215312357e-12
+ 25  J 0.99730975  J* 0.99767321  Psi 1.732599e-02  C 29415.491  g -4.31e-04  grey 0.0921  |R| 2.7e-12  23.6 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7390600069836387e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.854815154732322e-12
+ 26  J 0.99679170  J* 0.99715440  Psi 1.738886e-02  C 29353.914  g -3.33e-04  grey 0.0937  |R| 2.7e-12  25.1 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.720682143352197e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.8644508163335064e-12
+ 27  J 0.99635523  J* 0.99671853  Psi 1.728616e-02  C 29402.316  g -3.39e-04  grey 0.0931  |R| 2.7e-12  24.1 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7371112528119986e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.8682102054028478e-12
+ 28  J 0.99570610  J* 0.99606905  Psi 1.728937e-02  C 29373.832  g -2.13e-04  grey 0.0931  |R| 2.9e-12  23.9 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.7300716668770334e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.853667430707277e-12
+ 29  J 0.99517774  J* 0.99554055  Psi 1.727326e-02  C 29362.718  g -1.65e-04  grey 0.0938  |R| 2.7e-12  24.5 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.6978820266675844e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.8409813380838165e-12
+
+terminal (same-point evaluation of the design MMA last produced):
+ 30  J 0.99475334  J* 0.99511587  Psi 1.728074e-02  C 29340.628  g -1.52e-04  grey 0.0946  |R| 2.7e-12
+terminal / initial - 1: J -10.9021%, Psi +20.4137%, C -18.9041%
+stop: phase_end after 30 updates; convergence not verified
+zero step vs R1j: J +0.0e+00, C +0.0e+00
+
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1k_warm_start.json and D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1k_fields.npz; total 821 s
+exit=0 elapsed=831s

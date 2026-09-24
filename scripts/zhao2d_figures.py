@@ -3,7 +3,7 @@
 Nothing is solved or re-optimised here: every field and number is read from
 results/ and drawn, so a figure shows exactly the state the records describe
 -- including that the R1d run is budget-limited and not converged, and that the
-thermal compliance still moves with the thermal mesh. Three figures, written to
+thermal compliance still moves with the thermal mesh. Four figures, written to
 docs/figures/:
 
   zhao2d_r1d_fields.png        the R1d design in the layout of Zhao Figs. 8 and
@@ -15,6 +15,9 @@ docs/figures/:
   zhao2d_status.png            where the result sits against Zhao Tables 4 and 7
                                on the paper-interpreted scale, and how C moves
                                with the thermal mesh on the coarse and fine flow
+  zhao2d_r1k_warm_start.png    R1k: density and temperature at x_300 and after
+                               30 updates on the flow h / thermal h/4 model, the
+                               objective's history and the design step
 
     python scripts/zhao2d_figures.py [--results results] [--out docs/figures]
 """
@@ -434,6 +437,117 @@ def status_figure(res: pathlib.Path, out: pathlib.Path) -> pathlib.Path:
     return path
 
 
+# -- figure 4: the R1k warm start -------------------------------------------------------
+
+
+def density_grid(s: np.ndarray, centres: np.ndarray, h: float, g: dict):
+    """gamma = 1 - s per design-mesh element, on the lattice, NaN outside."""
+    nx = int(round(g["design_half_width"] / h))
+    ny = int(round((g["design_height"] + 2 * g["tab_length"]) / h))
+    grid = np.full((nx, ny), np.nan)
+    grid[np.floor(centres[:, 0] / h).astype(int),
+         np.floor((centres[:, 1] + g["tab_length"]) / h).astype(int)] = 1.0 - s
+    return np.arange(nx + 1) * h, -g["tab_length"] + np.arange(ny + 1) * h, grid
+
+
+def r1k_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
+    rec = json.loads((res / "zhao2d_r1k_warm_start.json").read_text(encoding="utf-8"))
+    f = np.load(res / "zhao2d_r1k_fields.npz")
+    coords_4 = np.load(res / "zhao2d_r1g_fields.npz")["thermal_node_coords_level4"]
+    h = g["element_size"]
+    if len(coords_4) != len(f["temperature"]):
+        raise RuntimeError("the h/4 node coordinates do not match R1k's temperature")
+    tri_4 = triangulation(coords_4, h / 4, g)
+    first, term = rec["comparison"]["initial"], rec["comparison"]["terminal"]
+    t_start, t_end = f["initial_temperature"], f["temperature"]
+    t_top = float(max(t_start.max(), t_end.max()))
+
+    fig = plt.figure(figsize=(11.0, 10.4))
+    top = fig.add_gridspec(1, 4, left=0.02, right=0.99, top=0.885, bottom=0.40, wspace=0.10)
+    low = fig.add_gridspec(1, 2, left=0.07, right=0.97, top=0.27, bottom=0.07, wspace=0.62)
+
+    for k, (s, title, r) in enumerate(((f["initial_solid_fraction"],
+                                        "(a) Density γ at the start: R1d's x₃₀₀", first),
+                                       (f["solid_fraction"],
+                                        "(b) Density γ after 30 updates", term))):
+        ax = fig.add_subplot(top[0, k])
+        field_axes(ax, g, title)
+        xe, ye, grid = density_grid(s, f["elem_centres"], h, g)
+        m = ax.pcolormesh(xe, ye, np.ma.masked_invalid(grid).T, cmap=DENSITY,
+                          vmin=0, vmax=1, shading="flat")
+        colorbar(fig, m, ax, "γ  (0 solid, 1 fluid)")
+        note(ax, f"β = 8, per element on h\nv_f (design domain) {r['v_f_design_domain']:.5f}\n"
+                 f"grey 0.05 < s < 0.95: {r['grey_fraction']:.1%} of cells")
+
+    for k, (t, title, r) in enumerate(((t_start, "(c) Temperature at the start", first),
+                                       (t_end, "(d) Temperature after 30 updates", term))):
+        ax = fig.add_subplot(top[0, 2 + k])
+        field_axes(ax, g, title)
+        m = ax.tripcolor(tri_4, t, cmap=HEAT, vmin=0, vmax=t_top, shading="gouraud")
+        colorbar(fig, m, ax, "T  (one scale for c and d)")
+        note(ax, f"thermal mesh h/4, 3×3\nT_max {r['T_max']:.2f}; T_min {r['T_min']:.2f}\n"
+                 f"C = {r['compliance']:.0f};  Ψ = {r['psi']:.5f}")
+
+    hist = rec["history"]
+    term_it = rec["terminal"]["iteration"]
+    it = np.array([r["iteration"] for r in hist] + [term_it])
+    ax = fig.add_subplot(low[0, 0])
+    ax.grid(axis="y", color=GRID, lw=0.6)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    ax.axhline(1.0, color=MUTED, lw=0.8, ls=(0, (3, 2)))
+    ax.text(9, 0.975, "reference state = 1", fontsize=7.5, color=MUTED, va="top")
+    for (label, key), colour in zip((("J", "J_self"),
+                                     ("Ψ/Ψ₀", "psi_over_psi0_self"),
+                                     ("C/C₀", "c_over_c0_self")), SERIES):
+        y = np.array([r[key] for r in hist] + [rec["terminal"][key]])
+        ax.plot(it, y, color=colour, lw=1.6)
+        ax.plot([term_it], [y[-1]], "o", color=colour, ms=5)
+        ax.text(term_it + 1.2, y[-1], f"{label}  {y[-1]:.4f}", color=INK, fontsize=8,
+                va="center")
+    ax.set_xlim(0, term_it)
+    ax.set_xlabel("MMA update (30 = terminal, re-evaluated)")
+    ax.set_ylabel("ratio to this model's frozen reference")
+    ax.set_title("(e) Objective and its two terms, on this model's scale", loc="left",
+                 fontsize=9.5)
+
+    ax = fig.add_subplot(low[0, 1])
+    ax.grid(axis="y", color=GRID, lw=0.6)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    two = np.array(rec["steps"]["two_norm"])
+    mx = np.array(rec["steps"]["max_abs"])
+    ax.plot(np.arange(1, len(two) + 1), two, color=INK2, lw=1.4)
+    ax.set_xlim(1, len(two))
+    ax.set_ylim(0, 1.1 * two.max())
+    ax.set_xlabel("update")
+    ax.set_ylabel("‖Δx‖₂ per update")
+    ax.set_title("(f) Design step", loc="left", fontsize=9.5)
+    ax.text(0.03, 0.06, f"max |Δx| {mx[3:].min():.3f}–{mx[3:].max():.3f} from update 4 on:\n"
+                        f"the move limit 0.1 binds throughout", transform=ax.transAxes,
+            fontsize=8, color=INK2, va="bottom")
+
+    change = rec["comparison"]["terminal_over_initial_minus_1"]
+    fig.suptitle("R1k — warm start from x₃₀₀ on the development model (flow h, thermal h/4), "
+                 "α_max = 10⁷, β = 8 fixed",
+                 x=0.02, ha="left", fontsize=11.5, color=INK, y=0.985)
+    fig.text(0.02, 0.955,
+             "30 MMA updates, the whole budget; not converged. "
+             f"J {change['J_self']:+.1%} ({first['J_self']:.4f} → {term['J_self']:.4f}): "
+             f"C {change['compliance']:+.1%}, Ψ {change['psi']:+.1%}. J is this model's own "
+             "scale, not comparable with R1d's.\nEvery state passed the 10⁻⁸ residual gate; "
+             "the lowest feasible J is the terminal design's. No same-point convergence check "
+             "was made; upstream's KKT proxy only fell to "
+             f"{hist[-1]['kkt_proxy']:.1e}.", fontsize=8.5, color=INK2, ha="left", va="top")
+    footer(fig, "Drawn from results/zhao2d_r1k_warm_start.json, results/zhao2d_r1k_fields.npz and "
+           "the h/4 node coordinates in results/zhao2d_r1g_fields.npz — "
+           "scripts/zhao2d_figures.py; no state is re-solved.")
+    path = out / "zhao2d_r1k_warm_start.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--results", type=pathlib.Path, default=REPO / "results")
@@ -445,12 +559,12 @@ def main() -> None:
     g = geometry(r1h)
     names = ["zhao2d_r1d_main_fields.npz", "zhao2d_r1g_fields.npz", "zhao2d_r1i_fields.npz",
              "zhao2d_r1d_main.json", "zhao2d_r1g_dual.json", "zhao2d_r1h_matrix.json",
-             "zhao2d_r1i_h8.json"]
+             "zhao2d_r1i_h8.json", "zhao2d_r1k_warm_start.json", "zhao2d_r1k_fields.npz"]
     for n in names:
         print(f"read results/{n}  sha256 {sha(res / n)}")
     sources = [f"results/{n}" for n in names]
     for path in (fields_figure(res, args.out, g, sources), history_figure(res, args.out),
-                 status_figure(res, args.out)):
+                 status_figure(res, args.out), r1k_figure(res, args.out, g)):
         print(f"wrote {path.relative_to(REPO) if path.is_relative_to(REPO) else path}")
 
 

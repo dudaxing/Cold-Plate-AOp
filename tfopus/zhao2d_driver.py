@@ -13,17 +13,27 @@ design is paired with metrics from the same iterate.
 **Stop reasons.** Upstream `mma.py` sets `is_converged = True` for three
 different reasons -- the design step falling below `step_tol`, the KKT residual
 falling below `kkt_tol`, and simply reaching `max_iter` -- so the flag cannot
-distinguish a converged design from an exhausted budget. `_mma_convergence`
-re-derives the two genuine criteria and ignores the third. The driver reports
-one of:
+distinguish a converged design from an exhausted budget. `_mma_proxy_criterion`
+re-derives the first two and ignores the third. Neither of those two is a
+convergence test: `step_tol` measures the size of the last step, and upstream
+forms its KKT residual from the NEW design and the subproblem's multipliers but
+the objective gradient, constraint value and constraint gradient of the OLD
+point -- a mixed-point proxy. The driver reports one of:
 
-    converged          step_tol or kkt_tol fired, on its own
+    proxy_criterion    step_tol or kkt_tol fired (named in `proxy_criterion`)
     phase_end          the schedule ran to its end without either firing
     budget_exhausted   the global budget ran out first
 
-Only `converged` reached in the FINAL phase, at the final alpha_max and beta,
-describes a converged design; `converged` in an earlier phase means that phase
-settled under its own continuation parameters.
+and never "converged": it has no same-point convergence check, so it has no
+grounds to call a design converged. A proxy firing is a reason to stop and look,
+not a result; `proxy_fired_at_final_stage` says whether it fired under the
+final alpha_max and beta or while an earlier phase settled.
+
+**Where a run starts.** By default MMA starts from 1 - gamma_ref everywhere,
+the reference state. `run(initial_design=x)` starts it from `x` instead -- the
+raw design variables, checked for shape, finiteness and [0, 1] before anything
+is solved and never clipped, resampled or repaired. MMA's history starts fresh
+either way: a warm start is a new run from a saved design, not a resumed one.
 
 Reading the KKT residual needs care: `MMAState` declares `kkt_norm`, but
 `update_mma` assigns `mma_state.kktnorm` -- a different attribute created on the
@@ -37,7 +47,9 @@ schedule that moves both across a phase boundary, because a jump in J would
 then be unattributable.
 
 **One solve per iterate, for any model.** `evaluate` takes J, its gradient and
-the reported states from a single traced solve and gates THOSE states; it forms
+the reported states from a single traced forward evaluation -- the flow solve,
+then the thermal solve; the Newton iterations and the adjoints still make their
+own sparse linear solves -- and gates THOSE states; it forms
 C through `problem.thermal_velocity` and checks the reference with
 `problem.check_reference`. So the same driver serves the single-mesh model and
 the dual-mesh one, and a reference frozen for another model -- for a dual-mesh
@@ -186,12 +198,21 @@ class RunResult:
     history: list[dict]
     terminal: dict
     stop_reason: str
-    # Which genuine MMA criterion fired, if stop_reason is "converged".
-    converged_by: str | None
-    # True only if convergence was reached in the LAST phase of the schedule,
-    # i.e. at the final alpha_max and beta. Convergence in an earlier phase
-    # says that phase settled, not that the design is final.
-    converged_at_final_stage: bool
+    # Which upstream proxy fired, if stop_reason is "proxy_criterion":
+    # "step_tol" (the last design step) or "kkt_tol" (upstream's mixed-point
+    # KKT residual). Neither is a convergence check.
+    proxy_criterion: str | None
+    # Whether the proxy fired in the LAST phase of the schedule, i.e. at the
+    # final alpha_max and beta, rather than while an earlier phase settled.
+    proxy_fired_at_final_stage: bool
+    # The design MMA started from, and the state history[0] was computed on.
+    initial_design: np.ndarray
+    initial_solid_fraction: np.ndarray
+    initial_press_vel: np.ndarray
+    initial_temperature: np.ndarray
+    # designs[i] is the design history[i] was evaluated at.
+    designs: np.ndarray
+    # The terminal design and its state, re-evaluated after the last update.
     design: np.ndarray
     solid_fraction: np.ndarray
     press_vel: np.ndarray
@@ -297,18 +318,43 @@ def _kkt_norm(state) -> float:
     return float(value)
 
 
-def _mma_convergence(state, params) -> str | None:
-    """Which genuine criterion fired, if any. `max_iter` is not one of them.
+def _mma_proxy_criterion(state, params) -> str | None:
+    """Which upstream stopping proxy fired, if any. `max_iter` is not one of them.
 
     Upstream folds three conditions into one boolean, and one of them is just
     the iteration cap, so `state.is_converged` is True on the last step of every
-    run regardless of the design.
+    run regardless of the design. The other two are proxies, not convergence
+    checks: see the module docstring.
     """
     if state.epoch > 1 and state.change_design_var < params.step_tol:
         return "step_tol"
     if _kkt_norm(state) < params.kkt_tol:
         return "kkt_tol"
     return None
+
+
+def _checked_initial_design(initial_design, n: int) -> np.ndarray:
+    """The (n, 1) design MMA starts from, exactly as given -- or a refusal.
+
+    Never clipped, resampled or repaired: a warm start that silently starts
+    somewhere else is worse than none. It must be the raw design variables, one
+    per design-domain element -- not the solid fraction s, which also covers the
+    fixed tabs and has already been filtered and projected.
+    """
+    x = np.asarray(initial_design, dtype=float)
+    if x.shape not in ((n,), (n, 1)):
+        raise ValueError(
+            f"initial_design has shape {x.shape}; this problem has {n} design "
+            "variables -- the raw design x, not the solid fraction s"
+        )
+    if not np.all(np.isfinite(x)):
+        raise ValueError("initial_design has non-finite entries")
+    if x.min() < 0.0 or x.max() > 1.0:
+        raise ValueError(
+            f"initial_design leaves [0, 1] (min {x.min():.17g}, max "
+            f"{x.max():.17g}); it is refused, not clipped"
+        )
+    return x.reshape((n, 1)).copy()
 
 
 def run(
@@ -318,11 +364,17 @@ def run(
     move_limit: float = 0.1,
     budget: int | None = None,
     on_iteration: Callable[[dict], None] | None = None,
+    initial_design: np.ndarray | None = None,
 ) -> RunResult:
     """Run the phased schedule. Every state is gated before MMA sees it.
 
     A reference not frozen for `problem` is refused here, before the first
-    solve -- for a dual-mesh problem that includes the single-mesh reference.
+    solve -- for a dual-mesh problem that includes the single-mesh reference --
+    and so is an `initial_design` that is not a valid raw design for it.
+
+    If a state fails the gate, the `NotConverged` raised carries the run so far
+    as `exc.partial`: the history, the designs it was evaluated at, and the
+    iteration and design that failed.
     """
     spec = problem.spec
     problem.check_reference(reference)
@@ -330,6 +382,11 @@ def run(
     budget = budget or sum(p.iterations for p in phases)
 
     n = problem.num_design
+    x0 = (
+        np.full((n, 1), 1.0 - spec.reference_gamma)
+        if initial_design is None
+        else _checked_initial_design(initial_design, n)
+    )
     params = _mma.MMAParams(
         max_iter=budget,
         kkt_tol=1e-6,
@@ -340,12 +397,26 @@ def run(
         lower_bound=np.zeros((n, 1)),
         upper_bound=np.ones((n, 1)),
     )
-    state = _mma.init_mma(np.full((n, 1), 1.0 - spec.reference_gamma), params)
+    state = _mma.init_mma(x0, params)
 
     history: list[dict] = []
+    designs: list[np.ndarray] = []
+    initial_state = None
     stop_reason = "phase_end"
-    converged_by: str | None = None
+    proxy_criterion: str | None = None
     step = 0
+
+    def gated(x, alpha_max, beta, **kwargs):
+        try:
+            return evaluate(problem, reference, x, alpha_max, beta, **kwargs)
+        except _r1.NotConverged as exc:
+            exc.partial = {
+                "history": list(history),
+                "designs": np.asarray(designs).reshape((len(designs), n)),
+                "failed_iteration": step,
+                "failed_design": np.array(x),
+            }
+            raise
 
     for phase in phases:
         for _ in range(phase.iterations):
@@ -356,7 +427,10 @@ def run(
             x = jnp.asarray(state.x.reshape(-1))
             t0 = time.time()
 
-            record, _, dj, dg = evaluate(problem, reference, x, alpha_max, phase.beta)
+            record, iterate_state, dj, dg = gated(x, alpha_max, phase.beta)
+            if initial_state is None:
+                initial_state = iterate_state
+            designs.append(np.array(x))
 
             record.update(
                 iteration=step,
@@ -384,15 +458,16 @@ def run(
             )
             step += 1
 
-            record["kkt_norm"] = _kkt_norm(state)
+            # upstream's mixed-point KKT residual: a proxy, see the module docstring
+            record["kkt_proxy"] = _kkt_norm(state)
             record["design_step_norm"] = float(state.change_design_var)
-            fired = _mma_convergence(state, params)
-            record["mma_criterion"] = fired
+            fired = _mma_proxy_criterion(state, params)
+            record["proxy_criterion"] = fired
             if fired is not None:
-                stop_reason = "converged"
-                converged_by = fired
+                stop_reason = "proxy_criterion"
+                proxy_criterion = fired
                 break
-        if stop_reason in ("budget_exhausted", "converged"):
+        if stop_reason in ("budget_exhausted", "proxy_criterion"):
             break
 
     # The design MMA last produced has never been solved. Evaluate it so that
@@ -405,8 +480,8 @@ def run(
     final_phase = history[-1]["phase"]
 
     x_final = jnp.asarray(state.x.reshape(-1))
-    terminal, (s, press_vel, temperature), _, _ = evaluate(
-        problem, reference, x_final, final_alpha_max, final_beta, gradient=False
+    terminal, (s, press_vel, temperature), _, _ = gated(
+        x_final, final_alpha_max, final_beta, gradient=False
     )
     terminal.update(iteration=step, phase=final_phase, terminal=True)
 
@@ -414,10 +489,15 @@ def run(
         history=history,
         terminal=terminal,
         stop_reason=stop_reason,
-        converged_by=converged_by,
-        converged_at_final_stage=bool(
-            stop_reason == "converged" and final_phase == phases[-1].name
+        proxy_criterion=proxy_criterion,
+        proxy_fired_at_final_stage=bool(
+            stop_reason == "proxy_criterion" and final_phase == phases[-1].name
         ),
+        initial_design=x0.reshape(-1),
+        initial_solid_fraction=initial_state[0],
+        initial_press_vel=initial_state[1],
+        initial_temperature=initial_state[2],
+        designs=np.asarray(designs),
         design=np.asarray(x_final),
         solid_fraction=s,
         press_vel=press_vel,

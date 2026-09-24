@@ -23,7 +23,7 @@ governing equations, objective, constraint — is kept.
 | R1h | fixed design: flow h vs h/2 on the common thermal meshes h/2 and h/4 | **done**, closed in the review of d71ab66 — on this design, refining the flow h → h/2 does not remove the thermal drift (+8.6% against +8.9%); flow replacement −2.5% to −2.7% of C |
 | R1i | fixed design: h_T = h/8 on the saved coarse flow, one thermal state | **done**, closed in the review of 2a9bfea — the thermal step shrinks: +8.87% (h/2 → h/4) then +3.20% (h/4 → h/8), ratio 0.39 |
 | R1j | development model flow h / thermal h/4: versioned reference, dual-mesh driver entry, directional gradient at x₃₀₀; no MMA update on the main mesh | **done**, closed in the review of 6d675da — reference frozen (C₀ ×1.0005); the driver takes value, gradient and states from one forward evaluation and refuses other models' references; gradient check PASS at every step (largest relative error 7.5×10⁻⁷); a deadlock in upstream's solve callback found and fixed |
-| R1k | warm start from x₃₀₀ on the development model, α_max = 10⁷ and β = 8 fixed, at most 30 MMA updates; first an explicit initial-design entry, and stop reasons that keep upstream's mixed-point KKT a proxy | proposed in the review of 6d675da; awaiting authorisation |
+| R1k | warm start from x₃₀₀ on the development model, α_max = 10⁷ and β = 8 fixed, at most 30 MMA updates; first an explicit initial-design entry, and stop reasons that keep upstream's mixed-point KKT a proxy | **done** — the whole budget used, not converged: J −10.9% (C −18.9%, Ψ +20.4%), every state gated and feasible; the move limit binds throughout |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -55,6 +55,15 @@ the stabilisation details and the convergence state all differ from the
 paper's, so this places the result; it does not rank the two methods. (b) C
 against the thermal mesh at the fixed design, on the coarse and the fine flow
 (R1g, R1h, R1i).
+
+![R1k: the warm start on the development model](figures/zhao2d_r1k_warm_start.png)
+
+R1k: 30 MMA updates from x₃₀₀ on the development model (flow h, thermal h/4),
+α_max and β fixed. (a, b) Fluid fraction at the start and at the re-evaluated
+terminal design. (c, d) The temperature on h/4 at both, on one scale. (e) J
+and its two terms on this model's own scale, which is not R1d's. (f) The size
+of each design step; the move limit binds throughout. Budget used, not
+converged.
 
 ## R1d: the 300-update run
 
@@ -1157,7 +1166,9 @@ corrected while it ran.
 
 The review of 6d675da closed R1j with no numerical blocker.
 
-### Next: R1k, as proposed (awaiting authorisation)
+### Next: R1k, as proposed
+
+Authorised on the local CPU and done; see R1k below. As proposed:
 
 A bounded warm-start experiment on the model R1j wired up, to see how the
 design, J, Ψ, C and the constraint respond, not to chase a better number.
@@ -1189,6 +1200,120 @@ Two prerequisites, both small:
    is a step-size test; the driver reports either as "converged". The run
    should tell apart the budget ending, a proxy criterion firing and
    convergence verified at one point, and claim no convergence on a proxy.
+
+## R1k: a warm start on the development model
+
+Authorised after the review of 6d675da, on the local CPU.
+`scripts/zhao2d_r1k_warm_start.py`; records
+`results/zhao2d_r1k_warm_start.json` (and `.log`),
+`results/zhao2d_r1k_fields.npz`; figure `docs/figures/zhao2d_r1k_warm_start.png`
+(under Figures).
+
+### The two prerequisites
+
+**An explicit initial design.** `zhao2d_driver.run(..., initial_design=x)`
+starts MMA from `x`, the raw design variables. It is refused, never clipped,
+resampled or repaired, if its length is not the problem's `num_design` (the
+5200-element s is refused by name), if any entry is non-finite, or if any leaves
+[0, 1] — all before anything is solved. MMA's history starts fresh: `init_mma`
+sets both previous designs to `x`. `RunResult` now also carries the design each
+record was evaluated at and the state the first record was computed on, so a
+run can save its initial x, s, u, p and T without another solve.
+
+**Stop reasons that do not overclaim.** The driver no longer says "converged".
+`stop_reason` is `proxy_criterion` when upstream's `step_tol` or mixed-point
+KKT fires (named in `proxy_criterion`), otherwise `phase_end` or
+`budget_exhausted`. There is no same-point convergence check, so nothing is
+called converged. Renamed with it: `converged_by` → `proxy_criterion`,
+`converged_at_final_stage` → `proxy_fired_at_final_stage`, and per record
+`kkt_norm` → `kkt_proxy`, `mma_criterion` → `proxy_criterion`; R1d's saved
+record keeps the old names. A state that fails the gate now stops the run with
+the run so far attached to the `NotConverged` it raises.
+
+Tests, in `validation/test_zhao2d_driver.py` on the 208-cell mesh: the first
+evaluation receives exactly the given design, and every record is paired with
+its own; the returned initial state recomputes the first record's Ψ and C; a
+design of the solid fraction's length, of the wrong shape, with a NaN, or
+10⁻¹² outside [0, 1] is refused before any solve; a proxy firing is reported as
+`proxy_criterion`; a failed gate keeps the run so far. One of them failed at
+first. It demanded that the solid fraction in the record equal a plain
+re-evaluation's bit for bit, but s traced under `value_and_grad` differs from a
+plain forward pass by an ulp in some entries (measured on that mesh: 1.1×10⁻¹⁶
+in 103 of 208; the states and J by about 10⁻¹⁵ relative). The pairing was right
+and the assertion too strict. It now checks that the record recomputes from the
+returned state, and that a re-solve agrees to rounding. The two driver test
+files: 19 passed.
+
+### The run
+
+x₃₀₀ is `design` in `results/zhao2d_r1d_main_fields.npz`; α_max = 10⁷, β = 8
+and w = 0.5 are fixed; 30 MMA updates at `move_limit` 0.1. The zero-step point
+is R1j's baseline exactly (J, Ψ, C and g all differ by 0.0), and the design map
+reproduces R1d's saved s exactly.
+
+| | start: x₃₀₀ | after 30 updates (re-evaluated) | change |
+|---|---|---|---|
+| J, this model's scale | 1.116472 | 0.994753 | −10.90% |
+| Ψ/Ψ₀, C/C₀ | 0.4545, 1.7785 | 0.5472, 1.4423 | |
+| Ψ | 0.0143511 | 0.0172807 | +20.41% |
+| C | 36180.16 | 29340.63 | −18.90% |
+| J*, single-mesh scale | 1.116919 | 0.995116 | |
+| g | −5.4×10⁻⁵ | −1.5×10⁻⁴ | |
+| v_f, design domain | 0.39998 | 0.39994 | |
+| grey fraction | 6.4% | 9.5% | |
+| T_max; nodes below 0 | 15.95; 0 | 12.85; 0 | |
+
+- **Why it stopped:** `phase_end` — the one fixed phase of 30, which is the
+  whole budget. No proxy fired: upstream's KKT proxy fell from 4.7×10⁻² to
+  2.9×10⁻³, and no step came near the 10⁻⁶ step tolerance. Convergence was not
+  checked and is not claimed.
+- **Every state qualified:** all 31 evaluated designs passed the 10⁻⁸ gate
+  (worst 3.9×10⁻¹²) and were feasible (the largest g is the start's,
+  −5.4×10⁻⁵). The lowest J among them is the terminal design's.
+- **The path:** J fell at 28 of the 30 steps and rose at two (into updates 8
+  and 12). Most of the drop came early: −8.84% over the first 10 updates,
+  −1.70% over the next 10, −0.57% over the last 10, and −0.04% at the last
+  one. C was traded against Ψ: at w = 0.5, J = ½(Ψ/Ψ₀ + C/C₀), and the C term
+  fell by 0.336 while the Ψ term rose by 0.093.
+- **The move limit binds:** from the fourth update on, the largest change of
+  any design variable is 0.097–0.100 per update against the limit of 0.1.
+  ‖Δx‖₂ peaks at 0.95 (update 8) and is 0.41 at the last. Between x₃₀₀ and the
+  terminal design, ‖Δx‖₂ is 9.54 and the largest change 0.999: some variables
+  went from one bound to the other.
+- **On the paper-interpreted scale**, J goes from 1.026 to 0.894; Zhao's Tables
+  4 and 7 span 0.871–0.910. As with R1d, the parametrisation, stabilisation,
+  thermal mesh and convergence state all differ from the paper's, so this
+  places the result and ranks nothing.
+- **Cost:** build 35 s; the first update 44 s (compilation included), then
+  23–27 s each (mean 25.2 s over all 30); 786 s for the run with its terminal
+  evaluation, 821 s in all; cumulative peak working set 4087 MiB. The
+  10-minute faulthandler dump fired once, since the run outlasted the interval;
+  it shows ordinary work and is not committed.
+- **Provenance:** nothing the record hashes was edited after the run. All 27
+  recorded hashes (24 sources, the reference and the two inputs) reproduce from
+  the committed files, 12 of them after converting LF to CRLF as for R1j.
+
+### What R1k says, and what it does not
+
+- On this model, the gradient R1j checked moves the design to a clearly lower
+  J within 30 updates — −10.9%, by lowering thermal compliance 19% at the
+  price of 20% more dissipation — with every state gated and feasible.
+- It is not converged, and nothing here says so: the budget ended it, the move
+  limit bound on every update from the fourth, the last step was still 0.41 in
+  2-norm, and the KKT proxy was still 2.9×10⁻³. Where the design would settle
+  is not known.
+- The terminal design is more grey than the start (9.5% against 6.4%) at the
+  same β = 8. No thresholding diagnostic was run, so how much of the gain
+  survives a binary design is not known; for the R1d design, R1e found the
+  thresholding penalty grew from 0.33% to 10.3% of J* when the whole mesh was
+  refined to h/2.
+- The gain is measured on the thermal mesh it was optimised on (h/4). It has not
+  been re-measured on h/8, where R1i found C still 3.2% higher than on h/4 for
+  the R1d design.
+- J is this model's own scale and is not comparable with R1d's J_self; raw Ψ and
+  C are, and J* is recorded as a common scale.
+- Not done, by the contract: more updates, a continuation restart, β = 16, h/8,
+  a fine-flow check, a change of formulation, 3D.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -1443,6 +1568,7 @@ python scripts/zhao2d_flow_mesh_check.py --out DIR       # R1h rerun; keeps resu
 python scripts/zhao2d_thermal_h8_check.py --out DIR      # R1i, h_T = h/8 on the saved coarse flow
 python scripts/zhao2d_freeze_dual_reference.py --write   # R1j reference, flow h / thermal h/4; never overwrites
 python scripts/zhao2d_r1j_check.py --out DIR             # R1j refusals and directional gradient at x300
+python scripts/zhao2d_r1k_warm_start.py --out DIR        # R1k, 30 MMA updates from x300 (~14 min)
 python scripts/zhao2d_figures.py                         # docs/figures/ from the saved results, no solves
 ```
 

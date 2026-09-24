@@ -165,15 +165,18 @@ def main() -> None:
     elapsed = time.time() - t0
 
     print(f"\nstop reason: {result.stop_reason}"
-          + (f" ({result.converged_by})" if result.converged_by else ""))
+          + (f" ({result.proxy_criterion})" if result.proxy_criterion else ""))
     print(f"ended in phase {result.final_phase} at alpha_max "
           f"{result.final_alpha_max:.3e}, beta {result.final_beta:g}")
-    if result.stop_reason != "converged":
+    if result.stop_reason != "proxy_criterion":
         print("  -> this run is BUDGET/SCHEDULE limited. It is not a converged "
               "design and must not be reported as one.")
-    elif not result.converged_at_final_stage:
-        print("  -> converged inside an EARLIER phase, not at the final "
-              "alpha_max and beta.")
+    else:
+        print(f"  -> upstream's {result.proxy_criterion} proxy fired"
+              + ("" if result.proxy_fired_at_final_stage
+                 else " inside an EARLIER phase, not at the final alpha_max and beta")
+              + ". That is not a convergence check; the design must not be "
+                "reported as converged.")
     print(f"terminal design re-evaluated: J = {result.terminal['J_self']:.6f} "
           f"(the loop's last record was {result.history[-1]['J_self']:.6f} for the "
           f"PREVIOUS iterate, same model)")
@@ -198,11 +201,11 @@ def main() -> None:
     )
     meta = {
         "stop_reason": result.stop_reason,
-        "converged_by": result.converged_by,
-        # True only for convergence reached at the final alpha_max and beta.
-        # Upstream MMA's own is_converged flag also fires on max_iter and is
-        # deliberately not used anywhere here.
-        "converged_at_final_stage": result.converged_at_final_stage,
+        # step_tol or kkt_tol if one fired: upstream proxies, not convergence
+        # checks. Upstream MMA's own is_converged flag also fires on max_iter
+        # and is deliberately not used anywhere here.
+        "proxy_criterion": result.proxy_criterion,
+        "proxy_fired_at_final_stage": result.proxy_fired_at_final_stage,
         "elapsed_seconds": elapsed,
         "element_size": spec.element_size,
         "num_elements": int(problem.flow_mesh.num_elems),
