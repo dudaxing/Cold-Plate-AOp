@@ -23,7 +23,8 @@ governing equations, objective, constraint — is kept.
 | R1h | fixed design: flow h vs h/2 on the common thermal meshes h/2 and h/4 | **done**, closed in the review of d71ab66 — on this design, refining the flow h → h/2 does not remove the thermal drift (+8.6% against +8.9%); flow replacement −2.5% to −2.7% of C |
 | R1i | fixed design: h_T = h/8 on the saved coarse flow, one thermal state | **done**, closed in the review of 2a9bfea — the thermal step shrinks: +8.87% (h/2 → h/4) then +3.20% (h/4 → h/8), ratio 0.39 |
 | R1j | development model flow h / thermal h/4: versioned reference, dual-mesh driver entry, directional gradient at x₃₀₀; no MMA update on the main mesh | **done**, closed in the review of 6d675da — reference frozen (C₀ ×1.0005); the driver takes value, gradient and states from one forward evaluation and refuses other models' references; gradient check PASS at every step (largest relative error 7.5×10⁻⁷); a deadlock in upstream's solve callback found and fixed |
-| R1k | warm start from x₃₀₀ on the development model, α_max = 10⁷ and β = 8 fixed, at most 30 MMA updates; first an explicit initial-design entry, and stop reasons that keep upstream's mixed-point KKT a proxy | **done** — the whole budget used, not converged: J −10.9% (C −18.9%, Ψ +20.4%), every state gated and feasible; the move limit binds throughout. Terminal check: the gain holds on h/8 (−12.5%) but reverses after thresholding (+4.4% on h/4, +3.8% on h/8): R1k improved the grey design, not a binary one |
+| R1k | warm start from x₃₀₀ on the development model, α_max = 10⁷ and β = 8 fixed, at most 30 MMA updates; first an explicit initial-design entry, and stop reasons that keep upstream's mixed-point KKT a proxy | **done** — the whole budget used, not converged: J −10.9% (C −18.9%, Ψ +20.4%), every state gated and feasible; the move limit binds throughout. Terminal check: the gain holds on h/8 (−12.5%) but the s = 0.5 thresholded terminal is worse than the thresholded start (+4.4% on h/4, +3.8% on h/8) and exceeds the volume bound, so no qualified binary comparison exists yet; closed in the review of 320ea73 |
+| R1l | qualified binary baselines for x₃₀₀ and x₃₀ by one volume-threshold rule, then one β = 16 stage of at most 30 updates from x₃₀, judged on the qualified binary design | proposed in the review of 320ea73; awaiting authorisation |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -71,12 +72,16 @@ The R1k terminal check. (a) x₃₀ thresholded at s = 0.5, no repair: one
 connected channel, but 1.3% more fluid than the bound. (b, c) Its temperature
 on h/8, continuous and thresholded, on one scale: the thresholded design runs
 far hotter. (d) J of the start and the terminal design under the same four
-evaluations. The continuous gain holds on h/8; thresholded, it reverses.
+evaluations. The continuous gain holds on h/8; thresholded at s = 0.5 it
+reverses — but the thresholded x₃₀ exceeds the volume bound, so (d)'s lower two
+rows are a diagnostic of that rule, not a ranking of qualified designs.
 
 ## R1d: the 300-update run
 
 5200 elements, filter radius 2×10⁻⁴, Zhao's unmodified 1.03 α ramp to the 10⁷
 cap at n = 78 inside a 100-step β = 0 phase, then β = 1, 2, 4, 8 at the cap.
+The ramp is Zhao's (§4.1); the tanh projection and its β stages are this
+project's, since Zhao's relaxed Heaviside (Eq. 9) acts on the CBS level set.
 80.9 minutes.
 
 | | self scale | paper-interpreted scale |
@@ -1317,8 +1322,13 @@ The three recomputed anchors reproduce their records: x₃₀₀ at h/4 matches
 R1j's baseline (Ψ −2.2×10⁻¹⁶, C +2.2×10⁻¹⁶), x₃₀ at h/4 R1k's terminal record,
 and x₃₀₀ at h/8 R1i's cell (both exactly). All eight states passed the 10⁻⁸
 gate, the worst thermal residual being 2.6×10⁻¹¹ at h/8, and none has a node
-below the inlet temperature. Thresholded at any s from 0.3 to 0.7, both designs
-are one connected fluid domain joining inlet and outlet.
+below the inlet temperature. All four h/8 thermal solves ran to upstream's
+40-iteration cap and ended at relative residuals of 1.1–2.6×10⁻¹¹, above
+upstream's internal 10⁻¹¹ — the plateau R1i met. They are accepted by our gate
+on the returned states, not by upstream's own stopping test. At the five
+thresholds probed, 0.3, 0.4, 0.5, 0.6 and 0.7, both designs are one connected
+fluid domain joining inlet and outlet; thresholds between them were not
+checked.
 
 | J on R1k's scale | x₃₀₀ | x₃₀ | x₃₀ against x₃₀₀ | C | Ψ |
 |---|---|---|---|---|---|
@@ -1327,51 +1337,120 @@ are one connected fluid domain joining inlet and outlet.
 | thresholded, h/4 | 1.37131 | 1.43146 | **+4.39%** | +9.09% | −21.00% |
 | thresholded, h/8 | 1.47014 | 1.52549 | **+3.77%** | +7.99% | −21.00% |
 
-- **On the finer thermal mesh the gain holds, and is slightly larger.** On h/8
-  the continuous x₃₀ beats x₃₀₀ by 12.5% against R1k's 10.9% on h/4. Its C also
-  moves less between the two meshes: +0.94% from h/4 to h/8, against +3.20%
-  for x₃₀₀ (R1i's step).
-- **Thresholded, the gain does not survive.** At s = 0.5, x₃₀ is worse than
-  x₃₀₀ on both meshes, by 4.4% and 3.8%. Its thresholded design also has more
-  fluid than the bound allows: v_f 0.4052 in the design domain, 1.3% over 0.40,
-  where x₃₀₀'s thresholded design stays inside it (0.3988). That extra fluid is
-  part of why its Ψ falls 38% on thresholding, while C rises 75% (h/4) and 86%
-  (h/8).
+- **On the finer thermal mesh the continuous gain holds, and is slightly
+  larger.** On h/8 the continuous x₃₀ beats x₃₀₀ by 12.5% against R1k's 10.9%
+  on h/4. The continuous designs' C moves +0.94% (x₃₀) and +3.20% (x₃₀₀, R1i's
+  step) from h/4 to h/8; the thresholded designs' moves far more, +7.45% and
+  +8.54%, so x₃₀'s 0.94% says nothing about a binary design's mesh sensitivity.
+  These are differences between neighbouring meshes, not errors against an
+  exact solution, and the flow stays on h throughout: this is a check of the
+  thermal refinement, not of the mesh independence of the flow–thermal model.
+- **Thresholded at s = 0.5, the gain is not kept.** x₃₀ comes out worse than
+  x₃₀₀ on both meshes, by 4.4% and 3.8%. But its thresholded design has more
+  fluid than the bound allows — v_f 0.4052 in the design domain, 26 cells or
+  1.3% over 0.40 — where x₃₀₀'s stays inside it (0.3988). These two rows are
+  therefore a diagnostic of the s = 0.5 rule, not a ranking of two qualified
+  binary designs; that comparison has not been made. The extra fluid and a 38%
+  fall in Ψ on thresholding come together, with C rising 75% (h/4) and 86%
+  (h/8); how much of the fall the extra volume accounts for is not isolated,
+  since thresholding changes the resistance, the conductivity, the flow, the
+  temperature and the stabilisation at once.
 - **Thresholding costs x₃₀ about twice what it costs x₃₀₀:** J +43.9% (h/4)
-  and +52.3% (h/8), against +22.8% and +28.4%. The gain came with more grey,
-  6.4% of cells at the start and 9.5% at the end, and the thresholded design
-  does not keep it. That is the observation; which part of the model rewards
-  the grey is not identified here.
+  and +52.3% (h/8), against +22.8% and +28.4%. The grey fraction rose from
+  6.4% of cells to 9.5% over the run. That the gain rose with the grey is a
+  co-occurrence; that the gain comes from the grey is a hypothesis, which this
+  check did not test.
 - **Grey matters far more on the finer thermal meshes, even for x₃₀₀.** On its
   own single-mesh model R1d's thresholding cost 0.33% of J; on h/4 and h/8 the
   same design loses 22.8% and 28.4%. (R1e measured 10.3% of J* with the whole
   mesh at h/2; that is a different refinement, so it is not a point on this
   series.)
-- **Cost:** 1145 s in all; build 37 s (h/4) and 120 s (h/8); a thermal solve
-  9–15 s on h/4 and 195–209 s on h/8; cumulative peak working set 5613 MiB.
-  All 28 hashes in the record reproduce from the committed files, 13 of them
-  after converting LF to CRLF.
+- **Cost:** 1145 s in all, for 4 flow solves and 8 thermal solves; build 37 s
+  (h/4) and 120 s (h/8); a thermal solve 9–15 s on h/4 and 195–209 s on h/8;
+  cumulative peak working set 5613 MiB, the whole process's.
+
+**After the review of 320ea73.** The review closed this check and found two
+gaps in the script's acceptance, neither of which touched these numbers (every
+residual was finite and every anchor reproduced): `max(residuals) <= tol`
+accepts a NaN thermal residual when the flow residual is finite, because
+`max()` returns the finite one; and a cell whose anchor failed still counted,
+with the script exiting normally. The rules now live in
+`tfopus/zhao2d_binary.py`, tested in `validation/test_zhao2d_binary.py`
+(including both reproducers): every residual must be finite and within the
+gate; a failed gate or anchor removes the cell and makes the script exit
+non-zero; volume feasibility is recorded apart from the gate, and each
+comparison is labelled `qualified_comparison` (both designs feasible) or
+`threshold_diagnostic`; and every analysed state's s, u/p and T is saved with
+its mesh identity. The record above predates this: it saved the two
+thresholded solid fractions and x₃₀'s h/8 temperatures only, the thresholded
+flows were never written and no copy remains, so the thresholded states rest
+on the source and the run log rather than on saved fields. The script that ran
+is restored by `results/zhao2d_r1k_terminal_check_at_run.patch` (`patch -p1`
+reproduces the recorded hash). The record's other 27 hashes reproduce from the
+committed files, 13 after converting LF to CRLF.
+
+**What this means for β.** With η = 0.5, the projection gives s_β ≥ 0.5
+exactly when the filtered design x̃ ≥ 0.5, for every β > 0. Raising β alone
+therefore sharpens the grey without moving the s = 0.5 thresholded design;
+this was checked for both designs at β = 8, 16 and 32. At β = 16, x₃₀'s
+continuous fluid fraction becomes 0.4032 (g = +0.0080, infeasible) and its grey
+fraction 4.2%; x₃₀₀'s stays feasible (0.3996). A β = 16 step is therefore a
+new optimisation that has to restore the volume, not a sharper picture of the
+same design. The tanh projection and its β = 1, 2, 4, 8 continuation are this
+project's choices for the density method: Zhao's material description is a
+relaxed cubic Heaviside of the CBS level set (§2.3, Eq. 9, band ε = 0.75h),
+which has no β. The interpolations q_α = q_κ = 0.2 are Zhao's Eqs. (10) and
+(11).
 
 ### What R1k says, and what it does not
 
 - On this model, the gradient R1j checked moves the design to a clearly lower
   J within 30 updates — −10.9%, by lowering thermal compliance 19% at the
   price of 20% more dissipation — with every state gated and feasible. On h/8
-  the gain holds (−12.5%); after thresholding it reverses (+4.4% on h/4, +3.8%
-  on h/8), and the thresholded terminal design breaks the fluid-fraction bound.
-  R1k has improved the grey design, not a binary one.
+  the continuous gain holds (−12.5%). Direct thresholding at s = 0.5 did not
+  deliver a volume-feasible binary terminal design that keeps it: the
+  thresholded x₃₀ is worse than the thresholded start (+4.4% on h/4, +3.8% on
+  h/8) and breaks the fluid-fraction bound. R1k improved the continuous design;
+  whether the gain can be carried into a qualified binary design is open.
 - It is not converged, and nothing here says so: the budget ended it, the move
   limit bound on every update from the fourth, the last step was still 0.41 in
   2-norm, and the KKT proxy was still 2.9×10⁻³. Where the design would settle
   is not known.
-- A longer run at the same fixed β = 8 would go on optimising the grey model.
-  Nothing here suggests it would give a better thresholded design; whatever
-  follows needs a way to keep the gain out of the grey, and that is a decision
-  for the next stage.
+- Thirty updates cannot say what more updates at β = 8 would do to the
+  thresholded design. They are a reason not to extend the same experiment
+  blindly, not a prediction that it would fail.
 - J is this model's own scale and is not comparable with R1d's J_self; raw Ψ and
   C are, and J* is recorded as a common scale.
-- Not done, by the contract: more updates, a continuation restart, β = 16, h/8,
-  a fine-flow check, a change of formulation, 3D.
+- Not done in the run, by its contract: more updates, a continuation restart,
+  β = 16, a fine-flow check, a change of formulation, 3D. The h/8 re-analysis
+  and the thresholding came afterwards, as the terminal check above.
+
+### Next: R1l, as proposed (awaiting authorisation)
+
+Proposed in the review of 320ea73, to ask whether the continuous gain can be
+carried into a volume-feasible binary design:
+
+1. **Qualified binary baselines.** One export rule for both x₃₀₀ and x₃₀: a
+   single threshold per design, chosen so the design domain has at most 2000
+   fluid cells (40%) and as close to 2000 as possible, cells of equal density
+   moving together, the tabs fluid, no repair. Geometry alone puts it at about
+   t = 0.529 for x₃₀₀ (6 cells differ from s = 0.5) and t = 0.401 for x₃₀ (26
+   cells); both connected. This export threshold t is not the projection's η,
+   which stays 0.5. Each design is then solved once on h and h/4, and every
+   state saved: at most 2 flow and 2 thermal solves.
+2. **One β = 16 stage.** From R1k's terminal x, MMA reinitialised, everything
+   else held (α_max = 10⁷, q_α = q_κ = 0.2, filter, η = 0.5, thermal form,
+   h and h/4, this reference, w = 0.5), at most 30 updates. The zero step is
+   infeasible (g ≈ +0.008) and must be recorded as such; states before the
+   volume is restored cannot count as the best feasible design. If the
+   terminal is not feasible, that is reported and the stage stops. If it is,
+   it is exported by the same rule and, if connected, solved once more (1 flow,
+   1 thermal) and compared with the two baselines.
+
+What decides it is the qualified binary J, Ψ and C, and whether the
+continuous–binary gap narrows — not a lower continuous J or a smaller grey
+fraction. At most 3 flow and 3 thermal solves besides the 30 updates; no
+automatic β = 32, no binary h/8, no q sweep, no change of formulation, no 3D.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 

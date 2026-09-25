@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done here; the work continues in its own repository, Cooling-conformal-AOp |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and the gain does not survive thresholding |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -106,15 +106,18 @@ design's. It is budget-limited, not converged: the move limit binds on every
 update from the fourth, and the driver now reports upstream's stopping tests
 as proxies rather than convergence.
 
-**That gain belongs to the grey design, not a binary one.** Re-measured with the
-temperature on h/8 it holds,
-and grows to 12.5%. But thresholded at s = 0.5, the terminal design is 4.4% worse
-than the thresholded start (3.8% on h/8), and has 1.3% more fluid than the
-bound allows. Its grey fraction had risen from 6.4% to 9.5%. On these finer
-thermal meshes grey matters a great deal: thresholding costs even the start
-design 23–28% of J, where on R1d's own coarse model it cost 0.33%. So a longer
-run at the same β would optimise the grey design further; a better binary
-design needs something that keeps the gain out of the grey.
+**The gain is in the continuous design; it has not yet been carried into a
+binary one.** Re-measured with the temperature on h/8 it holds, and grows to
+12.5%. Thresholded directly at s = 0.5, though, the terminal design is 4.4%
+worse than the thresholded start (3.8% on h/8) and has 1.3% more fluid than
+the bound allows, so that is a diagnostic of the thresholding rule rather than
+a comparison of two qualified binary designs. The grey fraction rose from 6.4%
+to 9.5% over the run; that the gain comes from the grey is a hypothesis this
+check did not test. On these finer thermal meshes thresholding costs even the
+start design 23–28% of J, where on R1d's own coarse model it cost 0.33%.
+Raising β alone would not move the s = 0.5 binary design at all — with η = 0.5
+the threshold of s is the threshold of the filtered design — so any next step
+has to re-optimise, not just sharpen.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied

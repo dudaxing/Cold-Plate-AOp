@@ -1,0 +1,214 @@
+--- a/scripts/zhao2d_r1k_terminal_check.py
++++ b/scripts/zhao2d_r1k_terminal_check.py
+@@ -14,14 +14,9 @@
+ 
+ The binary design is the thresholded solid fraction, the fixed tabs kept fluid,
+ with no repair; if inlet and outlet are not joined through fluid it is reported
+-as such and not analysed. Fluid connectivity is also recorded at five probed
+-thresholds, 0.3 to 0.7. Every state is gated at 1e-8, each residual required
+-finite; a cell that fails, or an anchor that does not reproduce, is recorded,
+-never counted, and makes the script exit non-zero. Whether a design satisfies
+-the fluid-fraction bound is recorded apart from the gate: a comparison between
+-two feasible designs is `qualified_comparison`, any other a
+-`threshold_diagnostic`. Every analysed state's s, u/p and T is saved. The
+-rules are in tfopus/zhao2d_binary.py.
++as such and not analysed. Fluid connectivity is also recorded for thresholds
++0.3 to 0.7. Every state is gated at 1e-8; a cell that fails is recorded and not
++used.
+ 
+ J uses R1k's constants -- this model's Psi_0 and C_0 at w = 0.5 -- as one fixed
+ yardstick on every cell: the same weights, not a new normalisation. J* uses
+@@ -63,10 +58,10 @@
+ from tfopus import materials  # noqa: E402
+ from tfopus import zhao2d as z  # noqa: E402
+ from tfopus import zhao2d_analysis as za  # noqa: E402
+-from tfopus import zhao2d_binary as zb  # noqa: E402
+ from tfopus import zhao2d_dual as dual  # noqa: E402
+ from tfopus import zhao2d_flow_study as fs  # noqa: E402
+ from tfopus import zhao2d_r1 as r1  # noqa: E402
++from tfopus.mesh import Face  # noqa: E402
+ 
+ from zhao2d_dual_check import peak_working_set_mb  # noqa: E402
+ from zhao2d_flow_mesh_check import provenance, sha256_file  # noqa: E402
+@@ -82,6 +77,29 @@
+ INPUTS = ("zhao2d_r1k_warm_start.json", "zhao2d_r1k_fields.npz", "zhao2d_r1i_h8.json")
+ 
+ 
++def port_elements(planar, tag) -> np.ndarray:
++    return np.unique([e for e, _ in planar.elem_faces[tag]])
++
++
++def binary(s: np.ndarray, design_mask: np.ndarray, threshold: float) -> np.ndarray:
++    """Solid where s >= threshold; the fixed tabs fluid by definition. No repair."""
++    s_bin = (s >= threshold).astype(float)
++    s_bin[~design_mask] = 0.0
++    return s_bin
++
++
++def connectivity(problem, s: np.ndarray) -> dict:
++    pm = problem.flow_mesh
++    inlet, outlet = port_elements(pm, Face.INLET), port_elements(pm, Face.OUTLET)
++    out = {}
++    for t in CONNECTIVITY_THRESHOLDS:
++        fluid = binary(s, np.asarray(pm.design_mask), t) < 0.5
++        n, sizes, joined, ids_in, ids_out = z.fluid_connectivity(pm, fluid, inlet, outlet)
++        out[f"{t:g}"] = {"fluid_components": int(n), "inlet_outlet_connected": joined,
++                         "largest_components": [int(v) for v in np.sort(sizes)[::-1][:3]]}
++    return out
++
++
+ def main() -> None:
+     ap = argparse.ArgumentParser(description=__doc__)
+     ap.add_argument("--inputs", type=pathlib.Path, default=REPO / "results")
+@@ -160,31 +178,21 @@
+             record["yardstick"] = dict(yardstick)
+         material = za.build_material(spec, ALPHA_MAX)
+         design_mask = np.asarray(problem.flow_mesh.design_mask)
+-        coords = np.asarray(problem.thermal_mesh.mesh.nodes.coords)
+-        record.setdefault("thermal_meshes", {})[f"h{level}"] = {
+-            "refinement": level, "quadrature": QUADRATURE,
+-            "num_elems": int(problem.thermal_mesh.num_elems),
+-            "num_nodes": int(problem.thermal_mesh.mesh.num_nodes),
+-            "node_coords_sha256": fs.digest(coords)}
+ 
+         for name, x in designs.items():
+             s = np.asarray(problem.solid_fraction(jnp.asarray(x), BETA))
+             if level == REFINEMENTS[0]:
+                 record.setdefault("designs", {})[name] = {
+                     "sha256_float64": fs.digest(x),
+-                    "connectivity": zb.connectivity(problem.flow_mesh, s,
+-                                                    CONNECTIVITY_THRESHOLDS),
++                    "connectivity": connectivity(problem, s),
+                 }
+             for version in ("continuous", "binary"):
+                 key = f"{name}/{version}/h{level}"
+-                s_v = s if version == "continuous" else zb.threshold(s, design_mask, THRESHOLD)
++                s_v = s if version == "continuous" else binary(s, design_mask, THRESHOLD)
+                 cell = {"design": name, "version": version, "thermal_refinement": level,
+                         **z.fluid_fractions(problem.flow_mesh, jnp.asarray(s_v)),
+                         "grey_fraction": float(np.mean((s_v > 0.05) & (s_v < 0.95)))}
+                 cell["constraint_g"] = cell["v_f_design_domain"] / config.max_fluid_fraction - 1.0
+-                # design qualification, recorded apart from the PDE gate
+-                cell["volume_feasible"] = zb.volume_feasible(
+-                    cell["v_f_design_domain"], config.max_fluid_fraction)
+                 if version == "binary" and not record["designs"][name]["connectivity"][
+                         f"{THRESHOLD:g}"]["inlet_outlet_connected"]:
+                     cell["analysed"] = False
+@@ -215,26 +223,28 @@
+                     T_max=float(t.max()), T_min=float(t.min()),
+                     negative_nodes=int(np.count_nonzero(t < 0.0)),
+                     residual_flow=norms["flow"], residual_thermal=norms["thermal"],
+-                    gate_passed=zb.gate_passed(norms, GATE),
++                    gate_passed=bool(max(norms.values()) <= GATE),
+                 )
+                 anchor = anchors.get((name, version, level))
+                 if anchor is not None:
+-                    cell["anchor"] = zb.anchor_status({"psi": psi, "compliance": c},
+-                                                      anchor, ANCHOR_TOL)
+-                # the full state, so the cell can be re-assembled without re-solving
+-                stem = f"{name}_{version}"
+-                saved.setdefault(f"{stem}_solid_fraction", np.asarray(s_v))
+-                saved.setdefault(f"{stem}_press_vel", flows[(name, version)])
+-                saved[f"{stem}_h{level}_temperature"] = t
+-                cell["state_sha256"] = {"solid_fraction": fs.digest(s_v),
+-                                        "press_vel": fs.digest(flows[(name, version)]),
+-                                        "temperature": fs.digest(t)}
++                    cell["anchor"] = {
++                        "source": anchor["source"],
++                        "psi_relative": psi / anchor["psi"] - 1.0,
++                        "compliance_relative": c / anchor["compliance"] - 1.0,
++                    }
++                    cell["anchor"]["reproduced"] = bool(
++                        abs(cell["anchor"]["psi_relative"]) <= ANCHOR_TOL
++                        and abs(cell["anchor"]["compliance_relative"]) <= ANCHOR_TOL)
+                 cells[key] = cell
++                if level == 8 and name == "x30":
++                    saved[f"temperature_h8_{version}"] = t
+                 print(f"{key}: Psi {psi:.6e}  C {c:.3f}  J {cell['J']:.6f}  "
+-                      f"T_max {cell['T_max']:.2f}  |R| {norms['flow']:.1e}/{norms['thermal']:.1e}  "
++                      f"T_max {cell['T_max']:.2f}  |R| {max(norms.values()):.1e}  "
+                       f"thermal {cell['t_thermal_s']:.1f} s"
+                       + (f"  anchor {'ok' if cell['anchor']['reproduced'] else 'MISMATCH'}"
+                          if anchor is not None else ""), flush=True)
++            if level == REFINEMENTS[0]:
++                saved[f"solid_fraction_binary_{name}"] = binary(s, design_mask, THRESHOLD)
+         memory[f"after_h{level}"] = peak_working_set_mb()
+         # the h/8 node coordinates are R1i's (results/zhao2d_r1i_fields.npz): same mesh
+         del problem
+@@ -243,36 +253,36 @@
+     record["cells"] = cells
+     # the solves are the expensive part: keep them even if what follows fails
+     (out / RECORD).write_text(json.dumps(record, indent=2, default=float), encoding="utf-8")
+-    checks = zb.check_failures(cells)
++    bad_anchor = [k for k, c in cells.items() if "anchor" in c and not c["anchor"]["reproduced"]]
++    failed_gate = [k for k, c in cells.items() if c.get("analysed") and not c["gate_passed"]]
+ 
+-    def compare(a, b, quantities):
+-        """Relative change b/a - 1, and what kind of comparison it is -- or None."""
+-        kind = zb.comparison_kind(cells.get(a), cells.get(b))
+-        if kind is None:
+-            return None
+-        return {"kind": kind, **{q: cells[b][q] / cells[a][q] - 1.0 for q in quantities}}
++    def usable(key):
++        c = cells.get(key)
++        return c is not None and c.get("analysed") and c["gate_passed"]
+ 
+     gains, penalties = {}, {}
+     for version in ("continuous", "binary"):
+         for level in REFINEMENTS:
+-            row = compare(f"x300/{version}/h{level}", f"x30/{version}/h{level}",
+-                          ("J", "J_star", "psi", "compliance"))
+-            if row is not None:
+-                gains[f"{version}/h{level}"] = row
++            a, b = f"x300/{version}/h{level}", f"x30/{version}/h{level}"
++            if usable(a) and usable(b):
++                gains[f"{version}/h{level}"] = {
++                    q: cells[b][q] / cells[a][q] - 1.0
++                    for q in ("J", "J_star", "psi", "compliance")}
+     for name in designs:
+         for level in REFINEMENTS:
+-            row = compare(f"{name}/continuous/h{level}", f"{name}/binary/h{level}",
+-                          ("J", "psi", "compliance"))
+-            if row is not None:
+-                penalties[f"{name}/h{level}"] = row
++            a, b = f"{name}/continuous/h{level}", f"{name}/binary/h{level}"
++            if usable(a) and usable(b):
++                penalties[f"{name}/h{level}"] = {
++                    q: cells[b][q] / cells[a][q] - 1.0 for q in ("J", "psi", "compliance")}
+     for name in designs:
+-        for version in ("continuous", "binary"):
+-            row = compare(f"{name}/{version}/h4", f"{name}/{version}/h8", ("J", "compliance"))
+-            if row is not None:
+-                record.setdefault("thermal_step_h4_to_h8", {})[f"{name}/{version}"] = row
++        a, b = f"{name}/continuous/h4", f"{name}/continuous/h8"
++        if usable(a) and usable(b):
++            record.setdefault("thermal_step_h4_to_h8", {})[name] = {
++                "compliance": cells[b]["compliance"] / cells[a]["compliance"] - 1.0,
++                "J": cells[b]["J"] / cells[a]["J"] - 1.0}
+     record["gain_x30_over_x300"] = gains
+     record["thresholding_penalty"] = penalties
+-    record["checks"] = checks
++    record["checks"] = {"anchors_not_reproduced": bad_anchor, "cells_failing_gate": failed_gate}
+     record["cost"] = {"t_build_s": build,
+                       "peak_working_set_mb_cumulative": memory,
+                       "wall_clock_total_s": time.perf_counter() - t_start}
+@@ -287,15 +297,14 @@
+     print("\ngain of x_30 over x_300, same evaluation:")
+     for k, v in gains.items():
+         print(f"  {k:16s} J {v['J']:+.3%}  J* {v['J_star']:+.3%}  Psi {v['psi']:+.3%}  "
+-              f"C {v['compliance']:+.3%}  [{v['kind']}]")
++              f"C {v['compliance']:+.3%}")
+     print("thresholding penalty (binary over continuous):")
+     for k, v in penalties.items():
+-        print(f"  {k:10s} J {v['J']:+.3%}  Psi {v['psi']:+.3%}  C {v['compliance']:+.3%}  "
+-              f"[{v['kind']}]")
++        print(f"  {k:10s} J {v['J']:+.3%}  Psi {v['psi']:+.3%}  C {v['compliance']:+.3%}")
++    if bad_anchor or failed_gate:
++        print(f"\nCHECKS FAILED: anchors {bad_anchor}, gate {failed_gate}")
+     print(f"\nwrote {out / RECORD} and {out / FIELDS}; total "
+           f"{record['cost']['wall_clock_total_s']:.0f} s")
+-    if any(checks.values()):
+-        sys.exit(f"CHECKS FAILED: {checks}; the record says which cells are not counted")
+ 
+ 
+ if __name__ == "__main__":
