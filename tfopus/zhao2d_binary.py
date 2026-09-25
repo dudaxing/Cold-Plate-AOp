@@ -36,6 +36,37 @@ def threshold(s, design_mask, t: float) -> np.ndarray:
     return s_bin
 
 
+def volume_threshold(s, design_mask, areas, max_fluid_fraction: float) -> dict:
+    """R1l's export rule: one threshold t for the whole design, no repair.
+
+    Fluid is s < t. t is chosen so that the design domain's fluid volume is
+    at most `max_fluid_fraction` of it and as close to that as possible, cells
+    of equal s moving together (t sits exactly at a value of s, so every cell
+    at that value is solid). The tabs stay fluid. Returns t, the thresholded
+    s and what it changed against s = 0.5. This t is an export threshold, not
+    a projection's eta.
+    """
+    s = np.asarray(s, dtype=float)
+    design = np.asarray(design_mask, dtype=bool)
+    a = np.asarray(areas, dtype=float)[design]
+    sd = s[design]
+    budget = max_fluid_fraction * a.sum() * (1.0 + VOLUME_RTOL)
+    values = np.unique(sd)                                   # ascending
+    below = np.concatenate([[0.0], np.cumsum(np.bincount(
+        np.searchsorted(values, sd), weights=a, minlength=len(values)))])
+    k = int(np.flatnonzero(below <= budget).max())           # fluid area if t = values[k]
+    t = float(values[k]) if k < len(values) else float(np.nextafter(values[-1], np.inf))
+    s_bin = threshold(s, design, t)
+    fluid = design & (s_bin < 0.5)
+    return {
+        "t": t,
+        "s_binary": s_bin,
+        "fluid_cells": int(fluid.sum()),
+        "fluid_fraction": float(a[(s_bin < 0.5)[design]].sum() / a.sum()),
+        "cells_changed_from_0.5": int(np.count_nonzero(design & ((s < t) != (s < 0.5)))),
+    }
+
+
 def port_elements(planar, tag) -> np.ndarray:
     return np.unique([e for e, _ in planar.elem_faces[tag]])
 

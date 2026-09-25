@@ -3,7 +3,7 @@
 Nothing is solved or re-optimised here: every field and number is read from
 results/ and drawn, so a figure shows exactly the state the records describe
 -- including that the R1d run is budget-limited and not converged, and that the
-thermal compliance still moves with the thermal mesh. Five figures, written to
+thermal compliance still moves with the thermal mesh. Six figures, written to
 docs/figures/:
 
   zhao2d_r1d_fields.png        the R1d design in the layout of Zhao Figs. 8 and
@@ -21,6 +21,9 @@ docs/figures/:
   zhao2d_r1k_terminal_check.png  R1k's terminal design thresholded, its h/8
                                temperature continuous and binary, and J of the
                                start and the terminal under four evaluations
+  zhao2d_r1l.png               R1l: the qualified binary baselines, the 30 updates on
+                               the volume-preserving projection, and continuous
+                               against qualified binary J
 
     python scripts/zhao2d_figures.py [--results results] [--out docs/figures]
 """
@@ -638,6 +641,118 @@ def terminal_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Pa
     return path
 
 
+# -- figure 6: R1l, qualified binary designs ---------------------------------------------
+
+
+def r1l_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
+    a = json.loads((res / "zhao2d_r1l_baselines.json").read_text(encoding="utf-8"))
+    b = json.loads((res / "zhao2d_r1l_vp_pilot.json").read_text(encoding="utf-8"))
+    r1k = json.loads((res / "zhao2d_r1k_warm_start.json").read_text(encoding="utf-8"))
+    fa = np.load(res / "zhao2d_r1l_baselines_fields.npz")
+    fb = np.load(res / "zhao2d_r1l_vp_pilot_fields.npz")
+    h = g["element_size"]
+    ex = b["export"]
+
+    fig = plt.figure(figsize=(11.0, 10.2))
+    top = fig.add_gridspec(1, 4, left=0.02, right=0.99, top=0.875, bottom=0.40, wspace=0.10)
+    low = fig.add_gridspec(1, 2, left=0.07, right=0.97, top=0.27, bottom=0.10, wspace=0.55)
+
+    panels = (
+        (fa["x300_solid_fraction_binary"], fa["elem_centres"],
+         "(a) x₃₀₀ (R1d), qualified binary",
+         f"t = {a['designs']['x300']['t']:.4f}, 2000 fluid cells\nJ = {a['designs']['x300']['J']:.4f}"),
+        (fa["x30_solid_fraction_binary"], fa["elem_centres"],
+         "(b) x₃₀ (R1k), qualified binary",
+         f"t = {a['designs']['x30']['t']:.4f}, 2000 fluid cells\nJ = {a['designs']['x30']['J']:.4f}"),
+        (fb["solid_fraction"], fb["elem_centres"],
+         "(c) R1l B terminal, continuous",
+         f"volume-preserving, β = 16\ngrey {b['terminal']['grey_fraction']:.1%}; J = {b['terminal']['J_self']:.4f}"),
+        (fb["solid_fraction_binary"], fb["elem_centres"],
+         "(d) R1l B terminal, qualified binary",
+         f"t = {ex['t']:.4f}, 2000 fluid cells\nJ = {ex['J']:.4f}"),
+    )
+    for k, (s, centres, title, text) in enumerate(panels):
+        ax = fig.add_subplot(top[0, k])
+        field_axes(ax, g, title)
+        xe, ye, grid = density_grid(s, centres, h, g)
+        m = ax.pcolormesh(xe, ye, np.ma.masked_invalid(grid).T, cmap=DENSITY, vmin=0, vmax=1,
+                          shading="flat")
+        colorbar(fig, m, ax, "γ  (0 solid, 1 fluid)")
+        note(ax, text + "\nthermal h/4, flow h")
+
+    hist = b["history"]
+    it = np.array([r["iteration"] for r in hist] + [b["terminal"]["iteration"]])
+    jv = np.array([r["J_self"] for r in hist] + [b["terminal"]["J_self"]])
+    gv = np.array([r["constraint_g"] for r in hist] + [b["terminal"]["constraint_g"]])
+    sub = low[0, 0].subgridspec(2, 1, height_ratios=[3, 1.2], hspace=0.12)
+    ax = fig.add_subplot(sub[0])
+    ax.grid(axis="y", color=GRID, lw=0.6)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    ax.plot(it, jv, color=SERIES[0], lw=1.6)
+    ax.plot([it[-1]], [jv[-1]], "o", color=SERIES[0], ms=5)
+    ax.axhline(r1k["terminal"]["J_self"], color=MUTED, lw=0.8, ls=(0, (3, 2)))
+    ax.text(it[-1] * 0.45, r1k["terminal"]["J_self"] + 0.004, "R1k's tanh terminal, same x₃₀",
+            fontsize=7.5, color=MUTED, va="bottom")
+    ax.set_xlim(0, it[-1])
+    ax.set_ylabel("continuous J")
+    ax.set_xticklabels([])
+    ax.set_title("(e) R1l B: 30 updates on the new projection", loc="left", fontsize=9.5)
+    ax2 = fig.add_subplot(sub[1])
+    ax2.grid(axis="y", color=GRID, lw=0.6)
+    for side in ("top", "right"):
+        ax2.spines[side].set_visible(False)
+    ax2.axhline(0.0, color=MUTED, lw=0.8, ls=(0, (3, 2)))
+    ax2.plot(it, gv, color=INK2, lw=1.4)
+    ax2.set_xlim(0, it[-1])
+    ax2.set_ylabel("volume g")
+    ax2.set_xlabel("MMA update (30 = terminal, re-evaluated)")
+    ax2.text(1.2, gv[0], f"zero step g = +{gv[0]:.4f}", fontsize=7.5, color=INK2, va="center")
+
+    ax = fig.add_subplot(low[0, 1])
+    rows = [("x₃₀₀ (R1d)", 1.116472423534761, a["designs"]["x300"]["J"]),
+            ("x₃₀ (R1k)", r1k["terminal"]["J_self"], a["designs"]["x30"]["J"]),
+            ("R1l B terminal", b["terminal"]["J_self"], ex["J"])]
+    for i, (label, cont, binj) in enumerate(rows):
+        y = len(rows) - 1 - i
+        ax.plot([cont, binj], [y, y], color=AXIS, lw=1.2, zorder=1)
+        ax.plot([cont], [y], "o", color=MUTED, ms=8, zorder=2)
+        ax.plot([binj], [y], "o", color=SERIES[0], ms=8, zorder=3)
+        ax.text(binj + 0.012, y, f"{binj:.4f}", va="center", fontsize=8.5, color=INK)
+    ax.set_yticks(range(len(rows)))
+    ax.set_yticklabels([r[0] for r in rows][::-1])
+    ax.set_xlim(0.95, 1.47)
+    ax.set_ylim(-0.7, len(rows) - 0.3)
+    ax.grid(axis="x", color=GRID, lw=0.6)
+    for side in ("top", "right", "left"):
+        ax.spines[side].set_visible(False)
+    ax.tick_params(axis="y", length=0)
+    ax.set_xlabel("J on this model's scale (h/4)")
+    ax.set_title("(f) Continuous and qualified binary J", loc="left", fontsize=9.5)
+    ax.plot([], [], "o", color=MUTED, ms=7, label="continuous (its own projection)")
+    ax.plot([], [], "o", color=SERIES[0], ms=7, label="qualified binary (≤ 40% fluid)")
+    ax.legend(loc="upper center", bbox_to_anchor=(0.42, -0.2), ncol=2, frameon=False,
+              fontsize=8)
+
+    vs = b["binary_against_baselines"]
+    fig.suptitle("R1l — qualified binary baselines, and 30 updates on the volume-preserving "
+                 "projection", x=0.02, ha="left", fontsize=11.5, color=INK, y=0.985)
+    fig.text(0.02, 0.955,
+             f"The new terminal's qualified binary design has J {vs['x300']['J']:+.2%} against "
+             f"x₃₀₀'s and {vs['x30']['J']:+.2%} against x₃₀'s; x₃₀'s own was "
+             f"{a['x30_against_x300']['J']:+.2%} against x₃₀₀'s. Budget used, not converged; the "
+             "binary designs\nare 0/1 material with finite Brinkman resistance, "
+             "solved as given s. Every state passed the 10⁻⁸ gate.",
+             fontsize=8.5, color=INK2, ha="left", va="top")
+    footer(fig, "Drawn from results/zhao2d_r1l_baselines.json, zhao2d_r1l_vp_pilot.json, "
+           "their fields files and zhao2d_r1k_warm_start.json — scripts/zhao2d_figures.py; "
+           "no state is re-solved.")
+    path = out / "zhao2d_r1l.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--results", type=pathlib.Path, default=REPO / "results")
@@ -650,13 +765,14 @@ def main() -> None:
     names = ["zhao2d_r1d_main_fields.npz", "zhao2d_r1g_fields.npz", "zhao2d_r1i_fields.npz",
              "zhao2d_r1d_main.json", "zhao2d_r1g_dual.json", "zhao2d_r1h_matrix.json",
              "zhao2d_r1i_h8.json", "zhao2d_r1k_warm_start.json", "zhao2d_r1k_fields.npz",
-             "zhao2d_r1k_terminal_check.json", "zhao2d_r1k_terminal_fields.npz"]
+             "zhao2d_r1k_terminal_check.json", "zhao2d_r1k_terminal_fields.npz",
+             "zhao2d_r1l_baselines.json", "zhao2d_r1l_vp_pilot.json"]
     for n in names:
         print(f"read results/{n}  sha256 {sha(res / n)}")
     sources = [f"results/{n}" for n in names]
     for path in (fields_figure(res, args.out, g, sources), history_figure(res, args.out),
                  status_figure(res, args.out), r1k_figure(res, args.out, g),
-                 terminal_figure(res, args.out, g)):
+                 terminal_figure(res, args.out, g), r1l_figure(res, args.out, g)):
         print(f"wrote {path.relative_to(REPO) if path.is_relative_to(REPO) else path}")
 
 

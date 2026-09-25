@@ -1,0 +1,13 @@
+D:\Coding\thermalFluid\thermal-fluid-opus\external\TOFLUX\toflux\src\solver.py:21: UserWarning: petsc4py not found; the PETSC linear solver is unavailable.
+  warnings.warn("petsc4py not found; the PETSC linear solver is unavailable.")
+built: flow 5200 el, thermal 83200 el (33.6 s)
+NR converged in 8 iters, res_norm/res_norm_0: 1.3852231718869694e-14
+NR converged in 3 iters, res_norm/res_norm_0: 5.7319685044681774e-12
+x300: t 0.5288802660  fluid 2000  changed 6  Psi 1.307329e-02  C 47748.559  J 1.380572  |R| 1.2e-14/5.5e-12  21.3 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.2858294189896512e-14
+NR converged in 3 iters, res_norm/res_norm_0: 6.477757113719479e-12
+x30: t 0.4014602995  fluid 2000  changed 26  Psi 1.152092e-02  C 49560.549  J 1.400528  |R| 1.1e-14/6.5e-12  13.5 s
+
+x_30 against x_300, qualified binary designs (qualified_comparison): J +1.446%, Psi -11.874%, C +3.795%
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1l_baselines.json and D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1l_baselines_fields.npz; total 84 s
+exit=0 elapsed=88s

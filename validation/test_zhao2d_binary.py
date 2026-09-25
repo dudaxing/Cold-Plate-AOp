@@ -117,6 +117,45 @@ def test_check_failures_names_every_failing_cell():
                                         "cells_failing_gate": ["b"]}
 
 
+def test_the_volume_threshold_fills_the_budget_and_no_more(mesh):
+    design = np.asarray(mesh.design_mask)
+    areas = np.asarray(mesh.elem_area)
+    n = int(design.sum())  # 50 design cells; 40% is 20
+    s = np.zeros(mesh.num_elems)
+    s[design] = np.linspace(0.05, 0.95, n)  # distinct values
+    out = zb.volume_threshold(s, design, areas, 0.4)
+    assert out["fluid_cells"] == 20 and out["fluid_fraction"] == pytest.approx(0.4, rel=1e-12)
+    assert np.count_nonzero(design & (s < out["t"])) == 20
+    assert np.all(out["s_binary"][~design] == 0.0)  # tabs fluid
+
+
+def test_equal_densities_move_together(mesh):
+    """A tie straddling the budget goes solid as a group, never split."""
+    design = np.asarray(mesh.design_mask)
+    areas = np.asarray(mesh.elem_area)
+    idx = np.flatnonzero(design)
+    s = np.zeros(mesh.num_elems)
+    s[idx] = 0.9
+    s[idx[:18]] = 0.1      # 18 cells clearly fluid
+    s[idx[18:23]] = 0.5    # 5 tied cells: 18 + 5 = 23 would overshoot 20
+    out = zb.volume_threshold(s, design, areas, 0.4)
+    assert out["fluid_cells"] == 18 and out["t"] == 0.5
+
+
+def test_the_volume_threshold_reproduces_the_reviewed_geometry():
+    """The review of 320ea73 found t = 0.5288802660 (x300) and 0.4014602995 (x30)."""
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent / "results"
+    pm = z.build_mesh(z.Zhao2DSpec(), dofs_per_node=3)
+    design, areas = np.asarray(pm.design_mask), np.asarray(pm.elem_area)
+    for path, key, t, changed in (("zhao2d_r1d_main_fields.npz", "solid_fraction", 0.5288802660, 6),
+                                  ("zhao2d_r1k_fields.npz", "solid_fraction", 0.4014602995, 26)):
+        s = np.load(root / path)[key]
+        out = zb.volume_threshold(s, design, areas, 0.4)
+        assert out["t"] == pytest.approx(t, abs=5e-11)
+        assert out["fluid_cells"] == 2000 and out["cells_changed_from_0.5"] == changed
+
+
 def test_the_terminal_check_refuses_to_overwrite_its_record_before_building(tmp_path, monkeypatch):
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
     import zhao2d_r1k_terminal_check as tc

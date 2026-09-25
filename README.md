@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done here; the work continues in its own repository, Cooling-conformal-AOp |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -134,6 +134,16 @@ volume, and nothing is known yet about binary performance under it. The
 scripts behind earlier records pin the old projection, so those records stay
 reproducible.
 
+**The first qualified binary improvement, and it is small.** Exporting each
+design by one rule — a single threshold that leaves exactly 40% fluid, no
+repair — makes binary designs that meet the bound, so they can be ranked.
+R1k's terminal design is then still 1.45% worse than its start. Thirty
+updates from it on the volume-preserving projection at β = 16 give a
+qualified binary design 0.85% better than the start and 2.27% better than R1k's.
+That is budget-limited, not converged, and smaller than the 7–9% the thermal
+mesh moved thresholded designs by in the terminal check. The gap between each
+continuous design and its binary export stays near 40%.
+
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
 as source substitutions against a pristine checkout rather than a fork, so the
@@ -194,6 +204,8 @@ python scripts/zhao2d_freeze_dual_reference.py --write  # the development model'
 python scripts/zhao2d_r1j_check.py --out DIR            # its driver entry and gradient at the R1d design
 python scripts/zhao2d_r1k_warm_start.py --out DIR       # 30 MMA updates on it from the R1d design
 python scripts/zhao2d_r1k_terminal_check.py --out DIR   # that run's terminal design on h/8 and thresholded
+python scripts/zhao2d_r1l_baselines.py --out DIR        # qualified binary baselines, one export rule
+python scripts/zhao2d_r1l_vp_pilot.py --out DIR         # 30 updates on the volume-preserving projection
 python scripts/zhao2d_figures.py                        # docs/figures/, drawn from the saved results
 ```
 

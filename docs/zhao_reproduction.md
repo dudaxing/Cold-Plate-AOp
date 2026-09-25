@@ -25,7 +25,7 @@ governing equations, objective, constraint — is kept.
 | R1j | development model flow h / thermal h/4: versioned reference, dual-mesh driver entry, directional gradient at x₃₀₀; no MMA update on the main mesh | **done**, closed in the review of 6d675da — reference frozen (C₀ ×1.0005); the driver takes value, gradient and states from one forward evaluation and refuses other models' references; gradient check PASS at every step (largest relative error 7.5×10⁻⁷); a deadlock in upstream's solve callback found and fixed |
 | R1k | warm start from x₃₀₀ on the development model, α_max = 10⁷ and β = 8 fixed, at most 30 MMA updates; first an explicit initial-design entry, and stop reasons that keep upstream's mixed-point KKT a proxy | **done** — the whole budget used, not converged: J −10.9% (C −18.9%, Ψ +20.4%), every state gated and feasible; the move limit binds throughout. Terminal check: the gain holds on h/8 (−12.5%) but the s = 0.5 thresholded terminal is worse than the thresholded start (+4.4% on h/4, +3.8% on h/8) and exceeds the volume bound, so no qualified binary comparison exists yet; closed in the review of 320ea73 |
 | — | the volume-preserving projection of Xu, Cai & Cheng (2010) becomes the default; earlier record scripts pinned to the tanh projection | **done**; see "The volume-preserving projection" |
-| R1l | qualified binary baselines from R1d's and R1k's saved physical densities by one volume-threshold rule; then 30 updates from x₃₀ on the volume-preserving projection at β = 16, judged on the qualified binary design | contract frozen in the review of a1b4af9 (see "R1l: the contract"); awaiting authorisation |
+| R1l | qualified binary baselines from R1d's and R1k's saved physical densities by one volume-threshold rule; then 30 updates from x₃₀ on the volume-preserving projection at β = 16, judged on the qualified binary design | **done** — qualified, x₃₀ is still +1.45% worse than x₃₀₀; the new-projection pilot's qualified binary terminal is −0.85% against x₃₀₀'s and −2.27% against x₃₀'s; budget used, not converged; the continuous–binary gap stays +38.7% |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -1563,7 +1563,7 @@ thresholded one. And η is not an export threshold: H(η) = η, so η is not
 where s = 0.5. A warm start from either design under the new projection
 begins infeasible at every β and has to recover the volume first.
 
-## R1l: the contract (as frozen in the review of a1b4af9; awaiting authorisation)
+## R1l: the contract (as frozen in the review of a1b4af9; authorised and run)
 
 To ask whether the continuous gain can be carried into a qualified binary
 design, with the model otherwise held.
@@ -1613,6 +1613,98 @@ no h/16, no β = 32, no q sweep, no change of formulation, no 3D. Xu β = 16 is 
 stronger de-greying step than the earlier proposal's tanh β = 16 — twice its
 slope at the threshold — not a like-for-like replacement, and nothing yet
 shows it is better than 8.
+
+## R1l: what it found
+
+Authorised on the local CPU. `scripts/zhao2d_r1l_baselines.py` (A) and
+`scripts/zhao2d_r1l_vp_pilot.py` (B); records `results/zhao2d_r1l_baselines.json`
+and `results/zhao2d_r1l_vp_pilot.json`, each with a `.log` and a fields file
+holding every compared state's s, u/p and T; figure `docs/figures/zhao2d_r1l.png`.
+The export rule is `zhao2d_binary.volume_threshold`, tested in
+`validation/test_zhao2d_binary.py` (17 tests), which reproduces the thresholds
+the review of 320ea73 found.
+
+### A. Qualified binary baselines
+
+From the saved tanh physical densities, each exported by the one rule and
+solved as a given s on flow h and thermal h/4:
+
+| | t | cells differing from s = 0.5 | Ψ | C | J | against its continuous state | against its s = 0.5 diagnostic |
+|---|---|---|---|---|---|---|---|
+| x₃₀₀ (R1d) | 0.5288802660 | 6 | 0.0130733 | 47748.56 | 1.380572 | +23.7% | +0.7% |
+| x₃₀ (R1k) | 0.4014602995 | 26 | 0.0115209 | 49560.55 | 1.400528 | +40.8% | −2.2% |
+
+Both have exactly 2000 fluid cells (40.0%) in one connected domain, pass the
+gate (residuals ≤ 6.5×10⁻¹²) and have no node below the inlet temperature.
+**Qualified, x₃₀ is still worse than x₃₀₀: J +1.45%** (Ψ −11.9%, C +3.8%).
+The s = 0.5 diagnostic's +4.4% narrows once both designs meet the bound, but
+does not reverse. A qualified comparison, not a diagnostic: this is the
+baseline B had to beat.
+
+### B. Thirty updates on the volume-preserving projection
+
+The zero step's map, checked before anything was solved: η = 0.49328433, the
+root non-degenerate (slope −1.0×10⁻⁵), g₀ = +0.00692227, the projected minus
+the filtered volume −5.6×10⁻¹⁷, and the constraint gradient within 2.0×10⁻¹⁸ of
+its affine expression −Fᵀv/(0.4 V_D) (whose largest entry is 6.0×10⁻⁴).
+
+| | J | Ψ | C | g | grey |
+|---|---|---|---|---|---|
+| R1k's tanh terminal (the same x₃₀) | 0.994753 | 0.0172807 | 29340.63 | −1.5×10⁻⁴ | 9.5% |
+| new map, zero step | 1.095951 | 0.0119460 | 36894.59 | +6.9×10⁻³ | 3.3% |
+| new map, terminal after 30 updates | 0.986845 | 0.0166309 | 29437.52 | −7.7×10⁻⁵ | 6.2% |
+| its qualified binary design | 1.368794 | 0.0122518 | 47798.59 | 2000 fluid cells | — |
+
+The three responses, kept apart:
+
+- **Model switch**, R1k's tanh terminal to the new map's zero step, same x₃₀:
+  J +10.2% (Ψ −30.9%, C +25.7%).
+- **Optimisation**, zero step to terminal, both on the new map: J −10.0% (Ψ
+  +39.2%, C −20.2%).
+- **Export gap**, terminal to its qualified binary design: J +38.7% (Ψ
+  −26.3%, C +62.4%).
+
+**Against the baselines, qualified to qualified: J −0.85% against x₃₀₀'s** (Ψ
+−6.3%, C +0.1%) **and −2.27% against x₃₀'s** (Ψ +6.3%, C −3.6%).
+
+Also recorded:
+
+- **The volume.** The first update overshot it: g went from +0.7% to −6.2%,
+  with Ψ up and C down. Every state from update 1 on is feasible, and J rose
+  only at updates 1 and 5.
+- **The stop.** It ended at the budget (`phase_end`), with no proxy fired. The
+  KKT proxy went from 0.18 to 6.0×10⁻³, and the last step is 0.22 in 2-norm:
+  not converged.
+- **The export.** The terminal exports at t = 0.3879 (37 cells differ from
+  s = 0.5), connected. Its binary state has 2 nodes below the inlet temperature,
+  the lowest at −0.077 against T_max 20.6: a small undershoot at a sharp
+  interface, of the kind R1e and R1f saw.
+- **Cost.** A 84 s; B 926 s — build 47 s, 23–33 s per update after the first
+  (47 s), peak working set 4393 MiB.
+- **Provenance.** Every hash in the two records reproduces from the committed
+  files, 31 and 30 of them, 13 each after converting LF to CRLF.
+
+### What R1l says, and what it does not
+
+- For the first time a qualified binary design improves on the start: the
+  pilot's binary terminal has J 0.85% below x₃₀₀'s qualified binary design and
+  2.27% below x₃₀'s. The margins are small. Against x₃₀₀ the thermal
+  compliance is level (+0.1%) and the gain is all in dissipation (−6.3%).
+- They are smaller than what the thermal mesh moves: the s = 0.5 thresholded
+  designs' C changed 7–9% from h/4 to h/8 in R1k's terminal check. Whether
+  this ranking holds on h/8 is not known.
+- The continuous–binary gap stays large: +38.7% for the pilot's terminal,
+  against +40.8% for x₃₀ and +23.7% for x₃₀₀. It narrowed a little relative to
+  x₃₀ and is far from closed, and the continuous design became greyer again
+  under optimisation (3.3% → 6.2%) at β = 16.
+- The +10.2% jump at the zero step is the change of map, not optimisation. The
+  new map's J is not comparable with R1k's tanh J except through the qualified
+  binary designs, which are what this stage is judged on.
+- Budget used, not converged. All binary designs here are 0/1 material with
+  finite Brinkman resistance, solved as given s on the same meshes — not
+  body-fitted solids.
+- Not done, by the contract: β = 32, a longer run, the binary designs on h/8,
+  a q sweep, a change of formulation, 3D.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -1869,6 +1961,8 @@ python scripts/zhao2d_freeze_dual_reference.py --write   # R1j reference, flow h
 python scripts/zhao2d_r1j_check.py --out DIR             # R1j refusals and directional gradient at x300
 python scripts/zhao2d_r1k_warm_start.py --out DIR        # R1k, 30 MMA updates from x300 (~14 min)
 python scripts/zhao2d_r1k_terminal_check.py --out DIR    # R1k terminal check, h/8 and thresholding (~19 min)
+python scripts/zhao2d_r1l_baselines.py --out DIR         # R1l A, qualified binary baselines (~1.5 min)
+python scripts/zhao2d_r1l_vp_pilot.py --out DIR          # R1l B, 30 updates on the volume-preserving projection (~16 min)
 python scripts/zhao2d_figures.py                         # docs/figures/ from the saved results, no solves
 ```
 
