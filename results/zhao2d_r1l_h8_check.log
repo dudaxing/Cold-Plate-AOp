@@ -1,0 +1,24 @@
+D:\Coding\thermalFluid\thermal-fluid-opus\external\TOFLUX\toflux\src\solver.py:21: UserWarning: petsc4py not found; the PETSC linear solver is unavailable.
+  warnings.warn("petsc4py not found; the PETSC linear solver is unavailable.")
+built thermal h/4: 83200 el (38.7 s)
+x300/h4: Psi 1.307329e-02  C 47748.559  J 1.380572  T_max 21.72  T_min +0.000  |R| 1.2e-14/5.5e-12  thermal 0.0 s  anchor ok
+x30/h4: Psi 1.152092e-02  C 49560.549  J 1.400528  T_max 21.14  T_min +0.000  |R| 1.1e-14/6.5e-12  thermal 0.0 s  anchor ok
+pilot/h4: Psi 1.225178e-02  C 47798.594  J 1.368794  T_max 20.59  T_min -0.077  |R| 1.1e-14/6.2e-12  thermal 0.0 s  anchor ok
+built thermal h/8: 332800 el (168.2 s)
+NR converged in 40 iters, res_norm/res_norm_0: 2.2320547759279268e-11
+x300/h8: Psi 1.307329e-02  C 51798.593  J 1.480115  T_max 22.55  T_min +0.000  |R| 1.2e-14/2.2e-11  thermal 215.6 s
+NR converged in 40 iters, res_norm/res_norm_0: 2.4978312607579513e-11
+x30/h8: Psi 1.152092e-02  C 53396.898  J 1.494819  T_max 21.85  T_min +0.000  |R| 1.1e-14/2.5e-11  thermal 205.0 s
+NR converged in 40 iters, res_norm/res_norm_0: 2.4556953445838245e-11
+pilot/h8: Psi 1.225178e-02  C 51363.615  J 1.456416  T_max 21.30  T_min +0.000  |R| 1.1e-14/2.5e-11  thermal 225.5 s
+
+ranking, qualified binary designs (J, same yardstick):
+  pilot_against_x300     h/4 -0.853%   h/8 -1.601%   (C h/4 +0.105%, h/8 -0.840%)
+  pilot_against_x30      h/4 -2.266%   h/8 -2.569%   (C h/4 -3.555%, h/8 -3.808%)
+  x30_against_x300       h/4 +1.446%   h/8 +0.993%   (C h/4 +3.795%, h/8 +3.086%)
+  x300   h/4 -> h/8: C +8.482%, J +7.210%
+  x30    h/4 -> h/8: C +7.741%, J +6.733%
+  pilot  h/4 -> h/8: C +7.458%, J +6.401%
+
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1l_h8_check.json and D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1l_h8_fields.npz; total 965 s
+exit=0 elapsed=972s

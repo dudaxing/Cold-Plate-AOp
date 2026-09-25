@@ -647,6 +647,7 @@ def terminal_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Pa
 def r1l_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
     a = json.loads((res / "zhao2d_r1l_baselines.json").read_text(encoding="utf-8"))
     b = json.loads((res / "zhao2d_r1l_vp_pilot.json").read_text(encoding="utf-8"))
+    h8 = json.loads((res / "zhao2d_r1l_h8_check.json").read_text(encoding="utf-8"))["cells"]
     r1k = json.loads((res / "zhao2d_r1k_warm_start.json").read_text(encoding="utf-8"))
     fa = np.load(res / "zhao2d_r1l_baselines_fields.npz")
     fb = np.load(res / "zhao2d_r1l_vp_pilot_fields.npz")
@@ -710,28 +711,31 @@ def r1l_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
     ax2.text(1.2, gv[0], f"zero step g = +{gv[0]:.4f}", fontsize=7.5, color=INK2, va="center")
 
     ax = fig.add_subplot(low[0, 1])
-    rows = [("x₃₀₀ (R1d)", 1.116472423534761, a["designs"]["x300"]["J"]),
-            ("x₃₀ (R1k)", r1k["terminal"]["J_self"], a["designs"]["x30"]["J"]),
-            ("R1l B terminal", b["terminal"]["J_self"], ex["J"])]
-    for i, (label, cont, binj) in enumerate(rows):
+    rows = [("x₃₀₀ (R1d)", 1.116472423534761, a["designs"]["x300"]["J"], h8["x300/h8"]["J"]),
+            ("x₃₀ (R1k)", r1k["terminal"]["J_self"], a["designs"]["x30"]["J"], h8["x30/h8"]["J"]),
+            ("R1l B terminal", b["terminal"]["J_self"], ex["J"], h8["pilot/h8"]["J"])]
+    for i, (label, cont, binj, bin8) in enumerate(rows):
         y = len(rows) - 1 - i
-        ax.plot([cont, binj], [y, y], color=AXIS, lw=1.2, zorder=1)
+        ax.plot([cont, bin8], [y, y], color=AXIS, lw=1.2, zorder=1)
         ax.plot([cont], [y], "o", color=MUTED, ms=8, zorder=2)
         ax.plot([binj], [y], "o", color=SERIES[0], ms=8, zorder=3)
-        ax.text(binj + 0.012, y, f"{binj:.4f}", va="center", fontsize=8.5, color=INK)
+        ax.plot([bin8], [y], "o", color=SERIES[1], ms=8, zorder=3)
+        ax.text(binj, y + 0.2, f"{binj:.4f}", ha="center", va="bottom", fontsize=7.5, color=INK2)
+        ax.text(bin8 + 0.012, y, f"{bin8:.4f}", va="center", fontsize=8.5, color=INK)
     ax.set_yticks(range(len(rows)))
     ax.set_yticklabels([r[0] for r in rows][::-1])
-    ax.set_xlim(0.95, 1.47)
+    ax.set_xlim(0.95, 1.58)
     ax.set_ylim(-0.7, len(rows) - 0.3)
     ax.grid(axis="x", color=GRID, lw=0.6)
     for side in ("top", "right", "left"):
         ax.spines[side].set_visible(False)
     ax.tick_params(axis="y", length=0)
-    ax.set_xlabel("J on this model's scale (h/4)")
+    ax.set_xlabel("J on the h/4 model's scale")
     ax.set_title("(f) Continuous and qualified binary J", loc="left", fontsize=9.5)
-    ax.plot([], [], "o", color=MUTED, ms=7, label="continuous (its own projection)")
-    ax.plot([], [], "o", color=SERIES[0], ms=7, label="qualified binary (≤ 40% fluid)")
-    ax.legend(loc="upper center", bbox_to_anchor=(0.42, -0.2), ncol=2, frameon=False,
+    ax.plot([], [], "o", color=MUTED, ms=7, label="continuous, h/4")
+    ax.plot([], [], "o", color=SERIES[0], ms=7, label="qualified binary, h/4")
+    ax.plot([], [], "o", color=SERIES[1], ms=7, label="qualified binary, h/8")
+    ax.legend(loc="upper center", bbox_to_anchor=(0.40, -0.2), ncol=3, frameon=False,
               fontsize=8)
 
     vs = b["binary_against_baselines"]
@@ -740,13 +744,15 @@ def r1l_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
     fig.text(0.02, 0.955,
              f"The new terminal's qualified binary design has J {vs['x300']['J']:+.2%} against "
              f"x₃₀₀'s and {vs['x30']['J']:+.2%} against x₃₀'s; x₃₀'s own was "
-             f"{a['x30_against_x300']['J']:+.2%} against x₃₀₀'s. Budget used, not converged; the "
-             "binary designs\nare 0/1 material with finite Brinkman resistance, "
-             "solved as given s. Every state passed the 10⁻⁸ gate.",
+             f"{a['x30_against_x300']['J']:+.2%} against x₃₀₀'s. On thermal h/8 the ranking holds: "
+             f"{h8['pilot/h8']['J'] / h8['x300/h8']['J'] - 1:+.2%} and "
+             f"{h8['pilot/h8']['J'] / h8['x30/h8']['J'] - 1:+.2%}.\nBudget used, not converged; "
+             "the binary designs are 0/1 material with finite Brinkman resistance, solved as "
+             "given s. Every state passed the 10⁻⁸ gate.",
              fontsize=8.5, color=INK2, ha="left", va="top")
     footer(fig, "Drawn from results/zhao2d_r1l_baselines.json, zhao2d_r1l_vp_pilot.json, "
-           "their fields files and zhao2d_r1k_warm_start.json — scripts/zhao2d_figures.py; "
-           "no state is re-solved.")
+           "zhao2d_r1l_h8_check.json, their fields files and zhao2d_r1k_warm_start.json — "
+           "scripts/zhao2d_figures.py; no state is re-solved.")
     path = out / "zhao2d_r1l.png"
     fig.savefig(path, dpi=150)
     plt.close(fig)
@@ -766,7 +772,7 @@ def main() -> None:
              "zhao2d_r1d_main.json", "zhao2d_r1g_dual.json", "zhao2d_r1h_matrix.json",
              "zhao2d_r1i_h8.json", "zhao2d_r1k_warm_start.json", "zhao2d_r1k_fields.npz",
              "zhao2d_r1k_terminal_check.json", "zhao2d_r1k_terminal_fields.npz",
-             "zhao2d_r1l_baselines.json", "zhao2d_r1l_vp_pilot.json"]
+             "zhao2d_r1l_baselines.json", "zhao2d_r1l_vp_pilot.json", "zhao2d_r1l_h8_check.json"]
     for n in names:
         print(f"read results/{n}  sha256 {sha(res / n)}")
     sources = [f"results/{n}" for n in names]

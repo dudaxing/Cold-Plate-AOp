@@ -25,7 +25,7 @@ governing equations, objective, constraint — is kept.
 | R1j | development model flow h / thermal h/4: versioned reference, dual-mesh driver entry, directional gradient at x₃₀₀; no MMA update on the main mesh | **done**, closed in the review of 6d675da — reference frozen (C₀ ×1.0005); the driver takes value, gradient and states from one forward evaluation and refuses other models' references; gradient check PASS at every step (largest relative error 7.5×10⁻⁷); a deadlock in upstream's solve callback found and fixed |
 | R1k | warm start from x₃₀₀ on the development model, α_max = 10⁷ and β = 8 fixed, at most 30 MMA updates; first an explicit initial-design entry, and stop reasons that keep upstream's mixed-point KKT a proxy | **done** — the whole budget used, not converged: J −10.9% (C −18.9%, Ψ +20.4%), every state gated and feasible; the move limit binds throughout. Terminal check: the gain holds on h/8 (−12.5%) but the s = 0.5 thresholded terminal is worse than the thresholded start (+4.4% on h/4, +3.8% on h/8) and exceeds the volume bound, so no qualified binary comparison exists yet; closed in the review of 320ea73 |
 | — | the volume-preserving projection of Xu, Cai & Cheng (2010) becomes the default; earlier record scripts pinned to the tanh projection | **done**; see "The volume-preserving projection" |
-| R1l | qualified binary baselines from R1d's and R1k's saved physical densities by one volume-threshold rule; then 30 updates from x₃₀ on the volume-preserving projection at β = 16, judged on the qualified binary design | **done** — qualified, x₃₀ is still +1.45% worse than x₃₀₀; the new-projection pilot's qualified binary terminal is −0.85% against x₃₀₀'s and −2.27% against x₃₀'s; budget used, not converged; the continuous–binary gap stays +38.7% |
+| R1l | qualified binary baselines from R1d's and R1k's saved physical densities by one volume-threshold rule; then 30 updates from x₃₀ on the volume-preserving projection at β = 16, judged on the qualified binary design | **done** — qualified, x₃₀ is still +1.45% worse than x₃₀₀; the new-projection pilot's qualified binary terminal is −0.85% against x₃₀₀'s and −2.27% against x₃₀'s; budget used, not converged; the continuous–binary gap stays +38.7%. On thermal h/8 the ranking holds and the pilot's lead grows: −1.60% against x₃₀₀, −2.57% against x₃₀ |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -1691,8 +1691,9 @@ Also recorded:
   2.27% below x₃₀'s. The margins are small. Against x₃₀₀ the thermal
   compliance is level (+0.1%) and the gain is all in dissipation (−6.3%).
 - They are smaller than what the thermal mesh moves: the s = 0.5 thresholded
-  designs' C changed 7–9% from h/4 to h/8 in R1k's terminal check. Whether
-  this ranking holds on h/8 is not known.
+  designs' C changed 7–9% from h/4 to h/8 in R1k's terminal check. The h/8
+  check below asks whether the ranking survives that: it does, and the
+  pilot's lead grows.
 - The continuous–binary gap stays large: +38.7% for the pilot's terminal,
   against +40.8% for x₃₀ and +23.7% for x₃₀₀. It narrowed a little relative to
   x₃₀ and is far from closed, and the continuous design became greyer again
@@ -1703,8 +1704,53 @@ Also recorded:
 - Budget used, not converged. All binary designs here are 0/1 material with
   finite Brinkman resistance, solved as given s on the same meshes — not
   body-fitted solids.
-- Not done, by the contract: β = 32, a longer run, the binary designs on h/8,
-  a q sweep, a change of formulation, 3D.
+- Not done, by the contract: β = 32, a longer run, a q sweep, a change of
+  formulation, 3D. The binary designs on h/8 followed, as the check below.
+
+### The h/8 check of the three qualified binary designs
+
+Asked for after R1l, on the local CPU. `scripts/zhao2d_r1l_h8_check.py`;
+records `results/zhao2d_r1l_h8_check.json` (and `.log`),
+`results/zhao2d_r1l_h8_fields.npz` (the three h/8 temperatures; the h/8 node
+coordinates are R1i's, same mesh); figure `docs/figures/zhao2d_r1l.png`,
+panel (f). The three designs are exactly R1l's: x₃₀₀'s and x₃₀'s qualified
+baselines and the pilot's qualified terminal, each a given s with the flow R1l
+solved for it on h.
+
+- **Checked before anything was solved.** Each saved flow was re-verified
+  against its s: Dirichlet values exact, relative residual 1.1–1.2×10⁻¹⁴.
+  From the saved h/4 temperatures, Ψ, C and the residuals reproduce R1l's
+  records exactly.
+- **Then one temperature solve per design on h/8 (3×3).** All three ran to
+  upstream's 40-iteration cap, at relative residuals of 2.2–2.5×10⁻¹¹, and were
+  accepted by our 10⁻⁸ gate on the returned states. No node is below the
+  inlet temperature; the pilot's h/4 undershoot, −0.077 at 2 nodes, is gone on
+  h/8.
+
+J on one fixed yardstick (the h/4 model's constants), qualified to qualified:
+
+| | h/4 | h/8 |
+|---|---|---|
+| pilot's terminal against x₃₀₀ | J −0.85% (C +0.11%) | **J −1.60%** (C −0.84%) |
+| pilot's terminal against x₃₀ | J −2.27% (C −3.56%) | **J −2.57%** (C −3.81%) |
+| x₃₀ against x₃₀₀ | J +1.45% (C +3.80%) | J +0.99% (C +3.09%) |
+
+| h/4 → h/8 | x₃₀₀ | x₃₀ | pilot |
+|---|---|---|---|
+| C | +8.48% | +7.74% | +7.46% |
+| J | +7.21% | +6.73% | +6.40% |
+
+- **The ranking holds on h/8, and the pilot's lead grows.** Against x₃₀₀ it
+  goes from −0.85% to −1.60%, and its C, level on h/4, is now 0.84% below.
+  The flow, and so Ψ, is the same on both meshes.
+- **The three designs' C moves between 7.5% and 8.5%, the pilot's least.** So
+  the ranking is steadier than any one design's C. These are differences
+  between neighbouring meshes with the flow held on h, not errors against an
+  exact solution, and one more mesh cannot say where C would settle.
+- **Cost:** 965 s — h/4 built in 39 s and nothing solved on it; h/8 built in
+  168 s; three thermal solves of 205–226 s each; cumulative peak working set
+  5401 MiB. All 30 hashes in the record reproduce from the committed files, 12
+  after converting LF to CRLF.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -1963,6 +2009,7 @@ python scripts/zhao2d_r1k_warm_start.py --out DIR        # R1k, 30 MMA updates f
 python scripts/zhao2d_r1k_terminal_check.py --out DIR    # R1k terminal check, h/8 and thresholding (~19 min)
 python scripts/zhao2d_r1l_baselines.py --out DIR         # R1l A, qualified binary baselines (~1.5 min)
 python scripts/zhao2d_r1l_vp_pilot.py --out DIR          # R1l B, 30 updates on the volume-preserving projection (~16 min)
+python scripts/zhao2d_r1l_h8_check.py --out DIR          # R1l's qualified binary designs on thermal h/8 (~16 min)
 python scripts/zhao2d_figures.py                         # docs/figures/ from the saved results, no solves
 ```
 
