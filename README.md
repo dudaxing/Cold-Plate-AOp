@@ -124,9 +124,15 @@ projection used so far, raising β moved the volume, so the constraint limited
 which β could be used. From here on the default is the volume-preserving
 projection of Xu, Cai and Cheng (2010), `tfopus/projection.py`. The threshold η
 is solved at every call so that the projected volume equals the filtered one,
-and its derivative is exact: it includes η's dependence on the design, which
-the paper's sensitivities leave out. The scripts behind earlier records pin the
-old projection, so those records stay reproducible.
+and the derivative includes η's dependence on the design, which the paper's
+stated sensitivities (taken at fixed η) do not expand. That derivative exists
+wherever some filtered density is intermediate; at a degenerate root, such as
+a uniform design, it does not, and the driver refuses to pass a gradient
+there. The projection removes β's drift of the continuous volume for a fixed
+design, and that is all: both saved designs exceed the bound on their filtered
+volume, and nothing is known yet about binary performance under it. The
+scripts behind earlier records pin the old projection, so those records stay
+reproducible.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied

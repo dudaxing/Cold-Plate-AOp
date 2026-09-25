@@ -277,6 +277,16 @@ class NotConverged(RuntimeError):
     """A state that must not reach the objective, the gradient or MMA."""
 
 
+class DegenerateProjection(RuntimeError):
+    """A design at which the volume-preserving projection has no derivative.
+
+    With no filtered density strictly between 0 and 1, Eq. (21) holds for
+    every eta, and the implicit derivative of eta does not exist. The value
+    is still defined -- s equals the filtered design -- so value-only
+    evaluations proceed; a gradient does not reach MMA.
+    """
+
+
 # --------------------------------------------------------------------------
 # The differentiable problem
 # --------------------------------------------------------------------------
@@ -376,6 +386,25 @@ class Zhao2DProblem:
         """The eta the projection used for this design: 0.5 for TANH; for
         VOLUME_PRESERVING the root of Xu et al.'s Eq. (21), NaN at beta = 0."""
         return float(self._project(x, beta)[1])
+
+    def projection_root(self, x, beta: float | None = None) -> dict:
+        """Whether the design map is differentiable here, and why.
+
+        Only the volume-preserving projection at beta > 0 has a root to worry
+        about: it needs some filtered density strictly between 0 and 1, or
+        eta is not unique and its derivative does not exist. TANH, and beta = 0,
+        are always differentiable.
+        """
+        b = self.config.projection_beta if beta is None else beta
+        if self.config.projection != Projection.VOLUME_PRESERVING or b <= 0.0:
+            return {"eta": self.projection_threshold(x, beta), "slope": None,
+                    "nondegenerate": True}
+        filtered = self.filter_matrix @ jnp.asarray(x)
+        volumes = self.area[self.design_elements]
+        eta = _projection.volume_preserving_eta(filtered, volumes, b)
+        slope = _projection.root_slope(filtered, volumes, b, eta)
+        return {"eta": float(eta), "slope": slope,
+                "nondegenerate": _projection.root_is_nondegenerate(filtered, volumes, b, eta)}
 
     def _project(self, x, beta):
         filtered = self.filter_matrix @ jnp.asarray(x)

@@ -60,6 +60,15 @@
  def main() -> None:
      ap = argparse.ArgumentParser(description=__doc__)
      ap.add_argument("--inputs", type=pathlib.Path, default=REPO / "results")
+@@ -100,7 +118,7 @@
+     t_start = time.perf_counter()
+     memory = {}
+ 
+-    spec, config = z.Zhao2DSpec(), r1.R1Config(projection=r1.Projection.TANH)  # the projection its record used
++    spec, config = z.Zhao2DSpec(), r1.R1Config()
+     w = config.weight
+     r1k = json.loads((inputs / "zhao2d_r1k_warm_start.json").read_text(encoding="utf-8"))
+     f = np.load(inputs / "zhao2d_r1k_fields.npz")
 @@ -160,31 +178,21 @@
              record["yardstick"] = dict(yardstick)
          material = za.build_material(spec, ALPHA_MAX)

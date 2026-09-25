@@ -5,7 +5,9 @@ and the eta-derivatives (27) and (28) of its Appendix A -- so that the
 implementation is tested against formulas it does not share code with. Then
 Eq. (21): the projected volume equals the filtered volume for any beta, eta is
 the unique root, and the derivative, which includes eta's dependence on the
-design, matches finite differences. Last, the R1 problem: the constraint no
+design, matches finite differences. Where the root is degenerate (no
+intermediate density) the derivative does not exist, and it comes back NaN
+rather than as a finite wrong number. Last, the R1 problem: the constraint no
 longer moves with beta under the default, and the TANH setting still reproduces
 the records made with it.
 """
@@ -156,12 +158,45 @@ def test_holding_eta_fixed_would_get_the_volume_gradient_wrong():
     assert float(jnp.linalg.norm(fixed - vol) / jnp.linalg.norm(vol)) > 0.5
 
 
-def test_a_field_with_no_intermediate_density_stays_finite():
-    rho = jnp.concatenate([jnp.zeros(10), jnp.ones(10)])
-    vol = jnp.ones(20)
-    s, _ = P.volume_preserving_projection(rho, vol, 8.0)
-    g = jax.grad(lambda r: jnp.sum(P.volume_preserving_projection(r, vol, 8.0)[0] ** 2))(rho)
-    assert bool(jnp.all(s == rho)) and bool(jnp.all(jnp.isfinite(g)))
+@pytest.mark.parametrize("rho", [jnp.zeros(1),  # the review's counterexample
+                                 jnp.concatenate([jnp.zeros(10), jnp.ones(10)])])
+def test_a_degenerate_root_is_flagged_because_its_gradient_is_not_a_derivative(rho):
+    """No intermediate density: eta is not unique and has no derivative.
+
+    What AD returns there is only the eta-fixed part -- for the lone element
+    at rho = 0, (beta + 1) e^-beta = 0.0030 at beta 8 -- while the derivative
+    from inside the admissible range is 1 (s = rho is forced). Finite, and
+    wrong; so the root is flagged, and the driver refuses such a gradient.
+    """
+    vol = jnp.ones(rho.shape)
+    beta = 8.0
+    s, eta = P.volume_preserving_projection(rho, vol, beta)
+    assert bool(jnp.all(s == rho))  # the value is still defined
+    assert P.root_is_nondegenerate(rho, vol, beta, eta) is False
+    if rho.shape == (1,):
+        g = jax.grad(lambda r: P.volume_preserving_projection(r, vol, beta)[0][0])(rho)
+        assert float(g[0]) == pytest.approx((beta + 1) * np.exp(-beta), rel=1e-10)
+        h = 1e-7  # one-sided, into the admissible range
+        inside = (float(P.volume_preserving_projection(rho + h, vol, beta)[0][0])
+                  - float(s[0])) / h
+        assert inside == pytest.approx(1.0, rel=1e-6)
+
+
+def test_just_off_the_degenerate_point_a_lone_element_is_the_identity():
+    rho, vol, beta = jnp.asarray([1e-3]), jnp.ones(1), 8.0
+    s, eta = P.volume_preserving_projection(rho, vol, beta)
+    assert P.root_is_nondegenerate(rho, vol, beta, eta) is True
+    assert float(s[0]) == pytest.approx(1e-3, rel=1e-12)
+    d = jax.grad(lambda r: P.volume_preserving_projection(r, vol, beta)[0][0])(rho)
+    assert float(d[0]) == pytest.approx(1.0, rel=1e-10)
+
+
+def test_a_mixed_field_has_a_nondegenerate_root():
+    rho, vol = _field()
+    eta = P.volume_preserving_eta(rho, vol, 16.0)
+    assert P.root_slope(rho, vol, 16.0, eta) < 0.0
+    assert P.root_is_nondegenerate(rho, vol, 16.0, eta) is True
+    assert P.root_is_nondegenerate(rho, vol, 0.0, eta) is False  # beta 0: no root at all
 
 
 # -- in the R1 problem ---------------------------------------------------------------------
@@ -205,9 +240,14 @@ def test_the_constraints_gradient_is_the_filtered_volumes_for_every_beta(problem
 
 
 def test_tanh_still_reproduces_r1ds_saved_design():
-    """The records made before the default changed stay reproducible."""
+    """The records made before the default changed stay reproducible.
+
+    Bit for bit on the machine that made R1d; on the review's Linux build
+    (JAX 0.9.0.1) to 1.1e-16, rounding in the unchanged tanh path. Two ulps
+    is allowed: any change of projection path would differ by ~1e-2.
+    """
     meta = json.loads((REPO / "results" / "zhao2d_r1d_main.json").read_text(encoding="utf-8"))
     fields = np.load(REPO / "results" / "zhao2d_r1d_main_fields.npz")
     problem = r1.Zhao2DProblem(z.Zhao2DSpec(), r1.R1Config(projection=r1.Projection.TANH))
     s = np.asarray(problem.solid_fraction(jnp.asarray(fields["design"]), meta["final_beta"]))
-    assert np.array_equal(s, np.asarray(fields["solid_fraction"]))
+    assert np.max(np.abs(s - np.asarray(fields["solid_fraction"]))) <= 2 * np.finfo(float).eps

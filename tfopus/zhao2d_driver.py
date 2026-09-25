@@ -241,12 +241,24 @@ def evaluate(problem, reference, x, alpha_max, beta, gradient: bool = True,
     residual gate is applied to the states that solve returned: an unconverged
     state raises `NotConverged`, and its gradient is never used.
 
+    So is the design map: where the volume-preserving projection's root is
+    degenerate (no filtered density strictly between 0 and 1), the design has
+    no derivative, and asking for a gradient raises `DegenerateProjection`
+    before anything is solved. A value alone is still evaluated.
+
     Returns (record, (s, press_vel, temperature), dJ, dg); the gradients are
     None when `gradient` is False.
     """
     problem.check_reference(reference)
     config = problem.config
     w = config.weight
+    root = problem.projection_root(x, beta)
+    if gradient and not root["nondegenerate"]:
+        raise _r1.DegenerateProjection(
+            f"the volume-preserving projection's root is degenerate at this design "
+            f"(beta {beta:g}, slope {root['slope']}): no filtered density lies strictly "
+            "between 0 and 1, so eta and the design map have no derivative here; no "
+            "gradient is passed to MMA")
 
     def objective(v):
         s = problem.solid_fraction(v, beta)
@@ -301,7 +313,9 @@ def evaluate(problem, reference, x, alpha_max, beta, gradient: bool = True,
         # which projection made s, and its threshold (None where undefined:
         # the volume-preserving projection at beta = 0 is the identity)
         "projection": config.projection,
-        "projection_eta": _finite_or_none(problem.projection_threshold(x, beta)),
+        "projection_eta": _finite_or_none(root["eta"]),
+        # dF/d eta at the root: negative when the design map is differentiable
+        "projection_root_slope": root["slope"],
     }
     state = (np.asarray(s), np.asarray(press_vel), np.asarray(temperature))
     return record, state, dj, dg

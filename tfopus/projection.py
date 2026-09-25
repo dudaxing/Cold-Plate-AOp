@@ -17,19 +17,33 @@ that the projected volume equals the filtered one,
     sum_i v_i H(rho_i; eta) = sum_i v_i rho_i,
 
 and their Appendix A shows the root is unique in ]0, 1[ (f(eta) decreases,
-Eqs. 26-28). The volume a constraint sees is then the filtered volume whatever
-beta is, so beta can be chosen for sharpness alone.
+Eqs. 26-28) when beta > 0 and some rho with positive volume is intermediate.
+For a fixed design the volume a constraint sees is then the filtered volume
+whatever beta is. That removes beta's drift of the continuous volume; it does
+not make a design feasible, and it says nothing about gradient concentration,
+step sizes or the performance of a thresholded design.
 
-One deliberate difference from the paper. Its sensitivities use the chain rule
-(13) with dH/drho of Eq. (20), holding eta fixed; but eta moves with the design
-through (21). Here the derivative includes that, by implicit differentiation
-of the root, so it is the derivative of the map actually used -- the one a
-finite-difference check measures -- and the volume's derivative is exactly the
-filtered volume's, which the eta-fixed chain rule does not give.
+The derivative. The paper states its sensitivities as the chain rule (13)
+with the partial derivative (20), taken at fixed eta, and does not expand
+eta's dependence on the design. The map used here re-solves eta at every
+evaluation, so its derivative has one more term. With a_i = dH_i/drho_i (Eq.
+20), b_i = dH_i/deta (Eqs. 27, 28) and B = sum_i v_i b_i < 0,
+
+    d eta / d rho_j   = -v_j (a_j - 1) / B,
+    d s_i / d rho_j   = a_i delta_ij - b_i v_j (a_j - 1) / B,
+
+a diagonal plus a rank-one correction, supplied here by implicit
+differentiation of the root. It is the derivative finite differences measure,
+and it gives sum_i v_i ds_i/drho_j = v_j: the projected volume's derivative is
+the filtered volume's, so a design-domain volume constraint is affine in the
+raw design, with gradient -F^T v / (v_max V_D) whatever beta is (F the filter,
+V_D the design-domain volume, v_max the fluid-fraction bound). It exists only
+at a non-degenerate root (B < 0); see `root_is_nondegenerate`.
 """
 
 from __future__ import annotations
 
+import numpy as np
 import jax
 import jax.numpy as jnp
 
@@ -57,11 +71,19 @@ def volume_preserving_eta(rho, volumes, beta: float, iterations: int = 64):
     """The eta of Eq. (21), by bisection; differentiable in rho and the volumes.
 
     f(eta) = sum v H(rho; eta) - sum v rho decreases, with f(0+) > 0 and
-    f(1-) < 0 whenever some rho lies strictly between 0 and 1 (Appendix A), so
-    bisection on ]0, 1[ cannot miss the root; 64 halvings reach double
-    precision and never evaluate H at eta = 0 or 1. `jax.lax.custom_root`
-    supplies d(eta)/d(rho) implicitly. If no rho is intermediate, neither f nor
-    H depends on eta, and the derivative through eta is zero, not 0/0.
+    f(1-) < 0 whenever some rho with positive volume lies strictly between 0
+    and 1 (Appendix A), so bisection on ]0, 1[ cannot miss the root; 64
+    halvings reach double precision and never evaluate H at eta = 0 or 1.
+    `jax.lax.custom_root` supplies d(eta)/d(rho) implicitly.
+
+    If no rho is intermediate the root is degenerate: f vanishes for every
+    eta, eta is not unique, and d(eta)/d(rho) does not exist. The linearised
+    solve then contributes zero, which keeps the arithmetic finite but is NOT a
+    derivative: a lone element at rho = 0 must have ds/drho = 1 (s = rho is
+    forced), while what comes back is the eta-fixed part (beta + 1) e^-beta,
+    0.0030 at beta = 8. A caller must check `root_is_nondegenerate` before
+    using a gradient; the R1 driver does, and refuses to hand such a gradient
+    to MMA.
     """
     rho = jnp.asarray(rho)
     volumes = jnp.asarray(volumes)
@@ -83,9 +105,29 @@ def volume_preserving_eta(rho, volumes, beta: float, iterations: int = 64):
     def tangent_solve(g, y):
         slope = g(1.0)
         safe = jnp.where(slope != 0.0, slope, 1.0)
+        # zero at a degenerate root keeps this finite; it is not a derivative
+        # there -- see the docstring and root_is_nondegenerate
         return jnp.where(slope != 0.0, y / safe, 0.0)
 
     return jax.lax.custom_root(f, jnp.asarray(0.5, rho.dtype), bisect, tangent_solve)
+
+
+def root_slope(rho, volumes, beta: float, eta) -> float:
+    """B = d f / d eta = sum v dH/d eta at eta: negative at a proper root.
+
+    Appendix A: dH/d eta < 0 wherever 0 < rho < 1 and = 0 at rho in {0, 1},
+    so B < 0 exactly when some rho with positive volume is intermediate.
+    """
+    rho, volumes = jnp.asarray(rho), jnp.asarray(volumes)
+    d_eta = jax.grad(lambda e: jnp.sum(volumes * xu_heaviside(rho, beta, e)))(
+        jnp.asarray(eta, rho.dtype))
+    return float(d_eta)
+
+
+def root_is_nondegenerate(rho, volumes, beta: float, eta) -> bool:
+    """Whether the implicit derivative of eta exists here: beta > 0 and B < 0."""
+    return bool(beta > 0.0 and np.isfinite(float(eta))
+                and root_slope(rho, volumes, beta, eta) < 0.0)
 
 
 def volume_preserving_projection(rho, volumes, beta: float):

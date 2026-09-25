@@ -25,7 +25,7 @@ governing equations, objective, constraint — is kept.
 | R1j | development model flow h / thermal h/4: versioned reference, dual-mesh driver entry, directional gradient at x₃₀₀; no MMA update on the main mesh | **done**, closed in the review of 6d675da — reference frozen (C₀ ×1.0005); the driver takes value, gradient and states from one forward evaluation and refuses other models' references; gradient check PASS at every step (largest relative error 7.5×10⁻⁷); a deadlock in upstream's solve callback found and fixed |
 | R1k | warm start from x₃₀₀ on the development model, α_max = 10⁷ and β = 8 fixed, at most 30 MMA updates; first an explicit initial-design entry, and stop reasons that keep upstream's mixed-point KKT a proxy | **done** — the whole budget used, not converged: J −10.9% (C −18.9%, Ψ +20.4%), every state gated and feasible; the move limit binds throughout. Terminal check: the gain holds on h/8 (−12.5%) but the s = 0.5 thresholded terminal is worse than the thresholded start (+4.4% on h/4, +3.8% on h/8) and exceeds the volume bound, so no qualified binary comparison exists yet; closed in the review of 320ea73 |
 | — | the volume-preserving projection of Xu, Cai & Cheng (2010) becomes the default; earlier record scripts pinned to the tanh projection | **done**; see "The volume-preserving projection" |
-| R1l | qualified binary baselines for x₃₀₀ and x₃₀ by one volume-threshold rule, then one β stage from x₃₀, judged on the qualified binary design | proposed in the review of 320ea73; to be re-planned on the volume-preserving projection before authorisation |
+| R1l | qualified binary baselines from R1d's and R1k's saved physical densities by one volume-threshold rule; then 30 updates from x₃₀ on the volume-preserving projection at β = 16, judged on the qualified binary design | contract frozen in the review of a1b4af9 (see "R1l: the contract"); awaiting authorisation |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -1387,8 +1387,14 @@ thresholded solid fractions and x₃₀'s h/8 temperatures only, the thresholded
 flows were never written and no copy remains, so the thresholded states rest
 on the source and the run log rather than on saved fields. The script that ran
 is restored by `results/zhao2d_r1k_terminal_check_at_run.patch` (`patch -p1`
-reproduces the recorded hash). The record's other 27 hashes reproduce from the
-committed files, 13 after converting LF to CRLF.
+reproduces the recorded hash). At f7b2769, the commit that closed the check,
+the record's other 27 hashes reproduce, 13 after converting LF to CRLF; later
+commits change some of those files, the projection change among them. The
+patch was regenerated after the review of a1b4af9, which found that it left
+the later `TANH` pin in place: it now reverts that line too, and applied to
+the current script gives back the recorded bytes (checked). It rebuilds the
+historical source. Rerunning the old check in today's tree goes through the
+script's pinned `TANH` entry, or through the historical tree.
 
 **What this means for β.** With η = 0.5, the projection gives s_β ≥ 0.5
 exactly when the filtered design x̃ ≥ 0.5, for every β > 0. Raising β alone
@@ -1426,35 +1432,12 @@ which has no β. The interpolations q_α = q_κ = 0.2 are Zhao's Eqs. (10) and
   β = 16, a fine-flow check, a change of formulation, 3D. The h/8 re-analysis
   and the thresholding came afterwards, as the terminal check above.
 
-### Next: R1l, as proposed (awaiting authorisation)
+### Next: R1l
 
-Proposed in the review of 320ea73, to ask whether the continuous gain can be
-carried into a volume-feasible binary design:
-
-1. **Qualified binary baselines.** One export rule for both x₃₀₀ and x₃₀: a
-   single threshold per design, chosen so the design domain has at most 2000
-   fluid cells (40%) and as close to 2000 as possible, cells of equal density
-   moving together, the tabs fluid, no repair. Geometry alone puts it at about
-   t = 0.529 for x₃₀₀ (6 cells differ from s = 0.5) and t = 0.401 for x₃₀ (26
-   cells); both connected. This export threshold t is not the projection's η,
-   which stays 0.5. Each design is then solved once on h and h/4, and every
-   state saved: at most 2 flow and 2 thermal solves.
-2. **One β = 16 stage.** From R1k's terminal x, MMA reinitialised, everything
-   else held (α_max = 10⁷, q_α = q_κ = 0.2, filter, η = 0.5, thermal form,
-   h and h/4, this reference, w = 0.5), at most 30 updates. The zero step is
-   infeasible (g ≈ +0.008) and must be recorded as such; states before the
-   volume is restored cannot count as the best feasible design. If the
-   terminal is not feasible, that is reported and the stage stops. If it is,
-   it is exported by the same rule and, if connected, solved once more (1 flow,
-   1 thermal) and compared with the two baselines.
-
-What decides it is the qualified binary J, Ψ and C, and whether the
-continuous–binary gap narrows — not a lower continuous J or a smaller grey
-fraction. At most 3 flow and 3 thermal solves besides the 30 updates; no
-automatic β = 32, no binary h/8, no q sweep, no change of formulation, no 3D.
-
-This proposal predates the projection change below, which removes the volume
-problem its β = 16 stage was built around; R1l is to be re-planned on it.
+The version proposed in the review of 320ea73 was built on the tanh
+projection: a β = 16 stage at η = 0.5 with a zero step at g ≈ +0.008. It was
+superseded when the projection changed. The contract now proposed is "R1l: the
+contract" below.
 
 ## The volume-preserving projection, from R1l on
 
@@ -1476,23 +1459,52 @@ selected by `R1Config.projection`:
   β grows.
 - **Eq. (21)** fixes η: Σ vᵢ H(ρ̄ᵢ; η) = Σ vᵢ ρ̄ᵢ over the design-domain
   elements, solved by bisection every call. Their Appendix A shows the root is
-  unique in ]0, 1[.
+  unique in ]0, 1[ when β > 0 and some filtered density with positive volume
+  lies strictly between 0 and 1.
 
-The design-domain volume of s is therefore the filtered design's for every β,
-so β can be chosen for sharpness alone.
+For a fixed design, the design-domain volume of s is therefore the filtered
+design's for every β: β no longer drags the continuous volume with it. That
+is all it does. It does not make a design feasible. It preserves the
+filtered volume, not the raw design's, since the row-normalised filter need
+not keep the global volume at the design-domain edge. It does not preserve the
+volume of a thresholded design. And recovering feasibility, the concentration
+of the gradient near η, step sizes and thresholded performance remain to be
+looked at.
 
-**One deliberate difference from the paper.** Its sensitivities use the chain
-rule (13) with Eq. (20), holding η fixed; but η moves with the design through
-(21). The derivative here includes that, by implicit differentiation of the
-root (`jax.lax.custom_root`). It is the derivative of the map actually used,
-the one finite differences measure. And it makes the volume's derivative
-exactly the element volumes, i.e. the filtered volume's; with η held fixed it
-would be v·H′(ρ̄), nearly zero away from η and about β near it. On a random
-test field, the η-fixed gradient departed from the exact one by 0.03% at
-β = 0.1 and 84% at β = 200.
+**The derivative.** The paper states its sensitivities as the chain rule (13)
+with the partial derivative (20), taken at fixed η; its text does not expand
+η's dependence on the design, and Eq. (20) is right as that partial
+derivative. The map used here re-solves η at every evaluation, so its
+derivative has one more term. With aᵢ = ∂Hᵢ/∂ρ̄ᵢ (Eq. 20), bᵢ = ∂Hᵢ/∂η
+(Eqs. 27, 28) and B = Σ vᵢ bᵢ,
 
-Tests, in `validation/test_projection.py` (48, 22 s); with them the full suite
-passes, 299 tests in 1066 s, on the new default:
+    ∂η/∂ρ̄ⱼ = −vⱼ (aⱼ − 1)/B,        ∂sᵢ/∂ρ̄ⱼ = aᵢ δᵢⱼ − bᵢ vⱼ (aⱼ − 1)/B,
+
+a diagonal plus a rank-one correction, supplied here by implicit
+differentiation of the root (`jax.lax.custom_root`); the review of a1b4af9
+derived the same expression independently and matched it to 3.7×10⁻¹⁴. It
+gives Σᵢ vᵢ ∂sᵢ/∂ρ̄ⱼ = vⱼ: at the filtered-density level the projected
+volume's derivative is the element volumes, where with η held fixed it would
+be vⱼ aⱼ. On the raw design, the design-domain constraint
+g(x) = (1 − vᵀFx/V_D)/0.4 − 1 is affine, with ∇ₓg = −Fᵀv/(0.4 V_D) for every x
+and β (F the filter, V_D the design-domain volume).
+
+**Where the derivative does not exist.** The expression needs B < 0, which
+holds exactly when some filtered density with positive volume lies strictly
+between 0 and 1. Otherwise the root is degenerate: η is not unique and has no
+derivative. What AD returns there is the η-fixed part alone, finite but not a
+derivative. For a lone element at ρ̄ = 0 it returns (β + 1)e^{−β} = 0.0030 at
+β = 8, where the derivative from inside the admissible range is 1. The review
+of a1b4af9 found this. `projection.root_is_nondegenerate` checks it; the
+driver refuses to hand MMA a gradient at a degenerate root, before solving
+anything (`DegenerateProjection`), and still evaluates a value there. Any
+design with a solid–fluid interface filters to intermediate densities and has
+a proper root; a uniform 0 or 1 design does not.
+
+Tests, in `validation/test_projection.py` (51) and
+`validation/test_zhao2d_driver.py`. The full suite passed at a1b4af9 (299
+tests, 1066 s); after this closure the four affected files pass (86 tests,
+227 s):
 
 - **Eq. (19) against the paper's own closed forms:** it passes through 0, η
   and 1 and is continuous; its derivative is Eq. (20), including β + e^{−β}
@@ -1502,39 +1514,105 @@ passes, 299 tests in 1066 s, on the new default:
   is unique; β = 200 is nearly binary at the same volume.
 - **Derivatives:** they match central differences to 10⁻⁷ at every β; the
   projected volume's derivative is the filtered volume's; holding η fixed gets
-  it wrong; an all-0/1 field stays finite.
+  it wrong.
+- **Degenerate roots:** a degenerate root is flagged, and its AD value is shown
+  not to be the derivative; just off it a lone element is the identity,
+  ds/dρ̄ = 1; the driver refuses a gradient there and still evaluates a value.
 - **In the R1 problem:** the default is the new projection; the reference's
   identity does not include it, while the run fingerprint does; β does not
   move the constraint or its gradient; and `projection = TANH` still reproduces
-  R1d's saved s exactly.
+  R1d's saved s. That is bit for bit on this machine; on the review's Linux
+  build (JAX 0.9.0.1) it differs by 1.1×10⁻¹⁶, rounding in the unchanged tanh
+  path, and the test allows two ulps.
 
 The scripts that reproduce earlier records now pin `TANH` explicitly:
 `zhao2d_optimise`, `zhao2d_gradient_check`, `zhao2d_dual_check`,
 `zhao2d_r1j_check`, `zhao2d_r1k_warm_start` and `zhao2d_r1k_terminal_check`.
-The driver's records now carry `projection` and `projection_eta` (the paper's
-Fig. 14 tracks the same η).
+The driver's records now carry `projection`, `projection_eta` and
+`projection_root_slope` (the paper's Fig. 14 tracks the same η).
 
-**β means something else now.** Eq. (19)'s slope at the threshold is β + e^{−β},
-while the tanh form's is β/(2 tanh(β/2)). The paper doubles β from 0.1 up to
-about 200 and reports near-binary designs from about β = 50. A schedule has to
-be chosen afresh, not carried over from β = 1, 2, 4, 8.
+**β means something else now.** At fixed η the slope at the threshold is
+β + e^{−β} for Eq. (19) and β/(2 tanh(β/2)) for the tanh form:
+
+| | tanh 8 | tanh 16 | Xu 8 | Xu 16 |
+|---|---|---|---|---|
+| slope at the threshold | 4.00 | 8.00 | 8.00 | 16.00 |
+
+Matched by local slope, Xu 8 is closer to tanh 16. Even that is not an
+equivalence of the full Jacobian, which has the global η term. The paper
+doubles β from 0.1 to about 200 for its SIMP compliance cantilever, with
+smaller MMA asymptote settings for its Heaviside filters, and reports
+near-binary designs from about β = 50; copying its β sequence alone would not
+be adopting its algorithm.
 
 **What it means for the saved designs.** Under the new projection the
-constraint sees the filtered volume, whatever β is. Both designs so far exceed
-the bound on that volume. Under tanh at β = 8 the bound was met on the
-projected volume (fluid fractions 0.39998 and 0.39994), and the projection had
-made that smaller than the filtered volume. Computed from the saved x,
+constraint sees the filtered volume, whatever β is. Computed from the saved x,
 geometry only, nothing solved:
 
-| | filtered v_f (the constraint now) | g | η, β = 16 → 128 | grey, β = 16 → 128 | cells with s < 0.5, β = 16 → 128 |
-|---|---|---|---|---|---|
-| x₃₀₀ (R1d) | 0.4155 | +3.9% | 0.599 → 0.591 | 2.6% → 0.4% | 2079 → 2079 |
-| x₃₀ (R1k) | 0.4028 | +0.7% | 0.493 → 0.486 | 3.3% → 0.4% | 2021 → 2016 |
+| | tanh β = 8 v_f | filtered v_f (the constraint now) | g | above 40% | η, β = 16 → 128 | grey, β = 16 → 128 | cells with s < 0.5, β = 16 → 128 |
+|---|---|---|---|---|---|---|---|
+| x₃₀₀ (R1d) | 0.39998 | 0.415536 | +0.0388 | 1.554 points | 0.599 → 0.591 | 2.6% → 0.4% | 2079 → 2079 |
+| x₃₀ (R1k) | 0.39994 | 0.402769 | +0.0069 | 0.277 points | 0.493 → 0.486 | 3.3% → 0.4% | 2021 → 2016 |
 
-So a warm start from either design under the new projection begins
-infeasible at every β and has to recover the volume first. Its early states
-cannot count as feasible, just as R1l's β = 16 stage had to allow for under
-tanh.
+Both exceed the bound, by 3.9% and 0.7% of the budget. They were not falsely
+feasible: under the tanh map they met the constraint on their physical
+density, and the new map sends the same x to a different s. Thresholding the
+new s at 0.5 still exceeds it — x₃₀ at β = 16 has 2021 fluid cells against
+2000 — because the new projection preserves the continuous volume, not the
+thresholded one. And η is not an export threshold: H(η) = η, so η is not
+where s = 0.5. A warm start from either design under the new projection
+begins infeasible at every β and has to recover the volume first.
+
+## R1l: the contract (as frozen in the review of a1b4af9; awaiting authorisation)
+
+To ask whether the continuous gain can be carried into a qualified binary
+design, with the model otherwise held.
+
+**A. Qualified binary baselines**, from the physical densities R1d and R1k
+saved, which the tanh projection made. Never from their raw x re-projected by
+the new default: that would be a different design, not the baseline. One rule
+for both: a single export threshold t per design, chosen so the design domain
+has at most 2000 fluid cells and as close to 2000 as possible, cells of equal
+density moving together, the tabs fluid, no repair. Geometry alone (checked)
+puts t at 0.5288802660 for x₃₀₀ (6 cells differ from s = 0.5) and 0.4014602995
+for x₃₀ (26 cells), each with 2000 fluid cells in one connected domain; t is
+not the projection's η. Record t, the volume, the connectivity and the
+geometry's identity. Each qualified, connected geometry is then solved as a
+given s — never filtered or projected again — once on h for the flow and h/4
+for the temperature: at most 2 flow and 2 thermal solves, every state saved.
+
+**B. A 30-update pilot on the new projection**, from R1k's raw x₃₀ with MMA's
+history reinitialised: explicitly volume-preserving, β = 16, η solved every
+evaluation. Everything else is held: α_max = 10⁷, q_α = q_κ = 0.2, the filter
+radius 2×10⁻⁴, the thermal residual, flow h and thermal h/4, the existing
+dual-mesh reference (both projections share it), w = 0.5, move limit 0.1.
+
+- First evaluate the zero step under the new map, and record it as infeasible
+  (g₀ = +0.00692227). Its J is its own, not R1k's tanh terminal J of 0.994753.
+  Check there that the root is non-degenerate, the volume preserved, every
+  value finite and the constraint gradient equal to its affine expression; no
+  β scan.
+- At most 30 updates, then the same-point evaluation of the terminal design.
+  A proxy criterion is not convergence, and states before the volume is
+  recovered cannot count as the best feasible design.
+- Report three responses apart, never merged into "the gain of β": the model
+  switch (R1k's tanh terminal to the new map's zero step), the optimisation
+  (zero step to terminal), and the export gap (terminal to its qualified
+  binary design).
+- If the terminal is continuous-feasible, export it by the same rule as A; if
+  that design qualifies and is connected, solve it once (at most 1 flow and 1
+  thermal) and compare it with A's two baselines. If there is no feasible
+  terminal, or no qualified connected binary design, report that and stop: no
+  repair, no more budget.
+
+What decides the next step is the qualified binary J, Ψ and C, and the
+continuous–binary gap; not the grey fraction or the continuous J. The limit is
+30 MMA updates with their zero-step and terminal evaluations, plus at most 3
+flow and 3 thermal binary solves. No new reference, no repeat of the old h/8,
+no h/16, no β = 32, no q sweep, no change of formulation, no 3D. Xu β = 16 is a
+stronger de-greying step than the earlier proposal's tanh β = 16 — twice its
+slope at the threshold — not a like-for-like replacement, and nothing yet
+shows it is better than 8.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 

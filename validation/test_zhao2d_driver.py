@@ -274,3 +274,33 @@ def test_a_failed_gate_keeps_the_run_so_far(setup, monkeypatch):
     assert partial["designs"].shape == (1, problem.num_design)
     assert partial["failed_iteration"] == 1
     assert partial["failed_design"].shape == (problem.num_design,)
+
+
+def test_no_gradient_at_a_degenerate_projection_root(setup, monkeypatch):
+    """Uniform x = 0 filters to all zeros: the volume-preserving root is
+    degenerate and the design map has no derivative. The driver refuses to
+    hand MMA a gradient there, before solving anything; a value still works."""
+    problem, reference = setup
+    x = jnp.zeros(problem.num_design)
+    root = problem.projection_root(x, 8.0)
+    assert root["nondegenerate"] is False and root["slope"] == 0.0
+
+    solve = problem.solve_states
+    monkeypatch.setattr(problem, "solve_states",
+                        lambda *a, **k: pytest.fail("solved before refusing"))
+    with pytest.raises(r1.DegenerateProjection):
+        drv.evaluate(problem, reference, x, 1.0e7, 8.0)
+
+    monkeypatch.setattr(problem, "solve_states", solve)
+    record, _, dj, dg = drv.evaluate(problem, reference, x, 1.0e7, 8.0, gradient=False)
+    assert dj is None and dg is None
+    assert record["projection_root_slope"] == 0.0
+
+
+def test_records_carry_the_projection_and_its_root(setup):
+    problem, reference = setup
+    x = jnp.asarray(np.random.default_rng(6).uniform(0.2, 0.8, problem.num_design))
+    record, _, _, _ = drv.evaluate(problem, reference, x, 1.0e7, 8.0, gradient=False)
+    assert record["projection"] == r1.Projection.VOLUME_PRESERVING
+    assert 0.0 < record["projection_eta"] < 1.0
+    assert record["projection_root_slope"] < 0.0
