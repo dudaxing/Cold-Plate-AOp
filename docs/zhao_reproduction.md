@@ -1749,8 +1749,12 @@ J on one fixed yardstick (the h/4 model's constants), qualified to qualified:
   exact solution, and one more mesh cannot say where C would settle.
 - **Cost:** 965 s — h/4 built in 39 s and nothing solved on it; h/8 built in
   168 s; three thermal solves of 205–226 s each; cumulative peak working set
-  5401 MiB. All 30 hashes in the record reproduce from the committed files, 12
-  after converting LF to CRLF.
+  5401 MiB.
+- **Provenance, checked after the commit:** the record's 26 source and 4
+  input hashes reproduce from the committed files (12 after converting LF to
+  CRLF), and its 14 TOFLUX hashes from the untracked checkout under
+  `external/TOFLUX`. 13 of its 14 array digests match saved fields; the
+  fourteenth, the h/8 node coordinates, is rebuilt each run and not saved.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
