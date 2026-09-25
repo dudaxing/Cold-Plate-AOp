@@ -1,0 +1,38 @@
+D:\Coding\thermalFluid\thermal-fluid-opus\external\TOFLUX\toflux\src\solver.py:21: UserWarning: petsc4py not found; the PETSC linear solver is unavailable.
+  warnings.warn("petsc4py not found; the PETSC linear solver is unavailable.")
+built thermal h/4: 83200 el, 83881 nodes (37.1 s)
+NR converged in 8 iters, res_norm/res_norm_0: 1.5276922160282445e-14
+NR converged in 3 iters, res_norm/res_norm_0: 4.108440679165602e-12
+x300/continuous/h4: Psi 1.435114e-02  C 36180.160  J 1.116472  T_max 15.95  |R| 3.9e-12  thermal 14.6 s  anchor ok
+NR converged in 8 iters, res_norm/res_norm_0: 1.4823616431440158e-14
+NR converged in 3 iters, res_norm/res_norm_0: 5.6646881395055425e-12
+x300/binary/h4: Psi 1.353975e-02  C 47071.281  J 1.371311  T_max 21.43  |R| 5.4e-12  thermal 9.8 s
+NR converged in 8 iters, res_norm/res_norm_0: 1.6978820266675844e-14
+NR converged in 3 iters, res_norm/res_norm_0: 2.8409813380838165e-12
+x30/continuous/h4: Psi 1.728074e-02  C 29340.628  J 0.994753  T_max 12.85  |R| 2.7e-12  thermal 9.1 s  anchor ok
+NR converged in 8 iters, res_norm/res_norm_0: 1.181255028929875e-14
+NR converged in 3 iters, res_norm/res_norm_0: 6.523710084498794e-12
+x30/binary/h4: Psi 1.069681e-02  C 51349.775  J 1.431456  T_max 22.04  |R| 6.2e-12  thermal 9.1 s
+built thermal h/8: 332800 el, 334161 nodes (120.0 s)
+NR converged in 40 iters, res_norm/res_norm_0: 1.5296636145307757e-11
+x300/continuous/h8: Psi 1.435114e-02  C 37337.739  J 1.144924  T_max 16.06  |R| 1.5e-11  thermal 196.0 s  anchor ok
+NR converged in 40 iters, res_norm/res_norm_0: 2.1845655673396373e-11
+x300/binary/h8: Psi 1.353975e-02  C 51092.102  J 1.470136  T_max 22.28  |R| 2.2e-11  thermal 195.1 s
+NR converged in 40 iters, res_norm/res_norm_0: 1.141483896454964e-11
+x30/continuous/h8: Psi 1.728074e-02  C 29615.374  J 1.001506  T_max 12.86  |R| 1.1e-11  thermal 208.6 s
+NR converged in 40 iters, res_norm/res_norm_0: 2.6086383474154577e-11
+x30/binary/h8: Psi 1.069681e-02  C 55175.516  J 1.525486  T_max 22.77  |R| 2.6e-11  thermal 197.1 s
+
+gain of x_30 over x_300, same evaluation:
+  continuous/h4    J -10.902%  J* -10.905%  Psi +20.414%  C -18.904%
+  continuous/h8    J -12.526%  J* -12.530%  Psi +20.414%  C -20.682%
+  binary/h4        J +4.386%  J* +4.388%  Psi -20.997%  C +9.089%
+  binary/h8        J +3.765%  J* +3.767%  Psi -20.997%  C +7.992%
+thresholding penalty (binary over continuous):
+  x300/h4    J +22.825%  Psi -5.654%  C +30.102%
+  x300/h8    J +28.405%  Psi -5.654%  C +36.838%
+  x30/h4     J +43.901%  Psi -38.100%  C +75.013%
+  x30/h8     J +52.319%  Psi -38.100%  C +86.307%
+
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1k_terminal_check.json and D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1k_terminal_fields.npz; total 1145 s
+exit=0 elapsed=1151s

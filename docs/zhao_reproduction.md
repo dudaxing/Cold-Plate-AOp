@@ -23,7 +23,7 @@ governing equations, objective, constraint — is kept.
 | R1h | fixed design: flow h vs h/2 on the common thermal meshes h/2 and h/4 | **done**, closed in the review of d71ab66 — on this design, refining the flow h → h/2 does not remove the thermal drift (+8.6% against +8.9%); flow replacement −2.5% to −2.7% of C |
 | R1i | fixed design: h_T = h/8 on the saved coarse flow, one thermal state | **done**, closed in the review of 2a9bfea — the thermal step shrinks: +8.87% (h/2 → h/4) then +3.20% (h/4 → h/8), ratio 0.39 |
 | R1j | development model flow h / thermal h/4: versioned reference, dual-mesh driver entry, directional gradient at x₃₀₀; no MMA update on the main mesh | **done**, closed in the review of 6d675da — reference frozen (C₀ ×1.0005); the driver takes value, gradient and states from one forward evaluation and refuses other models' references; gradient check PASS at every step (largest relative error 7.5×10⁻⁷); a deadlock in upstream's solve callback found and fixed |
-| R1k | warm start from x₃₀₀ on the development model, α_max = 10⁷ and β = 8 fixed, at most 30 MMA updates; first an explicit initial-design entry, and stop reasons that keep upstream's mixed-point KKT a proxy | **done** — the whole budget used, not converged: J −10.9% (C −18.9%, Ψ +20.4%), every state gated and feasible; the move limit binds throughout |
+| R1k | warm start from x₃₀₀ on the development model, α_max = 10⁷ and β = 8 fixed, at most 30 MMA updates; first an explicit initial-design entry, and stop reasons that keep upstream's mixed-point KKT a proxy | **done** — the whole budget used, not converged: J −10.9% (C −18.9%, Ψ +20.4%), every state gated and feasible; the move limit binds throughout. Terminal check: the gain holds on h/8 (−12.5%) but reverses after thresholding (+4.4% on h/4, +3.8% on h/8): R1k improved the grey design, not a binary one |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -64,6 +64,14 @@ terminal design. (c, d) The temperature on h/4 at both, on one scale. (e) J
 and its two terms on this model's own scale, which is not R1d's. (f) The size
 of each design step; the move limit binds throughout. Budget used, not
 converged.
+
+![R1k terminal check: h/8 and thresholding](figures/zhao2d_r1k_terminal_check.png)
+
+The R1k terminal check. (a) x₃₀ thresholded at s = 0.5, no repair: one
+connected channel, but 1.3% more fluid than the bound. (b, c) Its temperature
+on h/8, continuous and thresholded, on one scale: the thresholded design runs
+far hotter. (d) J of the start and the terminal design under the same four
+evaluations. The continuous gain holds on h/8; thresholded, it reverses.
 
 ## R1d: the 300-update run
 
@@ -1293,23 +1301,73 @@ reproduces R1d's saved s exactly.
   recorded hashes (24 sources, the reference and the two inputs) reproduce from
   the committed files, 12 of them after converting LF to CRLF as for R1j.
 
+### The terminal check: h/8 and thresholding
+
+Asked for after the run, on the local CPU. `scripts/zhao2d_r1k_terminal_check.py`;
+records `results/zhao2d_r1k_terminal_check.json` (and `.log`),
+`results/zhao2d_r1k_terminal_fields.npz`; figure
+`docs/figures/zhao2d_r1k_terminal_check.png`. The start x₃₀₀ and the terminal
+x₃₀ are each evaluated continuous and thresholded at s = 0.5 (the fixed tabs
+kept fluid, no repair), each with the temperature on h/4 and on h/8 (3×3). The
+flow is on h, solved once per design and version and shared by both thermal
+meshes; α_max = 10⁷, β = 8. J is R1k's — this model's Ψ₀ and C₀ at w = 0.5 —
+used as one fixed yardstick on every cell. Nothing is optimised.
+
+The three recomputed anchors reproduce their records: x₃₀₀ at h/4 matches
+R1j's baseline (Ψ −2.2×10⁻¹⁶, C +2.2×10⁻¹⁶), x₃₀ at h/4 R1k's terminal record,
+and x₃₀₀ at h/8 R1i's cell (both exactly). All eight states passed the 10⁻⁸
+gate, the worst thermal residual being 2.6×10⁻¹¹ at h/8, and none has a node
+below the inlet temperature. Thresholded at any s from 0.3 to 0.7, both designs
+are one connected fluid domain joining inlet and outlet.
+
+| J on R1k's scale | x₃₀₀ | x₃₀ | x₃₀ against x₃₀₀ | C | Ψ |
+|---|---|---|---|---|---|
+| continuous, h/4 | 1.11647 | 0.99475 | **−10.90%** | −18.90% | +20.41% |
+| continuous, h/8 | 1.14492 | 1.00151 | **−12.53%** | −20.68% | +20.41% |
+| thresholded, h/4 | 1.37131 | 1.43146 | **+4.39%** | +9.09% | −21.00% |
+| thresholded, h/8 | 1.47014 | 1.52549 | **+3.77%** | +7.99% | −21.00% |
+
+- **On the finer thermal mesh the gain holds, and is slightly larger.** On h/8
+  the continuous x₃₀ beats x₃₀₀ by 12.5% against R1k's 10.9% on h/4. Its C also
+  moves less between the two meshes: +0.94% from h/4 to h/8, against +3.20%
+  for x₃₀₀ (R1i's step).
+- **Thresholded, the gain does not survive.** At s = 0.5, x₃₀ is worse than
+  x₃₀₀ on both meshes, by 4.4% and 3.8%. Its thresholded design also has more
+  fluid than the bound allows: v_f 0.4052 in the design domain, 1.3% over 0.40,
+  where x₃₀₀'s thresholded design stays inside it (0.3988). That extra fluid is
+  part of why its Ψ falls 38% on thresholding, while C rises 75% (h/4) and 86%
+  (h/8).
+- **Thresholding costs x₃₀ about twice what it costs x₃₀₀:** J +43.9% (h/4)
+  and +52.3% (h/8), against +22.8% and +28.4%. The gain came with more grey,
+  6.4% of cells at the start and 9.5% at the end, and the thresholded design
+  does not keep it. That is the observation; which part of the model rewards
+  the grey is not identified here.
+- **Grey matters far more on the finer thermal meshes, even for x₃₀₀.** On its
+  own single-mesh model R1d's thresholding cost 0.33% of J; on h/4 and h/8 the
+  same design loses 22.8% and 28.4%. (R1e measured 10.3% of J* with the whole
+  mesh at h/2; that is a different refinement, so it is not a point on this
+  series.)
+- **Cost:** 1145 s in all; build 37 s (h/4) and 120 s (h/8); a thermal solve
+  9–15 s on h/4 and 195–209 s on h/8; cumulative peak working set 5613 MiB.
+  All 28 hashes in the record reproduce from the committed files, 13 of them
+  after converting LF to CRLF.
+
 ### What R1k says, and what it does not
 
 - On this model, the gradient R1j checked moves the design to a clearly lower
   J within 30 updates — −10.9%, by lowering thermal compliance 19% at the
-  price of 20% more dissipation — with every state gated and feasible.
+  price of 20% more dissipation — with every state gated and feasible. On h/8
+  the gain holds (−12.5%); after thresholding it reverses (+4.4% on h/4, +3.8%
+  on h/8), and the thresholded terminal design breaks the fluid-fraction bound.
+  R1k has improved the grey design, not a binary one.
 - It is not converged, and nothing here says so: the budget ended it, the move
   limit bound on every update from the fourth, the last step was still 0.41 in
   2-norm, and the KKT proxy was still 2.9×10⁻³. Where the design would settle
   is not known.
-- The terminal design is more grey than the start (9.5% against 6.4%) at the
-  same β = 8. No thresholding diagnostic was run, so how much of the gain
-  survives a binary design is not known; for the R1d design, R1e found the
-  thresholding penalty grew from 0.33% to 10.3% of J* when the whole mesh was
-  refined to h/2.
-- The gain is measured on the thermal mesh it was optimised on (h/4). It has not
-  been re-measured on h/8, where R1i found C still 3.2% higher than on h/4 for
-  the R1d design.
+- A longer run at the same fixed β = 8 would go on optimising the grey model.
+  Nothing here suggests it would give a better thresholded design; whatever
+  follows needs a way to keep the gain out of the grey, and that is a decision
+  for the next stage.
 - J is this model's own scale and is not comparable with R1d's J_self; raw Ψ and
   C are, and J* is recorded as a common scale.
 - Not done, by the contract: more updates, a continuation restart, β = 16, h/8,
@@ -1569,6 +1627,7 @@ python scripts/zhao2d_thermal_h8_check.py --out DIR      # R1i, h_T = h/8 on the
 python scripts/zhao2d_freeze_dual_reference.py --write   # R1j reference, flow h / thermal h/4; never overwrites
 python scripts/zhao2d_r1j_check.py --out DIR             # R1j refusals and directional gradient at x300
 python scripts/zhao2d_r1k_warm_start.py --out DIR        # R1k, 30 MMA updates from x300 (~14 min)
+python scripts/zhao2d_r1k_terminal_check.py --out DIR    # R1k terminal check, h/8 and thresholding (~19 min)
 python scripts/zhao2d_figures.py                         # docs/figures/ from the saved results, no solves
 ```
 

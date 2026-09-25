@@ -3,7 +3,7 @@
 Nothing is solved or re-optimised here: every field and number is read from
 results/ and drawn, so a figure shows exactly the state the records describe
 -- including that the R1d run is budget-limited and not converged, and that the
-thermal compliance still moves with the thermal mesh. Four figures, written to
+thermal compliance still moves with the thermal mesh. Five figures, written to
 docs/figures/:
 
   zhao2d_r1d_fields.png        the R1d design in the layout of Zhao Figs. 8 and
@@ -18,6 +18,9 @@ docs/figures/:
   zhao2d_r1k_warm_start.png    R1k: density and temperature at x_300 and after
                                30 updates on the flow h / thermal h/4 model, the
                                objective's history and the design step
+  zhao2d_r1k_terminal_check.png  R1k's terminal design thresholded, its h/8
+                               temperature continuous and binary, and J of the
+                               start and the terminal under four evaluations
 
     python scripts/zhao2d_figures.py [--results results] [--out docs/figures]
 """
@@ -153,8 +156,8 @@ def colorbar(fig, mappable, ax, label: str, **kw):
     return cb
 
 
-def note(ax, text: str) -> None:
-    ax.text(0.04, -0.125, text, transform=ax.transAxes, ha="left", va="top",
+def note(ax, text: str, y: float = -0.125) -> None:
+    ax.text(0.04, y, text, transform=ax.transAxes, ha="left", va="top",
             fontsize=8, color=INK2, linespacing=1.35)
 
 
@@ -548,6 +551,93 @@ def r1k_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
     return path
 
 
+# -- figure 5: the R1k terminal check ---------------------------------------------------
+
+
+def terminal_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
+    rec = json.loads((res / "zhao2d_r1k_terminal_check.json").read_text(encoding="utf-8"))
+    f = np.load(res / "zhao2d_r1k_terminal_fields.npz")
+    centres = np.load(res / "zhao2d_r1k_fields.npz")["elem_centres"]
+    coords_8 = np.load(res / "zhao2d_r1i_fields.npz")["thermal_node_coords_h8"]
+    h = g["element_size"]
+    t_cont, t_bin = f["temperature_h8_continuous"], f["temperature_h8_binary"]
+    if len(coords_8) != len(t_cont):
+        raise RuntimeError("the h/8 node coordinates do not match the terminal check's")
+    tri_8 = triangulation(coords_8, h / 8, g)
+    cells = rec["cells"]
+    t_top = float(max(t_cont.max(), t_bin.max()))
+
+    fig = plt.figure(figsize=(11.0, 7.6))
+    top = fig.add_gridspec(1, 3, left=0.02, right=0.62, top=0.86, bottom=0.21, wspace=0.10)
+    side = fig.add_gridspec(1, 1, left=0.71, right=0.97, top=0.80, bottom=0.34)
+
+    cb = cells["x30/binary/h8"]
+    ax = fig.add_subplot(top[0, 0])
+    field_axes(ax, g, "(a) x₃₀ thresholded at s = 0.5")
+    xe, ye, grid = density_grid(f["solid_fraction_binary_x30"], centres, h, g)
+    m = ax.pcolormesh(xe, ye, np.ma.masked_invalid(grid).T, cmap=DENSITY, vmin=0, vmax=1,
+                      shading="flat")
+    colorbar(fig, m, ax, "γ  (0 solid, 1 fluid)")
+    note(ax, f"no repair; one connected fluid domain\nv_f (design domain) "
+             f"{cb['v_f_design_domain']:.4f}: {cb['constraint_g']:+.1%} over\nthe 0.40 bound "
+             f"(continuous: {cells['x30/continuous/h8']['v_f_design_domain']:.4f})", y=-0.17)
+    for k, (t, key, title) in enumerate(((t_cont, "x30/continuous/h8", "(b) x₃₀ continuous, T on h/8"),
+                                         (t_bin, "x30/binary/h8", "(c) x₃₀ thresholded, T on h/8"))):
+        ax = fig.add_subplot(top[0, 1 + k])
+        field_axes(ax, g, title)
+        m = ax.tripcolor(tri_8, t, cmap=HEAT, vmin=0, vmax=t_top, shading="gouraud")
+        colorbar(fig, m, ax, "T  (one scale for b and c)")
+        c = cells[key]
+        note(ax, f"flow re-solved on h for this s\nT_max {c['T_max']:.2f}\n"
+                 f"C = {c['compliance']:.0f};  Ψ = {c['psi']:.5f}", y=-0.17)
+
+    ax = fig.add_subplot(side[0, 0])
+    rows = [("continuous, h/4", "continuous", 4), ("continuous, h/8", "continuous", 8),
+            ("thresholded, h/4", "binary", 4), ("thresholded, h/8", "binary", 8)]
+    for i, (label, version, level) in enumerate(rows):
+        y = len(rows) - 1 - i
+        a = cells[f"x300/{version}/h{level}"]["J"]
+        b = cells[f"x30/{version}/h{level}"]["J"]
+        ax.plot([a, b], [y, y], color=AXIS, lw=1.2, zorder=1)
+        ax.plot([a], [y], "o", color=MUTED, ms=8, zorder=2)
+        ax.plot([b], [y], "o", color=SERIES[0], ms=8, zorder=3)
+        gain = rec["gain_x30_over_x300"][f"{version}/h{level}"]["J"]
+        ax.text(max(a, b) + 0.02, y, f"{gain:+.1%}", va="center", fontsize=8.5, color=INK)
+    ax.set_yticks(range(len(rows)))
+    ax.set_yticklabels([r[0] for r in rows][::-1])
+    ax.set_xlim(0.9, 1.7)
+    ax.set_ylim(-0.7, len(rows) - 0.3)
+    ax.grid(axis="x", color=GRID, lw=0.6)
+    for s_ in ("top", "right", "left"):
+        ax.spines[s_].set_visible(False)
+    ax.tick_params(axis="y", length=0)
+    ax.set_xlabel("J on R1k's scale (fixed Ψ₀, C₀, w = 0.5)")
+    ax.set_title("(d) J of x₃₀₀ and x₃₀, same evaluation", loc="left", fontsize=9.5)
+    ax.plot([], [], "o", color=MUTED, ms=7, label="x₃₀₀, the start")
+    ax.plot([], [], "o", color=SERIES[0], ms=7, label="x₃₀, after R1k")
+    ax.legend(loc="upper center", bbox_to_anchor=(0.45, -0.16), ncol=1, frameon=False,
+              fontsize=8)
+
+    g_c8 = rec["gain_x30_over_x300"]["continuous/h8"]["J"]
+    g_b4 = rec["gain_x30_over_x300"]["binary/h4"]["J"]
+    fig.suptitle("R1k terminal check — the gain holds on the finer thermal mesh and does not "
+                 "survive thresholding", x=0.02, ha="left", fontsize=11.5, color=INK, y=0.985)
+    fig.text(0.02, 0.955,
+             f"Continuous designs: x₃₀ beats x₃₀₀ by {-g_c8:.1%} in J on h/8 (10.9% on h/4). "
+             f"Thresholded at s = 0.5, x₃₀ is {g_b4:+.1%} worse on h/4 — and exceeds the "
+             "fluid-fraction bound.\nThe gain came with more grey (6.4% → 9.5% of cells), and "
+             "the thresholded design does not keep it. Every state passed the 10⁻⁸ gate; the three "
+             "recomputed anchors reproduce R1i, R1j and R1k.", fontsize=8.5, color=INK2,
+             ha="left", va="top")
+    footer(fig, "Drawn from results/zhao2d_r1k_terminal_check.json, "
+           "results/zhao2d_r1k_terminal_fields.npz and the h/8 node coordinates in "
+           "results/zhao2d_r1i_fields.npz — scripts/zhao2d_figures.py; no state is re-solved.")
+    path = out / "zhao2d_r1k_terminal_check.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--results", type=pathlib.Path, default=REPO / "results")
@@ -559,12 +649,14 @@ def main() -> None:
     g = geometry(r1h)
     names = ["zhao2d_r1d_main_fields.npz", "zhao2d_r1g_fields.npz", "zhao2d_r1i_fields.npz",
              "zhao2d_r1d_main.json", "zhao2d_r1g_dual.json", "zhao2d_r1h_matrix.json",
-             "zhao2d_r1i_h8.json", "zhao2d_r1k_warm_start.json", "zhao2d_r1k_fields.npz"]
+             "zhao2d_r1i_h8.json", "zhao2d_r1k_warm_start.json", "zhao2d_r1k_fields.npz",
+             "zhao2d_r1k_terminal_check.json", "zhao2d_r1k_terminal_fields.npz"]
     for n in names:
         print(f"read results/{n}  sha256 {sha(res / n)}")
     sources = [f"results/{n}" for n in names]
     for path in (fields_figure(res, args.out, g, sources), history_figure(res, args.out),
-                 status_figure(res, args.out), r1k_figure(res, args.out, g)):
+                 status_figure(res, args.out), r1k_figure(res, args.out, g),
+                 terminal_figure(res, args.out, g)):
         print(f"wrote {path.relative_to(REPO) if path.is_relative_to(REPO) else path}")
 
 
