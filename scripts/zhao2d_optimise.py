@@ -111,7 +111,7 @@ def main() -> None:
     spec = z.Zhao2DSpec()
     if args.coarse:
         spec = dataclasses.replace(spec, element_size=spec.element_size * 2)
-    config = r1.R1Config()
+    config = r1.R1Config(projection=r1.Projection.TANH)  # the projection its record used
 
     # r is an absolute coordinate length, fixed at 2e-4. On the main mesh that
     # is 2h; on any other mesh it is NOT, and the ratio is reported so a mesh

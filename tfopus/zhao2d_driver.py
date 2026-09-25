@@ -298,9 +298,17 @@ def evaluate(problem, reference, x, alpha_max, beta, gradient: bool = True,
         **fractions,
         "flow_residual_relative": norms["flow"],
         "thermal_residual_relative": norms["thermal"],
+        # which projection made s, and its threshold (None where undefined:
+        # the volume-preserving projection at beta = 0 is the identity)
+        "projection": config.projection,
+        "projection_eta": _finite_or_none(problem.projection_threshold(x, beta)),
     }
     state = (np.asarray(s), np.asarray(press_vel), np.asarray(temperature))
     return record, state, dj, dg
+
+
+def _finite_or_none(value: float) -> float | None:
+    return float(value) if np.isfinite(value) else None
 
 
 def _evaluate(problem, reference, x, alpha_max, beta):

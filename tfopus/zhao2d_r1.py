@@ -45,6 +45,7 @@ import jax.numpy as jnp
 import toflux.src.solver as _solver
 
 from tfopus import design as _design
+from tfopus import projection as _projection
 from tfopus import elements as _elements
 from tfopus import fe_flow as _fe_flow
 from tfopus import fe_thermal as _fe_thermal
@@ -73,6 +74,27 @@ class VolumeDomain:
 
     DESIGN = "design"
     WHOLE = "whole"
+
+
+class Projection:
+    """How the filtered design becomes the solid fraction s.
+
+    VOLUME_PRESERVING is Xu, Cai & Cheng (2010), Eqs. (19) and (21): the
+    threshold eta is solved every call so that the projected volume equals
+    the filtered volume, so beta never moves the volume constraint (see
+    tfopus/projection.py). It is the default from R1l on.
+
+    TANH is the fixed-threshold tanh form, eta = 0.5, that R1b to R1k and
+    their records used. With it, raising beta moves the volume: R1k's
+    terminal design goes from g = -1.5e-4 at beta 8 to +8.0e-3 at beta 16.
+    Scripts that reproduce those records pin it.
+
+    Neither is Zhao's: the paper's relaxed Heaviside (its Eq. 9) acts on a CBS
+    level-set function, which a density method does not have.
+    """
+
+    VOLUME_PRESERVING = "volume_preserving"
+    TANH = "tanh"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -106,6 +128,7 @@ class R1Config:
     # by a length-scale study.
     filter_radius_elements: float = 2.0
     projection_beta: float = 0.0
+    projection: str = Projection.VOLUME_PRESERVING
 
     flow_form: _fe_flow.FlowForm = R1_FLOW_FORM
     thermal_form: _fe_thermal.ThermalForm = R1_THERMAL_FORM
@@ -339,14 +362,31 @@ class Zhao2DProblem:
         parameter that touches nothing else: the mesh, the filter, the solvers
         and the boundary conditions are all independent of it, so a
         continuation step must not pay for rebuilding them.
+
+        Which projection is `config.projection` (see `Projection`). With the
+        default, volume-preserving one, the design-domain volume of s equals
+        that of the filtered design for every beta.
         """
-        filtered = self.filter_matrix @ jnp.asarray(x)
-        projected = _design.heaviside_projection(
-            filtered, self.config.projection_beta if beta is None else beta
-        )
+        projected, _ = self._project(x, beta)
         return jnp.zeros(self.flow_mesh.num_elems).at[self.design_elements].set(
             projected
         )
+
+    def projection_threshold(self, x, beta: float | None = None) -> float:
+        """The eta the projection used for this design: 0.5 for TANH; for
+        VOLUME_PRESERVING the root of Xu et al.'s Eq. (21), NaN at beta = 0."""
+        return float(self._project(x, beta)[1])
+
+    def _project(self, x, beta):
+        filtered = self.filter_matrix @ jnp.asarray(x)
+        b = self.config.projection_beta if beta is None else beta
+        if self.config.projection == Projection.VOLUME_PRESERVING:
+            # Eq. (21)'s volumes: the design-domain elements the projection acts on
+            return _projection.volume_preserving_projection(
+                filtered, self.area[self.design_elements], b)
+        if self.config.projection == Projection.TANH:
+            return _design.heaviside_projection(filtered, b), jnp.asarray(0.5)
+        raise ValueError(f"unknown projection {self.config.projection!r}")
 
     def fluid_fraction(self, x, beta: float | None = None):
         """v_f on the domain the constraint is measured over."""

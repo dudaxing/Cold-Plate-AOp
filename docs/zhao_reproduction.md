@@ -24,7 +24,8 @@ governing equations, objective, constraint — is kept.
 | R1i | fixed design: h_T = h/8 on the saved coarse flow, one thermal state | **done**, closed in the review of 2a9bfea — the thermal step shrinks: +8.87% (h/2 → h/4) then +3.20% (h/4 → h/8), ratio 0.39 |
 | R1j | development model flow h / thermal h/4: versioned reference, dual-mesh driver entry, directional gradient at x₃₀₀; no MMA update on the main mesh | **done**, closed in the review of 6d675da — reference frozen (C₀ ×1.0005); the driver takes value, gradient and states from one forward evaluation and refuses other models' references; gradient check PASS at every step (largest relative error 7.5×10⁻⁷); a deadlock in upstream's solve callback found and fixed |
 | R1k | warm start from x₃₀₀ on the development model, α_max = 10⁷ and β = 8 fixed, at most 30 MMA updates; first an explicit initial-design entry, and stop reasons that keep upstream's mixed-point KKT a proxy | **done** — the whole budget used, not converged: J −10.9% (C −18.9%, Ψ +20.4%), every state gated and feasible; the move limit binds throughout. Terminal check: the gain holds on h/8 (−12.5%) but the s = 0.5 thresholded terminal is worse than the thresholded start (+4.4% on h/4, +3.8% on h/8) and exceeds the volume bound, so no qualified binary comparison exists yet; closed in the review of 320ea73 |
-| R1l | qualified binary baselines for x₃₀₀ and x₃₀ by one volume-threshold rule, then one β = 16 stage of at most 30 updates from x₃₀, judged on the qualified binary design | proposed in the review of 320ea73; awaiting authorisation |
+| — | the volume-preserving projection of Xu, Cai & Cheng (2010) becomes the default; earlier record scripts pinned to the tanh projection | **done**; see "The volume-preserving projection" |
+| R1l | qualified binary baselines for x₃₀₀ and x₃₀ by one volume-threshold rule, then one β stage from x₃₀, judged on the qualified binary design | proposed in the review of 320ea73; to be re-planned on the volume-preserving projection before authorisation |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -1451,6 +1452,89 @@ What decides it is the qualified binary J, Ψ and C, and whether the
 continuous–binary gap narrows — not a lower continuous J or a smaller grey
 fraction. At most 3 flow and 3 thermal solves besides the 30 updates; no
 automatic β = 32, no binary h/8, no q sweep, no change of formulation, no 3D.
+
+This proposal predates the projection change below, which removes the volume
+problem its β = 16 stage was built around; R1l is to be re-planned on it.
+
+## The volume-preserving projection, from R1l on
+
+The fixed-threshold tanh projection used from R1b to R1k moves the volume when
+β moves: at η = 0.5 the projected volume is not the filtered one, so R1k's
+terminal design, feasible at β = 8 (g = −1.5×10⁻⁴), becomes infeasible at
+β = 16 (g = +8.0×10⁻³), and the volume constraint limits which β can be used.
+From R1l on the default is the volume-preserving projection of Xu, Cai and
+Cheng (Struct Multidisc Optim 41 (2010) 495–505), `tfopus/projection.py`,
+selected by `R1Config.projection`:
+
+- **Eq. (19)**, their projection: Sigmund's modified Heaviside rescaled onto
+  [0, η] and Guest's onto [η, 1],
+
+      H = η [e^{−β(1−ρ̄/η)} − (1 − ρ̄/η) e^{−β}]                           ρ̄ ≤ η
+      H = (1 − η) [1 − e^{−β(ρ̄−η)/(1−η)} + (ρ̄ − η) e^{−β}/(1 − η)] + η    ρ̄ > η
+
+  so H(0) = 0, H(η) = η, H(1) = 1, the identity at β = 0 and a step at η as
+  β grows.
+- **Eq. (21)** fixes η: Σ vᵢ H(ρ̄ᵢ; η) = Σ vᵢ ρ̄ᵢ over the design-domain
+  elements, solved by bisection every call. Their Appendix A shows the root is
+  unique in ]0, 1[.
+
+The design-domain volume of s is therefore the filtered design's for every β,
+so β can be chosen for sharpness alone.
+
+**One deliberate difference from the paper.** Its sensitivities use the chain
+rule (13) with Eq. (20), holding η fixed; but η moves with the design through
+(21). The derivative here includes that, by implicit differentiation of the
+root (`jax.lax.custom_root`). It is the derivative of the map actually used,
+the one finite differences measure. And it makes the volume's derivative
+exactly the element volumes, i.e. the filtered volume's; with η held fixed it
+would be v·H′(ρ̄), nearly zero away from η and about β near it. On a random
+test field, the η-fixed gradient departed from the exact one by 0.03% at
+β = 0.1 and 84% at β = 200.
+
+Tests, in `validation/test_projection.py` (48, 22 s); with them the full suite
+passes, 299 tests in 1066 s, on the new default:
+
+- **Eq. (19) against the paper's own closed forms:** it passes through 0, η
+  and 1 and is continuous; its derivative is Eq. (20), including β + e^{−β}
+  from both sides at the join; its η-derivative is Eqs. (27) and (28); β = 0 is
+  the identity.
+- **Eq. (21):** the volume is preserved to 10⁻¹³ from β = 0.1 to 200; the root
+  is unique; β = 200 is nearly binary at the same volume.
+- **Derivatives:** they match central differences to 10⁻⁷ at every β; the
+  projected volume's derivative is the filtered volume's; holding η fixed gets
+  it wrong; an all-0/1 field stays finite.
+- **In the R1 problem:** the default is the new projection; the reference's
+  identity does not include it, while the run fingerprint does; β does not
+  move the constraint or its gradient; and `projection = TANH` still reproduces
+  R1d's saved s exactly.
+
+The scripts that reproduce earlier records now pin `TANH` explicitly:
+`zhao2d_optimise`, `zhao2d_gradient_check`, `zhao2d_dual_check`,
+`zhao2d_r1j_check`, `zhao2d_r1k_warm_start` and `zhao2d_r1k_terminal_check`.
+The driver's records now carry `projection` and `projection_eta` (the paper's
+Fig. 14 tracks the same η).
+
+**β means something else now.** Eq. (19)'s slope at the threshold is β + e^{−β},
+while the tanh form's is β/(2 tanh(β/2)). The paper doubles β from 0.1 up to
+about 200 and reports near-binary designs from about β = 50. A schedule has to
+be chosen afresh, not carried over from β = 1, 2, 4, 8.
+
+**What it means for the saved designs.** Under the new projection the
+constraint sees the filtered volume, whatever β is. Both designs so far exceed
+the bound on that volume. Under tanh at β = 8 the bound was met on the
+projected volume (fluid fractions 0.39998 and 0.39994), and the projection had
+made that smaller than the filtered volume. Computed from the saved x,
+geometry only, nothing solved:
+
+| | filtered v_f (the constraint now) | g | η, β = 16 → 128 | grey, β = 16 → 128 | cells with s < 0.5, β = 16 → 128 |
+|---|---|---|---|---|---|
+| x₃₀₀ (R1d) | 0.4155 | +3.9% | 0.599 → 0.591 | 2.6% → 0.4% | 2079 → 2079 |
+| x₃₀ (R1k) | 0.4028 | +0.7% | 0.493 → 0.486 | 3.3% → 0.4% | 2021 → 2016 |
+
+So a warm start from either design under the new projection begins
+infeasible at every β and has to recover the volume first. Its early states
+cannot count as feasible, just as R1l's β = 16 stage had to allow for under
+tanh.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 

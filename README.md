@@ -119,6 +119,15 @@ Raising β alone would not move the s = 0.5 binary design at all — with η = 0
 the threshold of s is the threshold of the filtered design — so any next step
 has to re-optimise, not just sharpen.
 
+**The projection now preserves volume.** Under the fixed-threshold tanh
+projection used so far, raising β moved the volume, so the constraint limited
+which β could be used. From here on the default is the volume-preserving
+projection of Xu, Cai and Cheng (2010), `tfopus/projection.py`. The threshold η
+is solved at every call so that the projected volume equals the filtered one,
+and its derivative is exact: it includes η's dependence on the design, which
+the paper's sensitivities leave out. The scripts behind earlier records pin the
+old projection, so those records stay reproducible.
+
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
 as source substitutions against a pristine checkout rather than a fork, so the

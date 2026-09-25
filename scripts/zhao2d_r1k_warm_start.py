@@ -107,7 +107,7 @@ def main() -> None:
     t_start = time.perf_counter()
     memory = {}
 
-    spec, config = z.Zhao2DSpec(), r1.R1Config()
+    spec, config = z.Zhao2DSpec(), r1.R1Config(projection=r1.Projection.TANH)  # the projection its record used
     w = config.weight
     meta = json.loads((inputs / "zhao2d_r1d_main.json").read_text(encoding="utf-8"))
     fields = np.load(inputs / "zhao2d_r1d_main_fields.npz")

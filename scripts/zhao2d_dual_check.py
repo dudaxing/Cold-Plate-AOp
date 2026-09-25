@@ -294,7 +294,7 @@ def main() -> None:
     fields = np.load(args.out / "zhao2d_r1d_main_fields.npz")
     meta = json.loads((args.out / "zhao2d_r1d_main.json").read_text(encoding="utf-8"))
     alpha_max, beta = meta["final_alpha_max"], meta["final_beta"]
-    spec, config = z.Zhao2DSpec(), r1.R1Config()
+    spec, config = z.Zhao2DSpec(), r1.R1Config(projection=r1.Projection.TANH)  # the projection its record used
     scale = r1.load_reference(spec, config)  # single-mesh; a reporting scale here
     w = config.weight
 

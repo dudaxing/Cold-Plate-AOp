@@ -78,7 +78,7 @@ def build(full: bool, refinement: int = 1, quadrature: int | None = None):
     spec = z.Zhao2DSpec()
     if not full:
         spec = dataclasses.replace(spec, element_size=spec.element_size * 2)
-    config = r1.R1Config()
+    config = r1.R1Config(projection=r1.Projection.TANH)  # the projection its record used
     if refinement == 1 and quadrature is None:
         problem = r1.Zhao2DProblem(spec, config)
     else:
