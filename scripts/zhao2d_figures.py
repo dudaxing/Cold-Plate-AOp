@@ -3,7 +3,7 @@
 Nothing is solved or re-optimised here: every field and number is read from
 results/ and drawn, so a figure shows exactly the state the records describe
 -- including that the R1d run is budget-limited and not converged, and that the
-thermal compliance still moves with the thermal mesh. Six figures, written to
+thermal compliance still moves with the thermal mesh. Seven figures, written to
 docs/figures/:
 
   zhao2d_r1d_fields.png        the R1d design in the layout of Zhao Figs. 8 and
@@ -24,6 +24,10 @@ docs/figures/:
   zhao2d_r1l.png               R1l: the qualified binary baselines, the 30 updates on
                                the volume-preserving projection, and continuous
                                against qualified binary J
+  zhao2d_r1m.png               R1m: the two qualified binary designs with the flow
+                               on h or h/2, on thermal h/8 -- the pilot's
+                               temperature, how each design's temperature moves,
+                               J and the heat-balance deficit
 
     python scripts/zhao2d_figures.py [--results results] [--out docs/figures]
 """
@@ -759,6 +763,112 @@ def r1l_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
     return path
 
 
+# -- figure 7: R1m, the flow mesh under two qualified binary designs ---------------------
+
+# two hues and a neutral midpoint, for a signed difference
+DIVERGE = LinearSegmentedColormap.from_list(
+    "diverge", ["#184f95", "#6da7ec", "#ebeae4", "#f19e75", "#9c3c14"])
+
+
+def dot_rows(ax, cells: dict, key: str, rows: list) -> tuple[float, float]:
+    """x₃₀₀ and the pilot on one row per flow mesh; returns the data range."""
+    values = []
+    for i, (_, row) in enumerate(rows):
+        y = len(rows) - 1 - i
+        a, b = cells[f"x300/{row}"][key], cells[f"pilot/{row}"][key]
+        values += [a, b]
+        ax.plot([a, b], [y, y], color=AXIS, lw=1.2, zorder=1)
+        ax.plot([a], [y], "o", color=MUTED, ms=8, zorder=2)
+        ax.plot([b], [y], "o", color=SERIES[0], ms=8, zorder=3)
+    ax.set_yticks(range(len(rows)))
+    ax.set_yticklabels([r[0] for r in rows][::-1])
+    ax.set_ylim(-0.7, len(rows) - 0.3)
+    ax.grid(axis="x", color=GRID, lw=0.6)
+    for side in ("top", "right", "left"):
+        ax.spines[side].set_visible(False)
+    ax.tick_params(axis="y", length=0)
+    return min(values), max(values)
+
+
+def r1m_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
+    rec = json.loads((res / "zhao2d_r1m_flow_check.json").read_text(encoding="utf-8"))
+    f_h = np.load(res / "zhao2d_r1l_h8_fields.npz")
+    f_2 = np.load(res / "zhao2d_r1m_fields.npz")
+    coords_8 = np.load(res / "zhao2d_r1i_fields.npz")["thermal_node_coords_h8"]
+    h = g["element_size"]
+    cells, rank = rec["cells"], rec["ranking"]["pilot_against_x300"]
+    temps = {name: (f_h[f"{name}_temperature_h8"], f_2[f"{name}_temperature_flow_h2_thermal_h8"])
+             for name in ("x300", "pilot")}
+    for name, (a, b) in temps.items():
+        if not len(a) == len(b) == len(coords_8):
+            raise RuntimeError(f"{name}: the temperatures are not on the h/8 mesh")
+    tri_8 = triangulation(coords_8, h / 8, g)
+    delta = {name: b - a for name, (a, b) in temps.items()}
+    lim = float(max(np.abs(d).max() for d in delta.values()))
+
+    fig = plt.figure(figsize=(11.0, 7.6))
+    top = fig.add_gridspec(1, 3, left=0.02, right=0.62, top=0.86, bottom=0.21, wspace=0.10)
+    side = fig.add_gridspec(2, 1, left=0.71, right=0.97, top=0.82, bottom=0.27, hspace=0.95)
+
+    c = cells["pilot/flow_h2"]
+    ax = fig.add_subplot(top[0, 0])
+    field_axes(ax, g, "(a) Pilot's terminal, flow h/2")
+    m = ax.tripcolor(tri_8, temps["pilot"][1], cmap=HEAT, vmin=0, shading="gouraud")
+    colorbar(fig, m, ax, "T on thermal h/8")
+    note(ax, f"flow solved on h/2 for the given s\nT_max {c['T_max']:.2f};  C = {c['compliance']:.0f}"
+             f"\nΨ = {c['psi']:.5f};  D_T/Q {c['D_T_over_Q']:.1%}", y=-0.17)
+    for k, (name, title) in enumerate((("pilot", "(b) Pilot: flow h/2 minus flow h"),
+                                       ("x300", "(c) x₃₀₀: flow h/2 minus flow h"))):
+        ax = fig.add_subplot(top[0, 1 + k])
+        field_axes(ax, g, title)
+        m = ax.tripcolor(tri_8, delta[name], cmap=DIVERGE, vmin=-lim, vmax=lim, shading="gouraud")
+        colorbar(fig, m, ax, "ΔT  (one scale for b and c)")
+        r = rec["flow_replacement"][name]
+        note(ax, f"same s, same thermal h/8 mesh\nC {r['compliance']:+.2%};  Ψ {r['psi']:+.2%};  "
+                 f"J {r['J']:+.2%}\nT_max {r['T_max']:+.2%}", y=-0.17)
+
+    rows = [("flow h", "flow_h"), ("flow h/2", "flow_h2")]
+    ax = fig.add_subplot(side[0, 0])
+    lo, hi = dot_rows(ax, cells, "J", rows)
+    pad = 0.35 * (hi - lo)
+    ax.set_xlim(lo - pad, hi + 1.2 * pad)
+    for i, (_, row) in enumerate(rows):
+        y = len(rows) - 1 - i
+        right = max(cells[f"x300/{row}"]["J"], cells[f"pilot/{row}"]["J"])
+        ax.annotate(f"pilot {rank[row]['J']:+.2%}", (right, y), xytext=(9, 0),
+                    textcoords="offset points", va="center", fontsize=8.5, color=INK)
+    ax.set_xlabel("J on the h/4 model's scale")
+    ax.set_title("(d) J, both on thermal h/8", loc="left", fontsize=9.5)
+    ax.plot([], [], "o", color=MUTED, ms=7, label="x₃₀₀'s baseline")
+    ax.plot([], [], "o", color=SERIES[0], ms=7, label="pilot's terminal")
+    ax.legend(loc="upper center", bbox_to_anchor=(0.45, -0.42), ncol=2, frameon=False, fontsize=8)
+
+    ax = fig.add_subplot(side[1, 0])
+    _, hi = dot_rows(ax, cells, "D_T_over_Q", rows)
+    ax.set_xlim(0.0, 1.15 * hi)
+    ax.xaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0, decimals=0))
+    ax.set_xlabel("D_T / Q, the discrete heat-balance deficit")
+    ax.set_title("(e) Heat-balance deficit, thermal h/8", loc="left", fontsize=9.5)
+
+    fig.suptitle("R1m — the two qualified binary designs with the flow solved on h/2",
+                 x=0.02, ha="left", fontsize=11.5, color=INK, y=0.985)
+    fig.text(0.02, 0.955,
+             f"Pilot against x₃₀₀, qualified to qualified: J {rank['flow_h']['J']:+.2%} on flow h, "
+             f"{rank['flow_h2']['J']:+.2%} on flow h/2 (thermal h/8 both). D_T/Q: x₃₀₀ "
+             f"{cells['x300/flow_h']['D_T_over_Q']:.1%} → {cells['x300/flow_h2']['D_T_over_Q']:.1%}, "
+             f"pilot {cells['pilot/flow_h']['D_T_over_Q']:.1%} → "
+             f"{cells['pilot/flow_h2']['D_T_over_Q']:.1%}.\nThe binary designs are given s, the "
+             "material copied from the parent element; two flow meshes are not an exact solution. "
+             "Every state passed the 10⁻⁸ gate.", fontsize=8.5, color=INK2, ha="left", va="top")
+    footer(fig, "Drawn from results/zhao2d_r1m_flow_check.json, zhao2d_r1m_fields.npz, "
+           "zhao2d_r1l_h8_fields.npz and the h/8 node coordinates in zhao2d_r1i_fields.npz — "
+           "scripts/zhao2d_figures.py; no state is re-solved.")
+    path = out / "zhao2d_r1m.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--results", type=pathlib.Path, default=REPO / "results")
@@ -772,13 +882,15 @@ def main() -> None:
              "zhao2d_r1d_main.json", "zhao2d_r1g_dual.json", "zhao2d_r1h_matrix.json",
              "zhao2d_r1i_h8.json", "zhao2d_r1k_warm_start.json", "zhao2d_r1k_fields.npz",
              "zhao2d_r1k_terminal_check.json", "zhao2d_r1k_terminal_fields.npz",
-             "zhao2d_r1l_baselines.json", "zhao2d_r1l_vp_pilot.json", "zhao2d_r1l_h8_check.json"]
+             "zhao2d_r1l_baselines.json", "zhao2d_r1l_vp_pilot.json", "zhao2d_r1l_h8_check.json",
+             "zhao2d_r1m_flow_check.json", "zhao2d_r1m_fields.npz"]
     for n in names:
         print(f"read results/{n}  sha256 {sha(res / n)}")
     sources = [f"results/{n}" for n in names]
     for path in (fields_figure(res, args.out, g, sources), history_figure(res, args.out),
                  status_figure(res, args.out), r1k_figure(res, args.out, g),
-                 terminal_figure(res, args.out, g), r1l_figure(res, args.out, g)):
+                 terminal_figure(res, args.out, g), r1l_figure(res, args.out, g),
+                 r1m_figure(res, args.out, g)):
         print(f"wrote {path.relative_to(REPO) if path.is_relative_to(REPO) else path}")
 
 

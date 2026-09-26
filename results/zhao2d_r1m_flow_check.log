@@ -1,0 +1,41 @@
+D:\Coding\thermalFluid\thermal-fluid-opus\external\TOFLUX\toflux\src\solver.py:21: UserWarning: petsc4py not found; the PETSC linear solver is unavailable.
+  warnings.warn("petsc4py not found; the PETSC linear solver is unavailable.")
+checkpoint passed: inputs
+built flow h (5200 el) / thermal h/8 (332800 el): 183.8 s
+x300/flow_h: Psi 1.307329324e-02  C 51798.592781  J 1.480114635  D_T/Q 24.6600%  |R| 1.2e-14/2.2e-11  anchor ok  (69.4 s)
+pilot/flow_h: Psi 1.225177805e-02  C 51363.615033  J 1.456416367  D_T/Q 20.9525%  |R| 1.1e-14/2.5e-11  anchor ok  (67.8 s)
+checkpoint passed: flow h: the saved states on thermal h/8, re-evaluated
+built flow h/2 (20800 el) / thermal h/8 (332800 el): 239.5 s
+checkpoint passed: flow h/2: meshes, material and source, before anything is solved
+NR converged in 8 iters, res_norm/res_norm_0: 1.694952465664055e-14
+checkpoint passed: flow h/2: x300's flow solve (38.1 s)
+NR converged in 40 iters, res_norm/res_norm_0: 2.0912696601902074e-11
+x300/flow_h2: Psi 1.309327298e-02  C 47661.300433  J 1.378743314  D_T/Q 5.7206%  |R| 1.5e-14/2.1e-11  flow 38.1 s, thermal 282.4 s
+checkpoint passed: flow h/2: x300's thermal solve (282.4 s)
+NR converged in 8 iters, res_norm/res_norm_0: 1.632319747065489e-14
+checkpoint passed: flow h/2: pilot's flow solve (31.5 s)
+NR converged in 40 iters, res_norm/res_norm_0: 2.2800753083967123e-11
+pilot/flow_h2: Psi 1.231362524e-02  C 47069.379612  J 1.351850547  D_T/Q 4.8924%  |R| 1.4e-14/2.3e-11  flow 31.5 s, thermal 283.3 s
+checkpoint passed: flow h/2: pilot's thermal solve (283.3 s)
+
+                                   x300/flow_h      pilot/flow_h      x300/flow_h2     pilot/flow_h2
+  Psi                          1.307329324e-02   1.225177805e-02   1.309327298e-02   1.231362524e-02
+  C                               51798.592781      51363.615033      47661.300433      47069.379612
+  J (h/4 yardstick)                1.480114635       1.456416367       1.378743314       1.351850547
+  J* (single mesh)                 1.480754663       1.457051020       1.379332221       1.352432140
+  T_max                              22.551681         21.300884         20.808407         20.322856
+  T_min                               0.000000          0.000000          0.000000          0.000000
+  D_T/Q                               24.6600%          20.9525%           5.7206%           4.8924%
+  H                                6482.249188       6289.455404       5497.400365       5454.333873
+  r_D                                -0.072757         -0.072757         -0.072763         -0.072763
+  balance closure / Q                  2.6e-14           2.3e-14           2.1e-14           1.9e-14
+  |R| flow                             1.2e-14           1.1e-14           1.5e-14           1.4e-14
+  |R| thermal                          2.2e-11           2.5e-11           2.1e-11           2.3e-11
+
+  x300, flow h -> h/2: Psi +0.153%  C -7.987%  J -6.849%  T_max -7.730%  D_T/Q 24.66% -> 5.72%
+
+  pilot, flow h -> h/2: Psi +0.505%  C -8.360%  J -7.180%  T_max -4.591%  D_T/Q 20.95% -> 4.89%
+  pilot against x300, flow_h : J -1.601% (Psi -6.284%, C -0.840%) [qualified_comparison]
+  pilot against x300, flow_h2: J -1.951% (Psi -5.955%, C -1.242%) [qualified_comparison]
+
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1m_flow_check.json and D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1m_fields.npz; total 1328 s

@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done here; the work continues in its own repository, Cooling-conformal-AOp |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8); a flow-mesh check of that lead is proposed, not authorised |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8, 1.95% with the flow also refined to h/2) |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -146,15 +146,22 @@ ranking holds, and the lead grows to 1.60% and 2.57%. It is still
 budget-limited and not converged, and the pilot's binary export still has a J
 39% above its continuous design's (x₃₀₀'s gap is 24%, R1k's 41%).
 
-**The flow mesh is the untested part.** The review of 0f88624 closed that
-stage and found one more thing in the saved binary states: their discrete
-global heat balance misses by 20–25% of the heat input on thermal h/8 (D_T/Q,
-from the velocity's discrete divergence in the non-conservative convection
-term). The thermal refinement cannot remove it, because the flow stays on h.
-It is not an error in C and does not overturn the ranking, but the ranking has
-not been checked on a finer flow. The proposed next stage, R1m, re-solves the
-flow on h/2 for x₃₀₀'s and the pilot's binary designs (at most 2 flow and 2
-thermal solves, no optimisation); it is not yet authorised.
+**On a finer flow the lead holds, and the flow mesh turns out to matter as
+much as the thermal mesh.** The review of 0f88624 found that these binary
+states' discrete global heat balance misses by 20–25% of the heat input on
+thermal h/8 (D_T/Q, from the velocity's discrete divergence in the
+non-conservative convection term). The thermal refinement cannot remove it,
+because the flow stays on h. So R1m re-solved the flow on h/2 for x₃₀₀'s and
+the pilot's binary designs, with the temperature on h/8 (2 flow and 2 thermal
+solves, no optimisation).
+- The pilot stays ahead: 1.95% better in J, against 1.60% on the coarse flow,
+  with both dissipation and thermal compliance lower.
+- Replacing the flow lowers C by 8.0–8.4%, about as much as the thermal
+  refinement h/4 → h/8 raised it.
+- D_T/Q falls to 5.7% and 4.9%.
+
+Two meshes in each direction are not a convergence proof, and neither pair is
+shown adequate.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
@@ -219,6 +226,7 @@ python scripts/zhao2d_r1k_terminal_check.py --out DIR   # that run's terminal de
 python scripts/zhao2d_r1l_baselines.py --out DIR        # qualified binary baselines, one export rule
 python scripts/zhao2d_r1l_vp_pilot.py --out DIR         # 30 updates on the volume-preserving projection
 python scripts/zhao2d_r1l_h8_check.py --out DIR         # the three qualified binary designs on thermal h/8
+python scripts/zhao2d_r1m_flow_check.py --out DIR       # two of them with the flow on h/2, thermal h/8
 python scripts/zhao2d_figures.py                        # docs/figures/, drawn from the saved results
 ```
 

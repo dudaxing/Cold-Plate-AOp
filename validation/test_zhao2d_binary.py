@@ -4,8 +4,9 @@ Each test targets a way a check could count a state or a comparison it should
 not: a NaN residual accepted because `max()` returned the finite one, an anchor
 that failed but left its cell counted, a volume-infeasible design ranked as if
 it qualified. The two reproducers from the review of 320ea73 are the first two
-gate and usability cases; the last test is the review of 0f88624's, a failed
-anchor that did not stop the check before its next solves.
+gate and usability cases. The last two are the review of 0f88624's, a failed
+anchor that did not stop the check before its next solves, and the same guard
+for R1m.
 """
 
 import dataclasses
@@ -244,3 +245,66 @@ def test_the_h8_check_stops_at_a_failed_h4_anchor_before_building_h8(tmp_path, m
     assert set(record["cells"]) == {"x300/h4", "x30/h4", "pilot/h4"}
     assert record["cells"]["x300/h4"]["anchor"]["reproduced"]
     assert "stopped" in record and not (tmp_path / hc.FIELDS).exists()
+
+
+def _saved_state_report(psi, c):
+    """What R1m reads from `cell_report`, for a state that passes its gate."""
+    return {"psi": psi, "compliance": c, "j_star": 1.0, "c_advective": 0.0, "c_diffusive": 0.0,
+            "t_max": 1.0, "min_temperature": 0.0, "nodes_below_inlet": 0, "heat_in": 5200.0,
+            "identities": {"enthalpy": {"H": 5200.0}},
+            "reaction": {"reaction_at_dirichlet_nodes": 0.0},
+            "divergence": {"D_T": 0.0, "flow_mesh": {"integral_div_u_squared": 0.0}},
+            "mass": {"imbalance_relative": 0.0},
+            "residual_relative": {"flow": 1e-14, "thermal": 1e-12}}
+
+
+def test_r1m_stops_at_a_failed_flow_h_anchor_before_building_flow_h2(tmp_path, monkeypatch):
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
+    import zhao2d_r1m_flow_check as rm
+
+    root = pathlib.Path(__file__).resolve().parent.parent / "results"
+    h8 = json.loads((root / "zhao2d_r1l_h8_check.json").read_text(encoding="utf-8"))["cells"]
+    flows = {"x300": np.load(root / "zhao2d_r1l_baselines_fields.npz")["x300_press_vel"],
+             "pilot": np.load(root / "zhao2d_r1l_vp_pilot_fields.npz")["binary_press_vel"]}
+    # the real flow mesh and h/8 node coordinates, so every identity check before the anchor passes
+    nodes = SimpleNamespace(coords=np.load(root / "zhao2d_r1i_fields.npz")["thermal_node_coords_h8"])
+    fake = SimpleNamespace(
+        flow_mesh=z.build_mesh(z.Zhao2DSpec(), dofs_per_node=3),
+        thermal_mesh=SimpleNamespace(num_elems=1, region=np.zeros(1, dtype=np.int64),
+                                     mesh=SimpleNamespace(num_nodes=len(nodes.coords), nodes=nodes,
+                                                          elem_nodes=np.zeros((1, 4), np.int64))),
+        q_source=np.zeros(1), thermal_quadrature=3, nesting={},
+        thermal_bc={"fixed_dofs": np.zeros(1, np.int64), "dirichlet_values": np.zeros(1)},
+        maps=SimpleNamespace(density=lambda s: s))
+
+    def build(spec, config, thermal_refinement=2, thermal_quadrature=3):
+        if thermal_refinement != 8 or spec.element_size != z.Zhao2DSpec().element_size:
+            pytest.fail("built the flow-h/2 problem after an anchor failed")
+        return fake
+
+    def report(problem, s, pv, temperature, alpha_max, scale):
+        name = next(n for n, f in flows.items() if np.array_equal(f, pv))
+        off = 1.0 + 1e-9 if name == "x300" else 1.0
+        return _saved_state_report(h8[f"{name}/h8"]["psi"] * off, h8[f"{name}/h8"]["compliance"])
+
+    monkeypatch.setattr(rm.sys, "argv", ["r1m", "--out", str(tmp_path)])
+    monkeypatch.setattr(rm.faulthandler, "dump_traceback_later", lambda *a, **k: None)
+    monkeypatch.setattr(rm.dual, "Zhao2DDualProblem", build)
+    monkeypatch.setattr(rm.tf_solver, "modified_newton_raphson_solve",
+                        lambda *a, **k: pytest.fail("solved something after an anchor failed"))
+    monkeypatch.setattr(rm.fs, "verify_flow_state",
+                        lambda problem, pv, s, alpha_max, tol: {"residual_relative": 0.0})
+    monkeypatch.setattr(rm.fs, "cell_report", report)
+    monkeypatch.setattr(rm.fs, "thermal_inlet", lambda planar, spec, t: {})
+    monkeypatch.setattr(rm, "thermal_inlet_velocity", lambda problem, pv, spec: 0.0)
+    with pytest.raises(SystemExit) as stop:
+        rm.main()
+    assert "nothing after it was built or solved" in str(stop.value.code)
+    record = json.loads((tmp_path / rm.RECORD).read_text(encoding="utf-8"))
+    assert [c["stage"] for c in record["checkpoints"]][0] == "inputs"
+    assert record["checkpoints"][0]["failures"] == []
+    assert record["checkpoints"][-1]["stage"].startswith("flow h:")
+    assert [f.split(":")[0] for f in record["checkpoints"][-1]["failures"]] == ["x300/flow_h"]
+    assert set(record["cells"]) == {"x300/flow_h", "pilot/flow_h"}
+    assert record["cells"]["pilot/flow_h"]["anchor"]["reproduced"]
+    assert not (tmp_path / rm.FIELDS).exists()

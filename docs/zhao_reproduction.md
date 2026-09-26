@@ -26,7 +26,7 @@ governing equations, objective, constraint — is kept.
 | R1k | warm start from x₃₀₀ on the development model, α_max = 10⁷ and β = 8 fixed, at most 30 MMA updates; first an explicit initial-design entry, and stop reasons that keep upstream's mixed-point KKT a proxy | **done** — the whole budget used, not converged: J −10.9% (C −18.9%, Ψ +20.4%), every state gated and feasible; the move limit binds throughout. Terminal check: the gain holds on h/8 (−12.5%) but the s = 0.5 thresholded terminal is worse than the thresholded start (+4.4% on h/4, +3.8% on h/8) and exceeds the volume bound, so no qualified binary comparison exists yet; closed in the review of 320ea73 |
 | — | the volume-preserving projection of Xu, Cai & Cheng (2010) becomes the default; earlier record scripts pinned to the tanh projection | **done**; see "The volume-preserving projection" |
 | R1l | qualified binary baselines from R1d's and R1k's saved physical densities by one volume-threshold rule; then 30 updates from x₃₀ on the volume-preserving projection at β = 16, judged on the qualified binary design | **done** — qualified, x₃₀ is still +1.45% worse than x₃₀₀; the new-projection pilot's qualified binary terminal is −0.85% against x₃₀₀'s and −2.27% against x₃₀'s; budget used, not converged; the continuous–binary gap stays +38.7%. On thermal h/8 the ranking holds and the pilot's lead grows: −1.60% against x₃₀₀, −2.57% against x₃₀; closed in the review of 0f88624, which also found the binary designs' heat-balance deficit D_T/Q at 20–25% on h/8 |
-| R1m | x₃₀₀'s qualified baseline and the pilot's qualified terminal: flow h → h/2 on the common thermal h/8; at most 2 flow and 2 thermal solves, no MMA, no AD | proposed in the review of 0f88624; not authorised |
+| R1m | x₃₀₀'s qualified baseline and the pilot's qualified terminal: flow h → h/2 on the common thermal h/8; at most 2 flow and 2 thermal solves, no MMA, no AD | **done** — the ranking holds on flow h/2 and the lead grows: the pilot −1.95% against x₃₀₀ (−1.60% on flow h), both objectives lower. Replacing the flow moves C by −8.0% and −8.4%, about the size of the thermal step h/4 → h/8 and of the opposite sign; D_T/Q falls from 24.7% and 21.0% to 5.7% and 4.9% |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -77,6 +77,22 @@ far hotter. (d) J of the start and the terminal design under the same four
 evaluations. The continuous gain holds on h/8; thresholded at s = 0.5 it
 reverses — but the thresholded x₃₀ exceeds the volume bound, so (d)'s lower two
 rows are a diagnostic of that rule, not a ranking of qualified designs.
+
+![R1l: qualified binary baselines and the volume-preserving pilot](figures/zhao2d_r1l.png)
+
+R1l. (a, b) x₃₀₀'s and x₃₀'s qualified binary baselines, 2000 fluid cells
+each. (c, d) The pilot's continuous terminal on the volume-preserving
+projection and its qualified binary design. (e) Its 30 updates. (f) Continuous
+and qualified binary J, the binary designs on thermal h/4 and h/8.
+
+![R1m: the flow on h/2 under the two qualified binary designs](figures/zhao2d_r1m.png)
+
+R1m. (a) The pilot's temperature on thermal h/8 with the flow solved on h/2.
+(b, c) What replacing the flow does to each design's temperature, on one
+scale: cooler at 90–93% of the nodes, warmer only at the corner where the
+inlet tab meets the design domain. (d) J of both designs on flow h and h/2,
+thermal h/8: the pilot stays ahead. (e) The heat-balance deficit D_T/Q with
+each flow.
 
 ## R1d: the 300-update run
 
@@ -1815,8 +1831,9 @@ with D_T = ∫ b_f T ∇·u, H the boundary enthalpy flux, Q = 5200 the source a
 | the pilot's qualified terminal | 18.93% | 20.95% |
 
 For x₃₀₀ on h/8, H = 6482.2492, r_D = −0.07276 and D_T = 1282.3219; the identity
-closes. These are the review's numbers; this project has not yet evaluated
-them with its own code, and R1m below does so for x₃₀₀ and the pilot on h/8.
+closes. These are the review's numbers. R1m, below, evaluated the h/8 values
+for x₃₀₀ and the pilot with this project's own code and reproduces them. The
+h/4 values and x₃₀'s remain the review's.
 On R1d's continuous design, R1h found 7.6–9.0% on flow h and 0.7–1.3% on flow
 h/2. As R1h says, D_T/Q describes the global balance of the discrete
 solution, produced by the velocity's discrete divergence in the
@@ -1848,7 +1865,7 @@ binary designs' ranking does on a finer flow is untested.
   `validation/test_projection.py` (51) and the driver's two projection-root
   tests, 71 passed in 60 s. The full suite was not rerun for this closure.
 
-## R1m: the contract (as proposed in the review of 0f88624; not yet authorised)
+## R1m: the contract (as proposed in the review of 0f88624; authorised and run)
 
 To ask whether, with the binary geometry and thermal h/8 held, replacing the
 flow solved on h by the flow solved on h/2 keeps the pilot's lead over x₃₀₀,
@@ -1895,6 +1912,111 @@ R1m.
 Cost is not promised. R1h verified R1f's cached h/2 flow instead of solving
 it, so no h/2 flow solve is timed in these records; the h/8 check's thermal
 solves took 205–226 s each.
+
+## R1m: what it found
+
+Authorised on the local CPU. `scripts/zhao2d_r1m_flow_check.py`; record
+`results/zhao2d_r1m_flow_check.json` (and `.log`); fields
+`results/zhao2d_r1m_fields.npz` (each design's h/2 material, h/2 flow and h/8
+temperature, and the h/2 flow nodes); figure `docs/figures/zhao2d_r1m.png`. The
+script stops, with its record written, at the first failed checkpoint;
+`validation/test_zhao2d_binary.py` tests that a failed anchor on flow h stops it
+before the h/2 problem is built.
+
+**Checked before anything was solved; everything passed.**
+
+- The inputs are R1l's and the h/8 check's states, by hash, and the yardstick
+  is theirs.
+- Each saved h flow re-verifies: relative residual 1.1–1.2×10⁻¹⁴, Dirichlet
+  values exact.
+- Both reused cells (flow h, thermal h/8) reproduce the h/8 check's Ψ and C
+  exactly. Their D_T/Q matches the review's figures to every digit it printed:
+  24.6600% and 20.9525%, and for x₃₀₀ H = 6482.249188, r_D = −0.072757. That is
+  this project's own evaluation of them now.
+- The h/2 flow mesh is R1h's (its identity matches). The thermal mesh, the
+  source and the Dirichlet nodes reached from flow h/2 are those reached from
+  flow h.
+- Each design copied to h/2 keeps its fluid fraction (0.4) and its tabs fluid,
+  and gives the h/8 mesh the same material field, bit for bit.
+- The inflow is the same function on both flow meshes (difference 0;
+  inflow/nominal 1 and 1 − 1 ulp). The inlet-wins slip on the tab wall is
+  1×10⁻⁴ long on h and 5×10⁻⁵ on h/2. Mass balance closes to 8×10⁻¹⁵.
+
+**Then solved:**
+
+- Each h/2 flow converged in 8 Newton iterations, relative residual
+  1.6–1.7×10⁻¹⁴.
+- Each h/8 temperature ran to upstream's 40-iteration cap at 2.1–2.3×10⁻¹¹ and
+  passed our 10⁻⁸ gate, as on flow h.
+- No node is below the inlet temperature.
+- Every identity closes to 2.6×10⁻¹⁴ relative or better.
+
+| thermal h/8 | x₃₀₀, flow h | x₃₀₀, flow h/2 | pilot, flow h | pilot, flow h/2 |
+|---|---|---|---|---|
+| Ψ | 0.0130733 | 0.0130933 | 0.0122518 | 0.0123136 |
+| C | 51798.59 | 47661.30 | 51363.62 | 47069.38 |
+| J (h/4 yardstick) | 1.480115 | 1.378743 | 1.456416 | 1.351851 |
+| T_max | 22.55 | 20.81 | 21.30 | 20.32 |
+| D_T/Q | 24.66% | 5.72% | 20.95% | 4.89% |
+| ∫(∇·u)², on the flow mesh | 0.2460 | 0.0894 | 0.1945 | 0.0775 |
+
+The pilot against x₃₀₀, qualified to qualified, on the three models now
+measured:
+
+| model | J | Ψ | C |
+|---|---|---|---|
+| flow h, thermal h/4 (R1l) | −0.85% | −6.28% | +0.11% |
+| flow h, thermal h/8 (the h/8 check) | −1.60% | −6.28% | −0.84% |
+| flow h/2, thermal h/8 | **−1.95%** | −5.96% | −1.24% |
+
+- **The ranking holds on flow h/2, and the pilot's lead grows** to 1.95%, with
+  both objectives lower. On the h/4 yardstick,
+  ΔJ = −0.01234435 (dissipation) − 0.01454842 (compliance) = −0.02689277.
+- **Replacing the flow moves C by −7.99% (x₃₀₀) and −8.36% (the pilot).** That
+  is about the size of the thermal step h/4 → h/8 on flow h (+8.48%, +7.46%),
+  with the opposite sign. On R1d's continuous design, R1h measured −2.5% to
+  −2.7%. On these binary designs the flow mesh moves C about as much as the
+  thermal mesh does.
+  - In the split of C, c_diffusive moves −11.8% and −12.6%, c_advective −1.4%.
+    That is one algebraic decomposition of the difference, not a cause.
+  - Ψ moves +0.15% and +0.50%; T_max −7.7% and −4.6%.
+- **Where the temperature moves.** It falls at 90–93% of the h/8 nodes, by up
+  to 2.9. It rises only in a small patch at the re-entrant corner where the
+  inlet tab meets the design domain, around x = 1.05 mm, y = 9.95 mm: by up to
+  4.1 (x₃₀₀) and 4.0 (the pilot). See the figure's panels b and c.
+- **The heat-balance deficit falls about fourfold.** D_T/Q goes from 24.7% to
+  5.7% (x₃₀₀) and from 21.0% to 4.9% (the pilot), with ∫(∇·u)² at 0.36 and 0.40
+  of the coarse flow's. That is still several times R1h's 0.7–1.3% on the
+  continuous design. As in R1h, this describes the global balance, and is not
+  an accuracy figure.
+- **For these two designs, the two steps nearly offset.** C on (flow h/2,
+  thermal h/8) is 0.18% (x₃₀₀) and 1.53% (the pilot) below C on the development
+  model (flow h, thermal h/4), and J is 0.13% and 1.24% below. This is an
+  observation on two designs and these meshes. Nothing here says the offset
+  holds for other designs or finer meshes, and neither mesh pair is shown
+  adequate.
+- **Cost: 1328 s in all.**
+  - Builds: 184 s (flow h), 240 s (flow h/2).
+  - The two reused cells' reports: 68–69 s each.
+  - The h/2 flow solves: 38 s and 32 s.
+  - The h/8 thermal solves: 282–283 s each.
+  - The new cells' reports: 59–60 s each.
+  - Cumulative peak working set: 5732 MiB.
+
+### What R1m says, and what it does not
+
+- On these two qualified binary designs, the pilot is ahead of x₃₀₀ on every
+  model measured: −0.85%, −1.60% and −1.95%. On the two finer models both of
+  its objectives are lower. Two flow meshes and two thermal meshes are not a
+  convergence proof, and x₃₀ was not re-checked, by the contract.
+- On these designs the flow mesh is as large a modelling effect as the thermal
+  mesh, and it acts in the opposite direction. The contract measured the flow
+  step on thermal h/8 only, so the interaction of the two steps (thermal h/4 on
+  flow h/2) was not measured.
+- The finer flow closes the heat balance much better, and not to R1h's level.
+- Not measured, by the contract: flow h/4, thermal h/16, the interaction cell,
+  x₃₀ on flow h/2, any gradient on the fine flow, β = 32. The pilot is still
+  budget-limited and not converged.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -2154,6 +2276,7 @@ python scripts/zhao2d_r1k_terminal_check.py --out DIR    # R1k terminal check, h
 python scripts/zhao2d_r1l_baselines.py --out DIR         # R1l A, qualified binary baselines (~1.5 min)
 python scripts/zhao2d_r1l_vp_pilot.py --out DIR          # R1l B, 30 updates on the volume-preserving projection (~16 min)
 python scripts/zhao2d_r1l_h8_check.py --out DIR          # R1l's qualified binary designs on thermal h/8 (~16 min)
+python scripts/zhao2d_r1m_flow_check.py --out DIR        # R1m: two of them with the flow on h/2, thermal h/8 (~22 min)
 python scripts/zhao2d_figures.py                         # docs/figures/ from the saved results, no solves
 ```
 
