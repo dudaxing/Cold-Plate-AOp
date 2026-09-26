@@ -4,13 +4,16 @@ Each test targets a way a check could count a state or a comparison it should
 not: a NaN residual accepted because `max()` returned the finite one, an anchor
 that failed but left its cell counted, a volume-infeasible design ranked as if
 it qualified. The two reproducers from the review of 320ea73 are the first two
-gate and usability cases.
+gate and usability cases; the last test is the review of 0f88624's, a failed
+anchor that did not stop the check before its next solves.
 """
 
 import dataclasses
 import hashlib
+import json
 import pathlib
 import sys
+from types import SimpleNamespace
 
 import numpy as np
 import jax.numpy as jnp
@@ -170,3 +173,74 @@ def test_the_terminal_check_refuses_to_overwrite_its_record_before_building(tmp_
         tc.main()
     assert hashlib.sha256(target.read_bytes()).hexdigest() == before
     assert not (tmp_path / tc.STACKS).exists()
+
+
+class _SavedStatesH4:
+    """Stands in for the h/4 problem: each design's recorded Psi and C, one Psi off.
+
+    Designs are told apart by their saved flow. Nothing may be solved here: at
+    h/4 the check only re-evaluates the saved states.
+    """
+
+    def __init__(self, recorded: dict, off: str):
+        self.recorded, self.off = recorded, off
+        nodes = SimpleNamespace(coords=np.zeros((4, 2)))
+        self.thermal_mesh = SimpleNamespace(num_elems=1,
+                                            mesh=SimpleNamespace(num_nodes=4, nodes=nodes))
+        self.flow = SimpleNamespace(dissipated_power=self._psi)
+        self.thermal = SimpleNamespace(
+            thermal_compliance=lambda temperature, name, kappa: self.recorded[name][2])
+
+    def _name(self, press_vel):
+        return next(n for n, (pv, _, _) in self.recorded.items() if np.array_equal(pv, press_vel))
+
+    def _psi(self, press_vel, alpha):
+        name = self._name(press_vel)
+        return self.recorded[name][1] * (1.0 + 1e-9 if name == self.off else 1.0)
+
+    def thermal_velocity(self, press_vel):
+        return self._name(press_vel)
+
+    def thermal_conductivity(self, s, alpha_max):
+        return s
+
+    def residual_norms_at(self, press_vel, temperature, alpha, kappa):
+        return {"flow": 1e-14, "thermal": 1e-12}
+
+    def solve_thermal(self, *args, **kwargs):
+        pytest.fail("solved a temperature at h/4, where the saved states are only checked")
+
+
+def test_the_h8_check_stops_at_a_failed_h4_anchor_before_building_h8(tmp_path, monkeypatch):
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
+    import zhao2d_r1l_h8_check as hc
+
+    root = pathlib.Path(__file__).resolve().parent.parent / "results"
+    a = json.loads((root / "zhao2d_r1l_baselines.json").read_text(encoding="utf-8"))["designs"]
+    b = json.loads((root / "zhao2d_r1l_vp_pilot.json").read_text(encoding="utf-8"))["export"]
+    fa = np.load(root / "zhao2d_r1l_baselines_fields.npz")
+    fb = np.load(root / "zhao2d_r1l_vp_pilot_fields.npz")
+    recorded = {"x300": (fa["x300_press_vel"], a["x300"]["psi"], a["x300"]["compliance"]),
+                "x30": (fa["x30_press_vel"], a["x30"]["psi"], a["x30"]["compliance"]),
+                "pilot": (fb["binary_press_vel"], b["psi"], b["compliance"])}
+
+    def build(spec, config, level, quadrature):
+        if level != 4:
+            pytest.fail(f"built the h/{level} problem after an anchor failed")
+        return _SavedStatesH4(recorded, off="x30")
+
+    monkeypatch.setattr(hc.sys, "argv", ["h8_check", "--out", str(tmp_path)])
+    monkeypatch.setattr(hc.faulthandler, "dump_traceback_later", lambda *a, **k: None)
+    monkeypatch.setattr(hc.dual, "Zhao2DDualProblem", build)
+    monkeypatch.setattr(hc.dual, "load_reference",
+                        lambda problem, path: SimpleNamespace(psi_0=1.0, c_0=1.0))
+    monkeypatch.setattr(hc.fs, "verify_flow_state",
+                        lambda problem, pv, s, alpha_max: {"residual_relative": 0.0})
+    with pytest.raises(SystemExit) as stop:
+        hc.main()
+    assert "before anything was solved on h/8" in str(stop.value.code)
+    record = json.loads((tmp_path / hc.RECORD).read_text(encoding="utf-8"))
+    assert record["checks"] == {"anchors_not_reproduced": ["x30/h4"], "cells_failing_gate": []}
+    assert set(record["cells"]) == {"x300/h4", "x30/h4", "pilot/h4"}
+    assert record["cells"]["x300/h4"]["anchor"]["reproduced"]
+    assert "stopped" in record and not (tmp_path / hc.FIELDS).exists()

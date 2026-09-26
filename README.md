@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done here; the work continues in its own repository, Cooling-conformal-AOp |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8) |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8); a flow-mesh check of that lead is proposed, not authorised |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -125,10 +125,10 @@ which β could be used. From here on the default is the volume-preserving
 projection of Xu, Cai and Cheng (2010), `tfopus/projection.py`. The threshold η
 is solved at every call so that the projected volume equals the filtered one,
 and the derivative includes η's dependence on the design, which the paper's
-stated sensitivities (taken at fixed η) do not expand. That derivative exists
-wherever some filtered density is intermediate; at a degenerate root, such as
-a uniform design, it does not, and the driver refuses to pass a gradient
-there. The projection removes β's drift of the continuous volume for a fixed
+stated sensitivities (taken at fixed η) do not expand. That implicit
+derivative of η applies wherever some filtered density is intermediate; at a
+degenerate root, such as a uniform design, η is not unique and it does not
+apply, so the driver refuses to pass a gradient there. The projection removes β's drift of the continuous volume for a fixed
 design, and that is all: both saved designs exceed the bound on their filtered
 volume, and nothing is known yet about binary performance under it. The
 scripts behind earlier records pin the old projection, so those records stay
@@ -143,8 +143,18 @@ qualified binary design 0.85% better than the start and 2.27% better than R1k's.
 Each of these designs' thermal compliance moves 7.5–8.5% from thermal h/4 to
 h/8, far more than those margins, so the three were re-solved on h/8: the
 ranking holds, and the lead grows to 1.60% and 2.57%. It is still
-budget-limited and not converged, and the gap between each continuous design
-and its binary export stays near 40%.
+budget-limited and not converged, and the pilot's binary export still has a J
+39% above its continuous design's (x₃₀₀'s gap is 24%, R1k's 41%).
+
+**The flow mesh is the untested part.** The review of 0f88624 closed that
+stage and found one more thing in the saved binary states: their discrete
+global heat balance misses by 20–25% of the heat input on thermal h/8 (D_T/Q,
+from the velocity's discrete divergence in the non-conservative convection
+term). The thermal refinement cannot remove it, because the flow stays on h.
+It is not an error in C and does not overturn the ranking, but the ranking has
+not been checked on a finer flow. The proposed next stage, R1m, re-solves the
+flow on h/2 for x₃₀₀'s and the pilot's binary designs (at most 2 flow and 2
+thermal solves, no optimisation); it is not yet authorised.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied

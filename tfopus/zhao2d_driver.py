@@ -242,9 +242,10 @@ def evaluate(problem, reference, x, alpha_max, beta, gradient: bool = True,
     state raises `NotConverged`, and its gradient is never used.
 
     So is the design map: where the volume-preserving projection's root is
-    degenerate (no filtered density strictly between 0 and 1), the design has
-    no derivative, and asking for a gradient raises `DegenerateProjection`
-    before anything is solved. A value alone is still evaluated.
+    degenerate (no filtered density strictly between 0 and 1), eta is not
+    unique and the implicit derivative the gradient is built on does not apply,
+    so asking for a gradient raises `DegenerateProjection` before anything is
+    solved. A value alone is still evaluated.
 
     Returns (record, (s, press_vel, temperature), dJ, dg); the gradients are
     None when `gradient` is False.
@@ -257,8 +258,8 @@ def evaluate(problem, reference, x, alpha_max, beta, gradient: bool = True,
         raise _r1.DegenerateProjection(
             f"the volume-preserving projection's root is degenerate at this design "
             f"(beta {beta:g}, slope {root['slope']}): no filtered density lies strictly "
-            "between 0 and 1, so eta and the design map have no derivative here; no "
-            "gradient is passed to MMA")
+            "between 0 and 1, so eta is not unique and its implicit derivative does not "
+            "apply here; no gradient is passed to MMA")
 
     def objective(v):
         s = problem.solid_fraction(v, beta)

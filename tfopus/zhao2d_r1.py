@@ -278,12 +278,14 @@ class NotConverged(RuntimeError):
 
 
 class DegenerateProjection(RuntimeError):
-    """A design at which the volume-preserving projection has no derivative.
+    """A design at which the volume-preserving projection's root is degenerate.
 
     With no filtered density strictly between 0 and 1, Eq. (21) holds for
-    every eta, and the implicit derivative of eta does not exist. The value
-    is still defined -- s equals the filtered design -- so value-only
-    evaluations proceed; a gradient does not reach MMA.
+    every eta: eta is not unique, and its implicit derivative, which the
+    gradient is built on, does not apply. That is about eta, not a claim that
+    s has no derivative (a lone element is mapped to itself, ds/drho = 1).
+    The value is still defined -- s equals the filtered design -- so
+    value-only evaluations proceed; a gradient does not reach MMA.
     """
 
 
@@ -388,12 +390,12 @@ class Zhao2DProblem:
         return float(self._project(x, beta)[1])
 
     def projection_root(self, x, beta: float | None = None) -> dict:
-        """Whether the design map is differentiable here, and why.
+        """Whether the implicit derivative the gradient is built on applies here.
 
         Only the volume-preserving projection at beta > 0 has a root to worry
         about: it needs some filtered density strictly between 0 and 1, or
-        eta is not unique and its derivative does not exist. TANH, and beta = 0,
-        are always differentiable.
+        eta is not unique and its implicit derivative does not apply. TANH, and
+        beta = 0, are always differentiable.
         """
         b = self.config.projection_beta if beta is None else beta
         if self.config.projection != Projection.VOLUME_PRESERVING or b <= 0.0:

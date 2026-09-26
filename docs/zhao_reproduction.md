@@ -25,7 +25,8 @@ governing equations, objective, constraint — is kept.
 | R1j | development model flow h / thermal h/4: versioned reference, dual-mesh driver entry, directional gradient at x₃₀₀; no MMA update on the main mesh | **done**, closed in the review of 6d675da — reference frozen (C₀ ×1.0005); the driver takes value, gradient and states from one forward evaluation and refuses other models' references; gradient check PASS at every step (largest relative error 7.5×10⁻⁷); a deadlock in upstream's solve callback found and fixed |
 | R1k | warm start from x₃₀₀ on the development model, α_max = 10⁷ and β = 8 fixed, at most 30 MMA updates; first an explicit initial-design entry, and stop reasons that keep upstream's mixed-point KKT a proxy | **done** — the whole budget used, not converged: J −10.9% (C −18.9%, Ψ +20.4%), every state gated and feasible; the move limit binds throughout. Terminal check: the gain holds on h/8 (−12.5%) but the s = 0.5 thresholded terminal is worse than the thresholded start (+4.4% on h/4, +3.8% on h/8) and exceeds the volume bound, so no qualified binary comparison exists yet; closed in the review of 320ea73 |
 | — | the volume-preserving projection of Xu, Cai & Cheng (2010) becomes the default; earlier record scripts pinned to the tanh projection | **done**; see "The volume-preserving projection" |
-| R1l | qualified binary baselines from R1d's and R1k's saved physical densities by one volume-threshold rule; then 30 updates from x₃₀ on the volume-preserving projection at β = 16, judged on the qualified binary design | **done** — qualified, x₃₀ is still +1.45% worse than x₃₀₀; the new-projection pilot's qualified binary terminal is −0.85% against x₃₀₀'s and −2.27% against x₃₀'s; budget used, not converged; the continuous–binary gap stays +38.7%. On thermal h/8 the ranking holds and the pilot's lead grows: −1.60% against x₃₀₀, −2.57% against x₃₀ |
+| R1l | qualified binary baselines from R1d's and R1k's saved physical densities by one volume-threshold rule; then 30 updates from x₃₀ on the volume-preserving projection at β = 16, judged on the qualified binary design | **done** — qualified, x₃₀ is still +1.45% worse than x₃₀₀; the new-projection pilot's qualified binary terminal is −0.85% against x₃₀₀'s and −2.27% against x₃₀'s; budget used, not converged; the continuous–binary gap stays +38.7%. On thermal h/8 the ranking holds and the pilot's lead grows: −1.60% against x₃₀₀, −2.57% against x₃₀; closed in the review of 0f88624, which also found the binary designs' heat-balance deficit D_T/Q at 20–25% on h/8 |
+| R1m | x₃₀₀'s qualified baseline and the pilot's qualified terminal: flow h → h/2 on the common thermal h/8; at most 2 flow and 2 thermal solves, no MMA, no AD | proposed in the review of 0f88624; not authorised |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -1489,17 +1490,22 @@ be vⱼ aⱼ. On the raw design, the design-domain constraint
 g(x) = (1 − vᵀFx/V_D)/0.4 − 1 is affine, with ∇ₓg = −Fᵀv/(0.4 V_D) for every x
 and β (F the filter, V_D the design-domain volume).
 
-**Where the derivative does not exist.** The expression needs B < 0, which
-holds exactly when some filtered density with positive volume lies strictly
-between 0 and 1. Otherwise the root is degenerate: η is not unique and has no
-derivative. What AD returns there is the η-fixed part alone, finite but not a
-derivative. For a lone element at ρ̄ = 0 it returns (β + 1)e^{−β} = 0.0030 at
-β = 8, where the derivative from inside the admissible range is 1. The review
-of a1b4af9 found this. `projection.root_is_nondegenerate` checks it; the
-driver refuses to hand MMA a gradient at a degenerate root, before solving
-anything (`DegenerateProjection`), and still evaluates a value there. Any
-design with a solid–fluid interface filters to intermediate densities and has
-a proper root; a uniform 0 or 1 design does not.
+**Where the implicit derivative does not apply.** The expression needs B < 0,
+which holds exactly when some filtered density with positive volume lies
+strictly between 0 and 1. Otherwise the root is degenerate: η is not unique,
+so it has no implicit derivative and the expression above does not apply. That
+is about η and this formula, not a claim that the composite map s(ρ̄) has no
+derivative there: a lone element is mapped to itself, and its derivative from
+inside the admissible range is 1. What AD returns there is the η-fixed part
+alone, finite but not that derivative: for a lone element at ρ̄ = 0,
+(β + 1)e^{−β} = 0.0030 at β = 8. The review of a1b4af9 found this.
+`projection.root_is_nondegenerate` checks it; the driver refuses to hand MMA a
+gradient at a degenerate root, before solving anything
+(`DegenerateProjection`), and still evaluates a value there. The review of
+0f88624 accepted this as the fix — no NaN from AD, no derivative at degenerate
+points is needed — and asked for this narrower wording. Any design with a
+solid–fluid interface filters to intermediate densities and has a proper root;
+a uniform 0 or 1 design does not.
 
 Tests, in `validation/test_projection.py` (51) and
 `validation/test_zhao2d_driver.py`. The full suite passed at a1b4af9 (299
@@ -1673,16 +1679,22 @@ Also recorded:
   with Ψ up and C down. Every state from update 1 on is feasible, and J rose
   only at updates 1 and 5.
 - **The stop.** It ended at the budget (`phase_end`), with no proxy fired. The
-  KKT proxy went from 0.18 to 6.0×10⁻³, and the last step is 0.22 in 2-norm:
-  not converged.
+  KKT proxy went from 0.18 to 6.0×10⁻³, and the last step is 0.22 in 2-norm
+  over the 5000 design variables (largest single change 0.076, inside the move
+  limit 0.1; RMS 0.0031): not converged.
 - **The export.** The terminal exports at t = 0.3879 (37 cells differ from
   s = 0.5), connected. Its binary state has 2 nodes below the inlet temperature,
   the lowest at −0.077 against T_max 20.6: a small undershoot at a sharp
   interface, of the kind R1e and R1f saw.
 - **Cost.** A 84 s; B 926 s — build 47 s, 23–33 s per update after the first
   (47 s), peak working set 4393 MiB.
-- **Provenance.** Every hash in the two records reproduces from the committed
-  files, 31 and 30 of them, 13 each after converting LF to CRLF.
+- **Provenance.** The two records' project entries — source, input and
+  reference hashes, 31 and 30 of them — reproduce from the files committed in
+  dc40250, 13 each after converting LF to CRLF; their 14 upstream TOFLUX
+  hashes each, from the untracked checkout under `external/TOFLUX`. Their
+  array digests match saved fields: R1l's own, and for A's inputs the tanh
+  densities R1d and R1k saved. (Counted this way since the review of 0f88624;
+  the first version said "every hash", which was not what it counted.)
 
 ### What R1l says, and what it does not
 
@@ -1698,9 +1710,15 @@ Also recorded:
   against +40.8% for x₃₀ and +23.7% for x₃₀₀. It narrowed a little relative to
   x₃₀ and is far from closed, and the continuous design became greyer again
   under optimisation (3.3% → 6.2%) at β = 16.
-- The +10.2% jump at the zero step is the change of map, not optimisation. The
-  new map's J is not comparable with R1k's tanh J except through the qualified
-  binary designs, which are what this stage is judged on.
+- The +10.2% jump at the zero step is the change of map, not optimisation. With
+  the same evaluator, meshes and constants, the J of the new map's s and of
+  R1k's tanh s do compare, as two different designs; what they cannot be is an
+  optimisation gain within one parametrisation. Nor can the binary improvement
+  be put down to the volume-preserving projection alone: the new map, 30 more
+  updates and MMA's reinitialised history all went into the new design, and
+  no equal-budget run continued on the tanh map. (The first version said the
+  two J were not comparable; the review of 0f88624 narrowed it, and does not
+  ask for that control now.)
 - Budget used, not converged. All binary designs here are 0/1 material with
   finite Brinkman resistance, solved as given s on the same meshes — not
   body-fitted solids.
@@ -1751,10 +1769,132 @@ J on one fixed yardstick (the h/4 model's constants), qualified to qualified:
   168 s; three thermal solves of 205–226 s each; cumulative peak working set
   5401 MiB.
 - **Provenance, checked after the commit:** the record's 26 source and 4
-  input hashes reproduce from the committed files (12 after converting LF to
-  CRLF), and its 14 TOFLUX hashes from the untracked checkout under
-  `external/TOFLUX`. 13 of its 14 array digests match saved fields; the
-  fourteenth, the h/8 node coordinates, is rebuilt each run and not saved.
+  input hashes reproduce from the files committed in d9c826f (12 after
+  converting LF to CRLF), and its 14 TOFLUX hashes from the untracked checkout
+  under `external/TOFLUX`. All 14 array digests match saved fields, the h/8
+  node coordinates R1i's `thermal_node_coords_h8` (the same mesh, as said
+  above). 0f88624 called the coordinates unsaved; the review of 0f88624 found
+  them in R1i's file, and they match.
+
+### After the review of 0f88624
+
+The review closed R1l and this check. Without `tfopus` or JAX it rebuilt the
+filter, the projection root and the export for the 31 saved designs
+(constraint within 4.4×10⁻¹⁶ of the records, η within 3.3×10⁻¹⁶) and the three
+binary designs (the thresholds, 2000 fluid cells each, one connected fluid
+domain, the masks bit for bit), and it re-assembled the saved states'
+residuals and integrals without solving: C within 1.9×10⁻¹⁴ of the records,
+residuals at most 3.3×10⁻¹³ (flow) and 2.9×10⁻¹¹ (thermal). Checked here too,
+from the records and saved fields:
+
+- **What the qualified comparison rests on.** The pilot's terminal thresholded
+  at s = 0.5 has 2037 fluid cells in the design domain, over the bound; its
+  qualified design comes from the export rule. The result is continuous
+  optimisation plus one volume-qualified export, not the projection making 0.5
+  thresholding feasible.
+- **Against x₃₀₀, both objectives are lower on h/8.** On the h/4 yardstick,
+  ΔJ = −0.01300725 (dissipation) + 0.00122978 (compliance) = −0.01177747 on
+  h/4, and −0.01300725 − 0.01069102 = −0.02369827 on h/8: Ψ −6.28%, C −0.84%.
+  On h/4 lower dissipation outweighed a slightly higher C; on h/8 the lead
+  does not rest on the weights. Against x₃₀ the pilot is still a trade-off —
+  Ψ +6.34%, C −3.56% (h/4) and −3.81% (h/8) — so it does not dominate every
+  baseline.
+- **The ranking is what the two thermal meshes agree on.** Each design's
+  7.5–8.5% step in C is not its error bar and is not to be set against the
+  1.60%; and the ranking has not been checked on another flow mesh.
+
+**A finding for the next step: the binary designs' heat-balance deficit.**
+From the saved states, the review evaluated R1h's identity H − Q − r_D = D_T,
+with D_T = ∫ b_f T ∇·u, H the boundary enthalpy flux, Q = 5200 the source and
+−r_D the heat the weak form conducts out through the inlet:
+
+| D_T/Q | thermal h/4 | thermal h/8 |
+|---|---|---|
+| x₃₀₀'s qualified baseline | 22.19% | 24.66% |
+| x₃₀'s qualified baseline | 17.41% | 19.66% |
+| the pilot's qualified terminal | 18.93% | 20.95% |
+
+For x₃₀₀ on h/8, H = 6482.2492, r_D = −0.07276 and D_T = 1282.3219; the identity
+closes. These are the review's numbers; this project has not yet evaluated
+them with its own code, and R1m below does so for x₃₀₀ and the pilot on h/8.
+On R1d's continuous design, R1h found 7.6–9.0% on flow h and 0.7–1.3% on flow
+h/2. As R1h says, D_T/Q describes the global balance of the discrete
+solution, produced by the velocity's discrete divergence in the
+non-conservative convection term. It is not an error in C, not something to
+subtract from the 1.60%, and not evidence that the ranking would change. But
+the thermal refinement does not remove it — the flow is the same on both
+thermal meshes — and R1h's fine-flow result was for another design. What the
+binary designs' ranking does on a finer flow is untested.
+
+**Fixed after the review:**
+
+- **The check now stops at its first failed checkpoint.** It recorded the h/4
+  anchors and gates before solving on h/8, but called `check_failures` only
+  after both levels, so a failed anchor would still have let the h/8 solves
+  run. It now checks right after h/4: on any failure it writes the record with
+  the failures and exits non-zero before h/8 is built. A test in
+  `validation/test_zhao2d_binary.py` puts one design's h/4 Ψ off by 10⁻⁹ and
+  fails if an h/8 problem is built or anything is solved. All three anchors
+  reproduced in the run, so the results above stand and nothing was rerun. The
+  script that ran is restored by `results/zhao2d_r1l_h8_check_at_run.patch`
+  (`patch -p1` on the current script reproduces the recorded hash; checked).
+- **Wording only, no number changed:** the degenerate root's missing
+  derivative is η's implicit one (in "Where the implicit derivative does not
+  apply" above, and in the `DegenerateProjection` docstring and the driver's
+  message); the two projections' J compare as different designs; A's and B's
+  hash counts are project entries, with TOFLUX and the array digests counted
+  apart; 0.22 is a 2-norm; the h/8 coordinates are saved, as R1i's.
+- **Tests after the fixes:** `validation/test_zhao2d_binary.py` (18),
+  `validation/test_projection.py` (51) and the driver's two projection-root
+  tests, 71 passed in 60 s. The full suite was not rerun for this closure.
+
+## R1m: the contract (as proposed in the review of 0f88624; not yet authorised)
+
+To ask whether, with the binary geometry and thermal h/8 held, replacing the
+flow solved on h by the flow solved on h/2 keeps the pilot's lead over x₃₀₀,
+and what it does to the heat-balance deficit. x₃₀ is not repeated: the
+question is the pilot's smaller lead over the start, not a full three-design
+ranking on the fine flow.
+
+| thermal h/8 | flow h | flow h/2 |
+|---|---|---|
+| **x₃₀₀'s qualified baseline** | the h/8 check's state, reused after its identity is checked | **new:** one flow solve, one thermal solve |
+| **the pilot's qualified terminal** | likewise | **new:** likewise |
+
+- **Geometry:** the two saved binary s, 2000 fluid cells each, never filtered,
+  projected or re-thresholded. On h/2 the material is copied from the parent
+  element, with no new design variable, and the common h/8 thermal mesh must
+  receive the same material field from either flow mesh. The tabs stay fluid;
+  the total source and the inflow are checked by the existing rules.
+- **Held:** α_max = 10⁷, the materials, the source, the boundary rules, flow
+  2×2 and thermal 3×3 quadrature, the thermal residual.
+- **Checked before anything is solved:** the given s, each paired flow and
+  temperature, the yardstick and the meshes' identities. A failure writes the
+  record and stops before any new solve.
+- **Budget:** at most 2 flow and 2 thermal solves. No MMA, no AD, no β change,
+  no q sweep, no change of scheme, no new reference, no h/16.
+- **Reported:** Ψ, C and J on the h/4 yardstick (the same constants as a
+  common scale, not a production reference for a fine-flow model), the
+  temperature extremes, D_T/Q and the heat balance with the reaction defined
+  as in R1h, the volume and the inflow, the residuals, and every s, u/p and T
+  saved with its hash. Replacing the flow is one complete response: inlet-wins
+  leaves a slip one flow element long on the tab wall, which shrinks with the
+  flow mesh, so not every difference is the divergence's.
+- **No pass mark,** and no invented "within 1%". After the four cells, stop.
+  If the ranking holds, that supports optimising further on this model; if it
+  changes, or the deficit stays large, that is a result too. Neither triggers a
+  finer mesh or a new scheme by itself. Two flow meshes are not an exact
+  solution.
+
+The review also remapped the pilot's raw design at β = 32, geometry only: the
+volume stays 0.3999693443 (g = −7.66×10⁻⁵), η ≈ 0.50454946, grey 4.5%. Raising β
+no longer moves the volume as the fixed-threshold tanh projection did, but
+nothing about its performance was computed, and it is not a reason to skip
+R1m.
+
+Cost is not promised. R1h verified R1f's cached h/2 flow instead of solving
+it, so no h/2 flow solve is timed in these records; the h/8 check's thermal
+solves took 205–226 s each.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
