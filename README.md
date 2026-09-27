@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done here; the work continues in its own repository, Cooling-conformal-AOp |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8, 1.95% with the flow also refined to h/2); next proposed, not authorised: one β = 32 stage from it |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8, 1.95% with the flow also refined to h/2); one β = 32 stage from it gives a second qualified binary design, 1.86% better again on the development model and 1.56% on the finer check model (lower C, higher Ψ) |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -167,9 +167,20 @@ comes from two large steps of opposite sign, not from small errors.
 From here the two models have separate jobs. The development model (flow h,
 thermal h/4) generates candidates; the finer pair (flow h/2, thermal h/8)
 re-checks the important binary ones. A new candidate has to earn its own lead
-on both. The next proposed stage, R1n, is one sharper projection stage (Xu
-β = 32, at most 30 updates) from the pilot's raw design, with its binary design
-checked on both layers. It is not yet authorised.
+on both.
+
+**A sharper stage gives a second candidate, better on both layers.** R1n ran 30
+more updates from the pilot's raw design at Xu β = 32. Its qualified binary
+design beats the pilot's by 1.86% in J on the development model and by 1.56% on
+the finer check model.
+- Against the pilot it trades a lower thermal compliance for a higher
+  dissipation, so the order holds only for weights w below about 0.75; the
+  objective uses 0.5.
+- Against the start x₃₀₀ it is 2.7% and 3.5% better, with both objectives lower.
+- It is still budget-limited and not converged, and the continuous–binary gap
+  is still 36%.
+- It does not show that β = 32 beats 16, because the new map, a restarted MMA
+  and 30 more updates all contributed.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
@@ -235,6 +246,7 @@ python scripts/zhao2d_r1l_baselines.py --out DIR        # qualified binary basel
 python scripts/zhao2d_r1l_vp_pilot.py --out DIR         # 30 updates on the volume-preserving projection
 python scripts/zhao2d_r1l_h8_check.py --out DIR         # the three qualified binary designs on thermal h/8
 python scripts/zhao2d_r1m_flow_check.py --out DIR       # two of them with the flow on h/2, thermal h/8
+python scripts/zhao2d_r1n_beta32_pilot.py --out DIR     # one beta = 32 stage from the pilot, its binary on both layers
 python scripts/zhao2d_figures.py                        # docs/figures/, drawn from the saved results
 ```
 

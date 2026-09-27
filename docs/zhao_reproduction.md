@@ -27,7 +27,7 @@ governing equations, objective, constraint — is kept.
 | — | the volume-preserving projection of Xu, Cai & Cheng (2010) becomes the default; earlier record scripts pinned to the tanh projection | **done**; see "The volume-preserving projection" |
 | R1l | qualified binary baselines from R1d's and R1k's saved physical densities by one volume-threshold rule; then 30 updates from x₃₀ on the volume-preserving projection at β = 16, judged on the qualified binary design | **done** — qualified, x₃₀ is still +1.45% worse than x₃₀₀; the new-projection pilot's qualified binary terminal is −0.85% against x₃₀₀'s and −2.27% against x₃₀'s; budget used, not converged; the continuous–binary gap stays +38.7%. On thermal h/8 the ranking holds and the pilot's lead grows: −1.60% against x₃₀₀, −2.57% against x₃₀; closed in the review of 0f88624, which also found the binary designs' heat-balance deficit D_T/Q at 20–25% on h/8 |
 | R1m | x₃₀₀'s qualified baseline and the pilot's qualified terminal: flow h → h/2 on the common thermal h/8; at most 2 flow and 2 thermal solves, no MMA, no AD | **done** — the ranking holds on flow h/2 and the lead grows: the pilot −1.95% against x₃₀₀ (−1.60% on flow h), both objectives lower. Replacing the flow moves C by −8.0% and −8.4%, about the size of the thermal step h/4 → h/8 and of the opposite sign; D_T/Q falls from 24.7% and 21.0% to 5.7% and 4.9%; closed in the review of d56d6ab |
-| R1n | from the pilot's raw terminal design, one Xu β = 32 stage on the development model, at most 30 MMA updates; its qualified binary design evaluated on the development layer (flow h, thermal h/4) and the check layer (flow h/2, thermal h/8), at most 2 flow and 2 thermal solves | proposed in the review of d56d6ab; not authorised |
+| R1n | from the pilot's raw terminal design, one Xu β = 32 stage on the development model, at most 30 MMA updates; its qualified binary design evaluated on the development layer (flow h, thermal h/4) and the check layer (flow h/2, thermal h/8), at most 2 flow and 2 thermal solves | **done** — budget used, not converged. The new qualified binary design is ahead of the pilot's by 1.86% in J on the development layer and 1.56% on the check layer (lower C, higher Ψ: ahead for w below about 0.75), and of x₃₀₀'s by 2.70% and 3.48% with both objectives lower. The continuous–binary gap is +35.8% |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -94,6 +94,15 @@ scale: cooler at 90–93% of the nodes, with the larger rises at the corner
 where the inlet tab meets the design domain. (d) J of both designs on flow h and h/2,
 thermal h/8: the pilot stays ahead. (e) The heat-balance deficit D_T/Q with
 each flow.
+
+![R1n: one β = 32 stage from the pilot](figures/zhao2d_r1n.png)
+
+R1n. (a) The pilot's qualified binary design, where R1n starts. (b, c) After
+30 updates at β = 32: the continuous design and its qualified binary design,
+which differs from (a) in 42 cells. (d) The continuous J and the volume over
+the updates; the dashed line is the pilot's β = 16 terminal, the same x as
+update 0 under the other map. (e) J of the three qualified binary designs on
+both layers.
 
 ## R1d: the 300-update run
 
@@ -1832,9 +1841,9 @@ with D_T = ∫ b_f T ∇·u, H the boundary enthalpy flux, Q = 5200 the source a
 | the pilot's qualified terminal | 18.93% | 20.95% |
 
 For x₃₀₀ on h/8, H = 6482.2492, r_D = −0.07276 and D_T = 1282.3219; the identity
-closes. These are the review's numbers. R1m, below, evaluated the h/8 values
-for x₃₀₀ and the pilot with this project's own code and reproduces them. The
-h/4 values and x₃₀'s remain the review's.
+closes. These are the review's numbers. With this project's own code, R1m
+(below) reproduces the h/8 values for x₃₀₀ and the pilot, and R1n reproduces
+their h/4 values. x₃₀'s remain the review's.
 On R1d's continuous design, R1h found 7.6–9.0% on flow h and 0.7–1.3% on flow
 h/2. As R1h says, D_T/Q describes the global balance of the discrete
 solution, produced by the velocity's discrete divergence in the
@@ -2080,7 +2089,7 @@ It also settled, for now, what each of the two models is for:
   (h/2, h/4) is ever to be chosen, E costs one thermal state per design, on the
   saved fine flows.
 
-## R1n: the contract (as proposed in the review of d56d6ab; not yet authorised)
+## R1n: the contract (as proposed in the review of d56d6ab; authorised and run)
 
 To ask whether one stronger sharpening step, on the development model, gives a
 better qualified binary design, not merely a blacker continuous density. The
@@ -2130,6 +2139,109 @@ improve, that is the result: this pilot did not improve it. It is not a reason
 to raise β or add updates. R1n would not show that β = 32 beats 16, and it is
 not an equal-budget projection ablation. Extending the pilot at a fixed β = 16
 instead would be a different experiment, and would be named as one.
+
+## R1n: what it found
+
+Authorised on the local CPU. `scripts/zhao2d_r1n_beta32_pilot.py`; record
+`results/zhao2d_r1n_beta32.json` (and `.log`); fields
+`results/zhao2d_r1n_fields.npz` (the 31 designs, the terminal's states, and the
+new binary design with its states on both layers); figure
+`docs/figures/zhao2d_r1n.png`. As in R1m, a failed gate writes the record and
+stops the run. `validation/test_zhao2d_binary.py` tests that a failed anchor on
+the development layer stops it before any update.
+
+**Gates; all passed.**
+
+- **Before any update:**
+  - The start design is the pilot's last saved design row, from the fields
+    file R1m hashed. The reused binary states are R1l's and R1m's, by hash.
+  - The reference belongs to the development model and is R1m's yardstick.
+  - x₃₀₀'s and the pilot's saved binary states re-verify and reproduce R1l's
+    Ψ and C exactly. Their D_T/Q, 22.1859% and 18.9265%, is also the review's
+    h/4 figure to every digit.
+  - The zero step's root is non-degenerate (η = 0.50454946, slope
+    −3.3×10⁻⁵). The volume is preserved (5.6×10⁻¹⁷), and the constraint
+    gradient is affine (1.3×10⁻¹⁷).
+- **During the updates:** the driver gated every state.
+- **Before the check layer's solves:**
+  - Its meshes are R1m's.
+  - x₃₀₀'s and the pilot's R1m states re-verify and reproduce R1m's Ψ and C.
+  - The new design's copy to h/2 keeps its fluid fraction and its tabs, and
+    gives the h/8 mesh its parents' material, bit for bit.
+- **After each solve:** every flow re-verifies (1.5–1.8×10⁻¹⁴). The h/8
+  temperature again ran to the 40-iteration cap, at 2.3×10⁻¹¹, and passed the
+  10⁻⁸ gate.
+
+**The run.**
+
+- The zero step is feasible. The map switch leaves the constraint where it was
+  (g = −7.66×10⁻⁵ at both β), because the constraint sees the filtered volume.
+- The first update overshot the volume (g −4.3%), as in R1l, and every state
+  stayed feasible.
+- J rose at updates 1, 6, 12, 18, 23 and 27. The lowest evaluated J is the
+  terminal's.
+- The move limit bound (largest single change ≥ 0.0999) at 13 of the 30
+  updates, including the last. The last step was L2 0.186, L∞ 0.0997,
+  RMS 0.0026.
+- The KKT proxy went from 0.19 to 0.029 and did not fire. The budget ended the
+  run (`phase_end`); it is not converged.
+
+| | J | Ψ | C | grey |
+|---|---|---|---|---|
+| the pilot's β = 16 terminal (its record) | 0.986845 | 0.0166309 | 29437.52 | 6.2% |
+| β = 32, zero step (the same x) | 1.011644 | 0.0143859 | 31892.70 | 4.5% |
+| β = 32, terminal | 0.989137 | 0.0168121 | 29414.03 | 5.4% |
+| its qualified binary design (flow h, thermal h/4) | 1.343323 | 0.0129383 | 46319.99 | 2000 fluid cells |
+
+The three responses, kept apart:
+
+- **Map switch**, from the β = 16 terminal to the β = 32 zero step, the same x:
+  J +2.51% (Ψ −13.5%, C +8.3%); grey 6.2% → 4.5%; η 0.5104 → 0.5045.
+- **Optimisation**, from the zero step to the terminal: J −2.22% (Ψ +16.9%,
+  C −7.8%); grey 4.5% → 5.4%.
+- **Export gap**, from the terminal to its qualified binary design: J +35.8%
+  (Ψ −23.0%, C +57.5%). The pilot's was +38.7%.
+
+**The export:** t = 0.3812 (28 cells differ from s = 0.5), 2000 fluid cells,
+one connected fluid domain. It is a new geometry, 42 cells different from the
+pilot's binary design (21 each way).
+
+**The new qualified binary design against the two candidates, on both
+layers.** J is on the h/4 model's constants, qualified to qualified:
+
+| | development (flow h, thermal h/4) | check (flow h/2, thermal h/8) |
+|---|---|---|
+| the new design's J | 1.343323 | 1.330791 |
+| against the pilot | **J −1.86%** (Ψ +5.60%, C −3.09%) | **J −1.56%** (Ψ +5.53%, C −2.75%) |
+| against x₃₀₀ | J −2.70% (Ψ −1.03%, C −2.99%) | J −3.48% (Ψ −0.75%, C −3.96%) |
+| the new design's D_T/Q | 20.06% | 5.27% |
+
+- **On both layers the new design is ahead of the pilot and of x₃₀₀.**
+  - Against x₃₀₀, both objectives are lower on both layers, so that order holds
+    for any weight.
+  - Against the pilot it is a trade-off: lower C, higher Ψ. With these
+    denominators the new design is ahead for w below 0.770 (development) and
+    0.747 (check). That includes the contract's w = 0.5; above those weights
+    the pilot would be ahead.
+- Its lowest temperature on h/4 is −0.043, at 1 node (the pilot's is −0.077, at
+  2 nodes). On h/8 no node is below the inlet temperature.
+- **Candidates.** The pilot stays a verified candidate, as the contract says.
+  The new design is a second one, ahead of it at w = 0.5 on both layers. Which
+  one to carry forward is not decided here.
+- **What this does not say.**
+  - It does not show that β = 32 beats 16. The map switch, a reinitialised
+    MMA and 30 more updates all went into the new design, and there is no
+    equal-budget run at β = 16.
+  - The continuous–binary gap is still +35.8%.
+  - The run is not converged.
+- **Cost: 1773 s in all.**
+  - Development layer: build 44 s; the reused states' reports 28 s and 22 s.
+  - The zero step, 30 updates and the terminal: 905 s (24–31 s per update).
+  - The new design on the development layer: flow 3.3 s, thermal 9.8 s.
+  - Check layer: build 190 s; the reused states' reports 76 s and 65 s; the
+    new design's flow 34 s and thermal 295 s.
+  - Cumulative peak working set: 8289 MiB (4553 MiB after the development
+    layer).
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -2390,6 +2502,7 @@ python scripts/zhao2d_r1l_baselines.py --out DIR         # R1l A, qualified bina
 python scripts/zhao2d_r1l_vp_pilot.py --out DIR          # R1l B, 30 updates on the volume-preserving projection (~16 min)
 python scripts/zhao2d_r1l_h8_check.py --out DIR          # R1l's qualified binary designs on thermal h/8 (~16 min)
 python scripts/zhao2d_r1m_flow_check.py --out DIR        # R1m: two of them with the flow on h/2, thermal h/8 (~22 min)
+python scripts/zhao2d_r1n_beta32_pilot.py --out DIR      # R1n: one beta = 32 stage, its binary on both layers (~30 min)
 python scripts/zhao2d_figures.py                         # docs/figures/ from the saved results, no solves
 ```
 

@@ -4,9 +4,9 @@ Each test targets a way a check could count a state or a comparison it should
 not: a NaN residual accepted because `max()` returned the finite one, an anchor
 that failed but left its cell counted, a volume-infeasible design ranked as if
 it qualified. The two reproducers from the review of 320ea73 are the first two
-gate and usability cases. The last two are the review of 0f88624's, a failed
+gate and usability cases. The last three are the review of 0f88624's, a failed
 anchor that did not stop the check before its next solves, and the same guard
-for R1m.
+for R1m and R1n.
 """
 
 import dataclasses
@@ -308,3 +308,49 @@ def test_r1m_stops_at_a_failed_flow_h_anchor_before_building_flow_h2(tmp_path, m
     assert set(record["cells"]) == {"x300/flow_h", "pilot/flow_h"}
     assert record["cells"]["pilot/flow_h"]["anchor"]["reproduced"]
     assert not (tmp_path / rm.FIELDS).exists()
+
+
+def test_r1n_stops_at_a_failed_development_anchor_before_any_update(tmp_path, monkeypatch):
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
+    import zhao2d_r1n_beta32_pilot as rn
+
+    root = pathlib.Path(__file__).resolve().parent.parent / "results"
+    a = json.loads((root / "zhao2d_r1l_baselines.json").read_text(encoding="utf-8"))["designs"]
+    b = json.loads((root / "zhao2d_r1l_vp_pilot.json").read_text(encoding="utf-8"))["export"]
+    yard = json.loads((root / "zhao2d_r1m_flow_check.json").read_text(encoding="utf-8"))["yardstick"]
+    flows = {"x300": (np.load(root / "zhao2d_r1l_baselines_fields.npz")["x300_press_vel"], a["x300"]),
+             "pilot": (np.load(root / "zhao2d_r1l_vp_pilot_fields.npz")["binary_press_vel"], b)}
+    fake = SimpleNamespace(flow_mesh=z.build_mesh(z.Zhao2DSpec(), dofs_per_node=3),
+                           thermal_mesh=SimpleNamespace(num_elems=1))
+
+    def build(spec, config, thermal_refinement=2, thermal_quadrature=3):
+        if thermal_refinement != 4 or spec.element_size != z.Zhao2DSpec().element_size:
+            pytest.fail("built the check layer after an anchor failed")
+        return fake
+
+    def report(problem, s, pv, temperature, alpha_max, scale):
+        name, rec = next((n, r) for n, (f, r) in flows.items() if np.array_equal(f, pv))
+        return _saved_state_report(rec["psi"] * (1.0 + 1e-9 if name == "x300" else 1.0),
+                                   rec["compliance"])
+
+    monkeypatch.setattr(rn.sys, "argv", ["r1n", "--out", str(tmp_path)])
+    monkeypatch.setattr(rn.faulthandler, "dump_traceback_later", lambda *a, **k: None)
+    monkeypatch.setattr(rn.dual, "Zhao2DDualProblem", build)
+    monkeypatch.setattr(rn.dual, "load_reference",
+                        lambda problem, path: SimpleNamespace(psi_0=yard["psi_0"], c_0=yard["c_0"]))
+    monkeypatch.setattr(rn.drv, "run", lambda *a, **k: pytest.fail("updated after an anchor failed"))
+    monkeypatch.setattr(rn.tf_solver, "modified_newton_raphson_solve",
+                        lambda *a, **k: pytest.fail("solved something after an anchor failed"))
+    monkeypatch.setattr(rn.fs, "verify_flow_state",
+                        lambda problem, pv, s, alpha_max, tol: {"residual_relative": 0.0})
+    monkeypatch.setattr(rn.fs, "cell_report", report)
+    with pytest.raises(SystemExit) as stop:
+        rn.main()
+    assert "nothing after it was built, updated or solved" in str(stop.value.code)
+    record = json.loads((tmp_path / rn.RECORD).read_text(encoding="utf-8"))
+    assert [c["stage"] for c in record["checkpoints"]] == [
+        "inputs", "development layer: the reused states"]
+    assert record["checkpoints"][0]["failures"] == []
+    assert [f.split(":")[0] for f in record["checkpoints"][-1]["failures"]] == ["x300/development"]
+    assert set(record["cells"]) == {"x300/development", "pilot/development"}
+    assert "zero_step_map" not in record and not (tmp_path / rn.FIELDS).exists()

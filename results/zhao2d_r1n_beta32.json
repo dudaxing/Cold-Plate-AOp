@@ -1,0 +1,2965 @@
+{
+  "note": "R1n: one stage of the volume-preserving projection at beta 32 from the R1l pilot's raw terminal design, MMA reinitialised, on the development model (flow h, thermal h/4); its qualified binary design evaluated there and on the check layer (flow h/2, thermal h/8) against the pilot's and x300's, on the h/4 model's constants. Not an exact resume, not a finding that beta 32 beats 16, not an equal-budget projection ablation.",
+  "provenance": {
+    "git_head": "98309e9256ce681c0d749dd34424ad6effefcc04",
+    "git_status_porcelain": [
+      "M validation/test_zhao2d_binary.py",
+      "?? scripts/zhao2d_r1n_beta32_pilot.py"
+    ],
+    "source_sha256": {
+      "tfopus/__init__.py": "4f8f07278ef09f9943b1a75b5c6651abc0a774ba8f9bcefd873f3410766500f6",
+      "tfopus/_callback_solve.py": "3893ee73af4b3d288a390967291729b168c216b5d2f5c56cb949fe3d29bee7be",
+      "tfopus/_threads.py": "46202a99056e2e7bd334a28fc7cd07c307f9a25293aa5c5d0a30e5a9315f4104",
+      "tfopus/advection_benchmark.py": "0164cd07368eacccb9f2145d5cac3f1db3c15a708ff4a63f906f100dbd69a40f",
+      "tfopus/bc3d.py": "425269329418f787a1bc8617fedea48cb83ec4269a03bd0cb8d00f1580af76fb",
+      "tfopus/design.py": "8541421386305329195472d8aa0fd6a42da90b38c95dd61f69fba441a5120138",
+      "tfopus/elements.py": "db2c62c44de30ec17dfce5b9d2af1e415fdec8f070c3c3e41690b7d9093a2a80",
+      "tfopus/fe_flow.py": "8faf45037fdb760c9d778474333720c84e3474dbe0dc7e880ddc12696a9265df",
+      "tfopus/fe_thermal.py": "6a13b8b82e84fc67e87078bde9bb5146b99f981979832be087bce80f47e5bcc0",
+      "tfopus/geometry.py": "6b2586d988667e7ee317fb6e864a43f5fb60b1a472ff68963cf813654f188505",
+      "tfopus/materials.py": "117b4a36676c9f2272ddd153e9e69fb08d3ef27b0e0c51b7097a80fc5f9daa11",
+      "tfopus/mesh.py": "a1aa2881c06ce45be42730a2c21bea1c48a9abd7cc3885e438f7b79bf948fe42",
+      "tfopus/projection.py": "2522292de520bf17ee9bc2e8aa87b4e6f532346a8a2f51ddb9c0c6102861a65a",
+      "tfopus/sparse_bc.py": "22d37784a86fd5e62e320df7f99e14d531892b638839e733310213c0d7b2583b",
+      "tfopus/zhao2d.py": "60f1205b533d4dcb0d49dd9d2d36a4364d1c0da9f02a457a57d25ed18724ebe6",
+      "tfopus/zhao2d_analysis.py": "543a42633426fdd885ed8c7881d8d616c868a04aee472455b35484490752d2df",
+      "tfopus/zhao2d_binary.py": "cd375d1361cdc2419f68dd362062c4d9257807db7ab56d4268223cea70cf7680",
+      "tfopus/zhao2d_driver.py": "e4e24a67e3eca12c4231a5a43301a7f07d846e95eaf0182ed8f9d9049fbbb5bf",
+      "tfopus/zhao2d_dual.py": "a2fc719f033058365dba159b1af8d0ee04286ee90f7366d7a6277cb3d4cef047",
+      "tfopus/zhao2d_flow_study.py": "2a451ecfc5a2d4053fbc177248592c8596f91b556fe95b55c9ccc7f575e8e33f",
+      "tfopus/zhao2d_r1.py": "7e4df67caa094e48ad934b15e9ae06ad7da4245c7eb01aa05c8492970c5a879e",
+      "tfopus/zhao2d_refine.py": "5070a9ad93645aaba55bea2936946f82cc948fafda9a0996463311a535e93d0f",
+      "tfopus/zhao2d_thermal_study.py": "b57e419c4e9ba546e3cd2447638b2cf64e469e4c1fc760e26446c41accd21941",
+      "scripts/zhao2d_flow_mesh_check.py": "51ccb9afe1eec6f964cb2fb6714520df056375b8e07cd044b9fcce455ea9539e",
+      "scripts/zhao2d_dual_check.py": "57afde862ffb0283284f7c23dc5a4a7391feb4b71ad4826ce59046c5d3c921b5",
+      "scripts/zhao2d_r1n_beta32_pilot.py": "b5e608d17ecd865d78c18004a9d310886dbbbe1d850dbccfa169ed49932598a5",
+      "scripts/zhao2d_r1m_flow_check.py": "1484f46a99468e756ddc9f54a4b3b199c3399f4d38a9d2faa41139dc0ef9c698"
+    },
+    "toflux_src_sha256": {
+      "__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bc.py": "a3fc663f26d1d8ad4813ba02d4cb344d3b34b855b0647d99077f7160e1babecd",
+      "constrained_loss.py": "846b464db6ad182eefddfa30995831606698f6a71a989c33cca4be390c1d75e2",
+      "element.py": "ae8f5367dbfdb21f615682e525c6ff7cd7063b1632794870d659638fcafee3a4",
+      "fe_fluid.py": "8b012b6f1a1e644f809d10e946db3d52d496f8569ae1817a46d9272dc9407ade",
+      "fe_struct.py": "8c8224edc0c36fcb5796aa1d39f57769bdc6cb92556a2c38993daf38c31e7c8b",
+      "fe_thermal.py": "ffef199d9a2608f66077c19f369a6d1851125ba11b55faf9011385d2758e8461",
+      "geometry.py": "4bf21900872eb6c3733a124746acf6744d30ebc89a43d03683b78e62d4656a7f",
+      "material.py": "504a9e02d75a3978d2ce624139c62002a20e7dbb8db32fcff10083a84d002351",
+      "mesher.py": "e60c691a8f1680ed30988ac48fc32263a53a2cfd2026d5735e167221a3f5b458",
+      "mma.py": "619952b8585a29b39930d12291da5338c585210d79030c8cbf3130d592ae829f",
+      "solver.py": "df36a4e0d62304c8329dcb782f839451f2bc381002225c1f745865a754aa8b4b",
+      "utils.py": "9c788175c2ec1987daebc7f429b2681a20f344f6e772b602557d191393da970c",
+      "viz.py": "eb40ea7f4661d667a76133032bc41da4ae0802b0ae265c016d9c7223dc6afbbb"
+    },
+    "environment": {
+      "python": "3.13.6",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "jax": "0.11.0",
+      "numpy": "2.4.6",
+      "scipy": "1.17.1",
+      "x64": true,
+      "threads": {
+        "OPENBLAS_NUM_THREADS": "8",
+        "OMP_NUM_THREADS": "8",
+        "MKL_NUM_THREADS": "8",
+        "NUMEXPR_NUM_THREADS": "8"
+      },
+      "cpu_count": 32
+    }
+  },
+  "inputs_sha256": {
+    "zhao2d_r1l_baselines.json": "a248099bc4ca8c75eb5092ed3bce8aed4ace53edffce9579a5d5ba07b15f14c3",
+    "zhao2d_r1l_baselines_fields.npz": "0df7ec2042ecbeb44788ef895a1a4c9852bb7f40d292eb94eab312824e0978e6",
+    "zhao2d_r1l_vp_pilot.json": "a8479d622784104dcf9a0b51292d69f18ec20489d85f267e74d7e28aef3d9e12",
+    "zhao2d_r1l_vp_pilot_fields.npz": "08b62fb67c444a828cd341ec495da97d99940dc692827705b83edaa727b01b30",
+    "zhao2d_r1m_flow_check.json": "063134d3a34c2d55efa1db92b33111b3d09ed2752295d72ab53e113ff7d84477",
+    "zhao2d_r1m_fields.npz": "feef9aeda9fb58a760bea15bffc67b948cbd911e5d3bc42e5ebc980269ad2b5a"
+  },
+  "contract": {
+    "projection": "volume_preserving",
+    "beta": 32.0,
+    "alpha_max": 10000000.0,
+    "max_mma_updates": 30,
+    "move_limit": 0.1,
+    "gate": 1e-08,
+    "weight": 0.5,
+    "continuation": "none",
+    "fingerprint": "{\"alpha_max_reference\": 1000000.0, \"element_length_mode\": \"min_edge\", \"filter_radius_elements\": 2.0, \"flow_form\": {\"brinkman_in_supg_residual\": true, \"brinkman_in_tau\": true, \"viscous_form\": \"symmetric\"}, \"max_fluid_fraction\": 0.4, \"outlet\": \"traction\", \"projection\": \"volume_preserving\", \"projection_beta\": 0.0, \"reference\": \"tabs_fluid\", \"source\": \"whole_domain\", \"thermal_form\": {\"stabilise_source\": true, \"supg_heat_capacity\": true, \"tau\": \"two_limit\", \"tau_velocity_floor\": 1e-12}, \"volume_domain\": \"design\", \"weight\": 0.5}",
+    "binary_solves_at_most": {
+      "flow": 2,
+      "thermal": 2
+    }
+  },
+  "initial_design": {
+    "file": "results/zhao2d_r1l_vp_pilot_fields.npz",
+    "key": "design",
+    "sha256_float64": "e732e3a80feab7405ee417dd4daf8755e6683731e53866926a481d902de9a5da"
+  },
+  "yardstick": {
+    "psi_0": 0.03157912835073678,
+    "c_0": 20343.13770002236,
+    "file": "tfopus/zhao2d_reference_dual_r4q3_v1.json",
+    "file_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+  },
+  "reporting_scale": {
+    "psi_0": 0.03157912835073678,
+    "c_0": 20332.91587569144,
+    "identity": "single-mesh h reference; J* only"
+  },
+  "zero_step_map": {
+    "root": {
+      "eta": 0.5045494601133163,
+      "slope": -3.250735011355999e-05,
+      "nondegenerate": true
+    },
+    "g0": -7.663935771018426e-05,
+    "volume_projected_minus_filtered": 5.551115123125783e-17,
+    "constraint_gradient_vs_affine_max_abs": 1.2793585635328952e-17,
+    "constraint_gradient_affine_max_abs": 0.0005956435022410458
+  },
+  "history": [
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 1.011643899739449,
+      "psi": 0.014385884555563253,
+      "compliance": 31892.6977926689,
+      "psi_over_psi0_self": 0.4555504001182355,
+      "c_over_c0_self": 1.5677373993606625,
+      "J_paper_interpreted": 0.9238020729322094,
+      "psi_over_paper": 0.31547992446410644,
+      "c_over_paper": 1.5321242214003123,
+      "constraint_g": -7.663935771018426e-05,
+      "grey_fraction": 0.04500000178813934,
+      "v_f_whole_domain": 0.42304744640088066,
+      "v_f_design_domain": 0.39996934425691594,
+      "flow_residual_relative": 1.2271544855784675e-14,
+      "thermal_residual_relative": 3.1535158095074186e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5045494601133163,
+      "projection_root_slope": -3.250735011355999e-05,
+      "iteration": 0,
+      "phase": "r1n-vp32",
+      "seconds": 43.1788284778595,
+      "model_changed": false,
+      "kkt_proxy": 0.1930860519896318,
+      "design_step_norm": 1000.0,
+      "proxy_criterion": null,
+      "J_star": 1.0120379685584822,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 1.3370817017502445,
+      "psi": 0.030710680275904245,
+      "compliance": 34617.18713791331,
+      "psi_over_psi0_self": 0.9724993019064039,
+      "c_over_c0_self": 1.701664101594085,
+      "J_paper_interpreted": 1.1682442181958914,
+      "psi_over_paper": 0.6734798306119352,
+      "c_over_paper": 1.6630086057798477,
+      "constraint_g": -0.04266494190331638,
+      "grey_fraction": 0.04057692363858223,
+      "v_f_whole_domain": 0.4066673300371859,
+      "v_f_design_domain": 0.3829340232386735,
+      "flow_residual_relative": 3.0913506658839246e-14,
+      "thermal_residual_relative": 4.153537343845781e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.4960011395938039,
+      "projection_root_slope": -2.6438835432506767e-05,
+      "iteration": 1,
+      "phase": "r1n-vp32",
+      "seconds": 26.24283242225647,
+      "model_changed": false,
+      "kkt_proxy": 0.22607377787041344,
+      "design_step_norm": 1.6556004222292593,
+      "proxy_criterion": null,
+      "J_star": 1.3375094345855905,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 1.1464830361257647,
+      "psi": 0.024231158717891194,
+      "compliance": 31036.517059361136,
+      "psi_over_psi0_self": 0.767315628498842,
+      "c_over_c0_self": 1.5256504437526874,
+      "J_paper_interpreted": 1.011189192449429,
+      "psi_over_paper": 0.5313850596028771,
+      "c_over_paper": 1.4909933252959808,
+      "constraint_g": -0.027038902593005676,
+      "grey_fraction": 0.041923075914382935,
+      "v_f_whole_domain": 0.41267734515653626,
+      "v_f_design_domain": 0.38918443896279775,
+      "flow_residual_relative": 2.4586123255483762e-14,
+      "thermal_residual_relative": 3.1638621577408344e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5122921692543305,
+      "projection_root_slope": -3.305530736538129e-05,
+      "iteration": 2,
+      "phase": "r1n-vp32",
+      "seconds": 24.01098346710205,
+      "model_changed": false,
+      "kkt_proxy": 0.43196926976465644,
+      "design_step_norm": 1.3691914579361635,
+      "proxy_criterion": null,
+      "J_star": 1.1468665259046475,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 1.137833615425751,
+      "psi": 0.016059087539874457,
+      "compliance": 35949.01720264257,
+      "psi_over_psi0_self": 0.5085348576285127,
+      "c_over_c0_self": 1.767132373222989,
+      "J_paper_interpreted": 1.0395813267536105,
+      "psi_over_paper": 0.3521729723656679,
+      "c_over_paper": 1.7269896811415533,
+      "constraint_g": -0.020243416395518965,
+      "grey_fraction": 0.03711538389325142,
+      "v_f_whole_domain": 0.41529099369403116,
+      "v_f_design_domain": 0.39190263344179244,
+      "flow_residual_relative": 1.44672906070111e-14,
+      "thermal_residual_relative": 3.533275010721686e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5342377121603692,
+      "projection_root_slope": -2.6210865625936495e-05,
+      "iteration": 3,
+      "phase": "r1n-vp32",
+      "seconds": 25.18867039680481,
+      "model_changed": false,
+      "kkt_proxy": 0.3376360985813936,
+      "design_step_norm": 1.2813535463164154,
+      "proxy_criterion": null,
+      "J_star": 1.1382778044638358,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 1.1116526413873649,
+      "psi": 0.02084802652636915,
+      "compliance": 31798.797130641466,
+      "psi_over_psi0_self": 0.6601837230850212,
+      "c_over_c0_self": 1.5631215596897088,
+      "J_paper_interpreted": 0.9924034003291533,
+      "psi_over_paper": 0.45719356417476203,
+      "c_over_paper": 1.5276132364835446,
+      "constraint_g": -0.018435580912843808,
+      "grey_fraction": 0.04346153885126114,
+      "v_f_whole_domain": 0.4159863150335217,
+      "v_f_design_domain": 0.3926257676348625,
+      "flow_residual_relative": 1.852644246070723e-14,
+      "thermal_residual_relative": 3.1849229142734637e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5433283306085175,
+      "projection_root_slope": -3.169398494955162e-05,
+      "iteration": 4,
+      "phase": "r1n-vp32",
+      "seconds": 30.239314556121826,
+      "model_changed": false,
+      "kkt_proxy": 0.30274054070644796,
+      "design_step_norm": 1.1336152397085177,
+      "proxy_criterion": null,
+      "J_star": 1.1120455499620303,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 1.0925673213272031,
+      "psi": 0.01615500374048289,
+      "compliance": 34045.511493634236,
+      "psi_over_psi0_self": 0.511572186573857,
+      "c_over_c0_self": 1.6735624560805493,
+      "J_paper_interpreted": 0.9949108616113939,
+      "psi_over_paper": 0.3542763978176073,
+      "c_over_paper": 1.6355453254051804,
+      "constraint_g": -0.013834435850007987,
+      "grey_fraction": 0.038846153765916824,
+      "v_f_whole_domain": 0.4177559862115353,
+      "v_f_design_domain": 0.39446622565999684,
+      "flow_residual_relative": 1.4122715432821851e-14,
+      "thermal_residual_relative": 3.2977364245640883e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5584735504209688,
+      "projection_root_slope": -2.4424855728706145e-05,
+      "iteration": 5,
+      "phase": "r1n-vp32",
+      "seconds": 30.870837688446045,
+      "model_changed": false,
+      "kkt_proxy": 0.27214916636895875,
+      "design_step_norm": 1.7195596927281331,
+      "proxy_criterion": null,
+      "J_star": 1.092987990490875,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 1.2002883679724894,
+      "psi": 0.028604347563836875,
+      "compliance": 30408.46629657318,
+      "psi_over_psi0_self": 0.9057991482899654,
+      "c_over_c0_self": 1.4947775876550136,
+      "J_paper_interpreted": 1.0440550548648926,
+      "psi_over_paper": 0.6272883237683525,
+      "c_over_paper": 1.4608217859614325,
+      "constraint_g": -0.047168773332214586,
+      "grey_fraction": 0.04403846338391304,
+      "v_f_whole_domain": 0.40493508717991744,
+      "v_f_design_domain": 0.3811324906671142,
+      "flow_residual_relative": 2.3197895200179897e-14,
+      "thermal_residual_relative": 3.245426110154749e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5320726086089183,
+      "projection_root_slope": -3.1613653191614855e-05,
+      "iteration": 6,
+      "phase": "r1n-vp32",
+      "seconds": 30.76740264892578,
+      "model_changed": false,
+      "kkt_proxy": 0.3613793873406739,
+      "design_step_norm": 1.2827932193473843,
+      "proxy_criterion": null,
+      "J_star": 1.2006640975040583,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 1.0747113647713364,
+      "psi": 0.01857789862892879,
+      "compliance": 31758.20073519042,
+      "psi_over_psi0_self": 0.5882967516579775,
+      "c_over_c0_self": 1.5611259778846955,
+      "J_paper_interpreted": 0.9665365222730917,
+      "psi_over_paper": 0.40741005765194716,
+      "c_over_paper": 1.5256629868942362,
+      "constraint_g": -0.02428216193679744,
+      "grey_fraction": 0.04653846099972725,
+      "v_f_whole_domain": 0.4137376300243086,
+      "v_f_design_domain": 0.390287135225281,
+      "flow_residual_relative": 1.5300168518063255e-14,
+      "thermal_residual_relative": 3.341897636598894e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5518855182451621,
+      "projection_root_slope": -3.343152253183858e-05,
+      "iteration": 7,
+      "phase": "r1n-vp32",
+      "seconds": 30.00773310661316,
+      "model_changed": false,
+      "kkt_proxy": 0.2263011842629451,
+      "design_step_norm": 0.8482360706667987,
+      "proxy_criterion": null,
+      "J_star": 1.0751037717335727,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 1.0386098744131975,
+      "psi": 0.017919797629677346,
+      "compliance": 30713.3113693111,
+      "psi_over_psi0_self": 0.5674570061164863,
+      "c_over_c0_self": 1.5097627427099087,
+      "J_paper_interpreted": 0.9342222760389012,
+      "psi_over_paper": 0.39297801819467865,
+      "c_over_paper": 1.4754665338831237,
+      "constraint_g": -0.013861807506800439,
+      "grey_fraction": 0.05057692155241966,
+      "v_f_whole_domain": 0.4177454586512305,
+      "v_f_design_domain": 0.39445527699727984,
+      "flow_residual_relative": 1.4443791669979572e-14,
+      "thermal_residual_relative": 3.285897499859268e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5565832636295778,
+      "projection_root_slope": -3.838741610503355e-05,
+      "iteration": 8,
+      "phase": "r1n-vp32",
+      "seconds": 30.105090856552124,
+      "model_changed": false,
+      "kkt_proxy": 0.21196962456679705,
+      "design_step_norm": 0.7574018033414612,
+      "proxy_criterion": null,
+      "J_star": 1.0389893706357682,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 1.0282935047786772,
+      "psi": 0.01700849085309978,
+      "compliance": 30880.636591420796,
+      "psi_over_psi0_self": 0.538599123579133,
+      "c_over_c0_self": 1.5179878859782214,
+      "J_paper_interpreted": 0.9282490264357384,
+      "psi_over_paper": 0.37299322046271444,
+      "c_over_paper": 1.4835048324087623,
+      "constraint_g": -0.008998335668477964,
+      "grey_fraction": 0.05096153914928436,
+      "v_f_whole_domain": 0.4196160247428931,
+      "v_f_design_domain": 0.39640066573260885,
+      "flow_residual_relative": 1.5240239297485475e-14,
+      "thermal_residual_relative": 3.1861490659913137e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5636849379665816,
+      "projection_root_slope": -3.615651789812461e-05,
+      "iteration": 9,
+      "phase": "r1n-vp32",
+      "seconds": 31.03435778617859,
+      "model_changed": false,
+      "kkt_proxy": 0.1914266789756288,
+      "design_step_norm": 0.6354526324517287,
+      "proxy_criterion": null,
+      "J_star": 1.0286750684855699,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 1.0241604158856545,
+      "psi": 0.017248121281466078,
+      "compliance": 30558.107714460864,
+      "psi_over_psi0_self": 0.5461873769883094,
+      "c_over_c0_self": 1.5021334547829994,
+      "J_paper_interpreted": 0.9231294143961529,
+      "psi_over_paper": 0.3782482737163613,
+      "c_over_paper": 1.4680105550759446,
+      "constraint_g": -0.0073640048844483275,
+      "grey_fraction": 0.051923077553510666,
+      "v_f_whole_domain": 0.42024461350598136,
+      "v_f_design_domain": 0.39705439804622067,
+      "flow_residual_relative": 1.3662841312795305e-14,
+      "thermal_residual_relative": 3.2091501555451264e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5642720785933302,
+      "projection_root_slope": -3.782333270775974e-05,
+      "iteration": 10,
+      "phase": "r1n-vp32",
+      "seconds": 27.059109687805176,
+      "model_changed": false,
+      "kkt_proxy": 0.24580455086456604,
+      "design_step_norm": 0.6297540213573788,
+      "proxy_criterion": null,
+      "J_star": 1.0245379943989934,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 1.014367792311054,
+      "psi": 0.016231071659362398,
+      "compliance": 30814.861296071867,
+      "psi_over_psi0_self": 0.5139809901999308,
+      "c_over_c0_self": 1.514754594422177,
+      "J_paper_interpreted": 0.9181447715879426,
+      "psi_over_paper": 0.3559445539333859,
+      "c_over_paper": 1.4803449892424994,
+      "constraint_g": -0.005917413436697383,
+      "grey_fraction": 0.051346153020858765,
+      "v_f_whole_domain": 0.4208009948320395,
+      "v_f_design_domain": 0.39763303462532107,
+      "flow_residual_relative": 1.384044019596795e-14,
+      "thermal_residual_relative": 3.2893031418148398e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5697508085651377,
+      "projection_root_slope": -3.612196896035618e-05,
+      "iteration": 11,
+      "phase": "r1n-vp32",
+      "seconds": 28.1085147857666,
+      "model_changed": false,
+      "kkt_proxy": 0.15313403769929124,
+      "design_step_norm": 0.8275474914934041,
+      "proxy_criterion": null,
+      "J_star": 1.0147485432929422,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 1.0351420017924213,
+      "psi": 0.019289558424521454,
+      "compliance": 29689.82257782638,
+      "psi_over_psi0_self": 0.6108325160302092,
+      "c_over_c0_self": 1.4594514875546336,
+      "J_paper_interpreted": 0.9246573979623265,
+      "psi_over_paper": 0.42301663211669854,
+      "c_over_paper": 1.4262981638079544,
+      "constraint_g": -0.014927373466381288,
+      "grey_fraction": 0.051923077553510666,
+      "v_f_whole_domain": 0.4173356255898533,
+      "v_f_design_domain": 0.3940290506134475,
+      "flow_residual_relative": 1.4710594208937732e-14,
+      "thermal_residual_relative": 2.794655721798877e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.560976815546367,
+      "projection_root_slope": -4.1182790917350086e-05,
+      "iteration": 12,
+      "phase": "r1n-vp32",
+      "seconds": 25.442517518997192,
+      "model_changed": false,
+      "kkt_proxy": 0.2867824646031363,
+      "design_step_norm": 0.6348478966913417,
+      "proxy_criterion": null,
+      "J_star": 1.0355088517025988,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 1.0062350968292821,
+      "psi": 0.01647088217562379,
+      "compliance": 30329.487312108286,
+      "psi_over_psi0_self": 0.5215749463597688,
+      "c_over_c0_self": 1.4908952472987955,
+      "J_paper_interpreted": 0.9091155972294858,
+      "psi_over_paper": 0.3612035564829778,
+      "c_over_paper": 1.4570276379759937,
+      "constraint_g": -0.0066153012660166155,
+      "grey_fraction": 0.05269230902194977,
+      "v_f_whole_domain": 0.4205325764361474,
+      "v_f_design_domain": 0.39735387949359335,
+      "flow_residual_relative": 1.4175301184978534e-14,
+      "thermal_residual_relative": 3.0612007863610793e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5696583788769611,
+      "projection_root_slope": -3.7838308605633255e-05,
+      "iteration": 13,
+      "phase": "r1n-vp32",
+      "seconds": 25.315253257751465,
+      "model_changed": false,
+      "kkt_proxy": 0.10711561736478266,
+      "design_step_norm": 0.4452729588254696,
+      "proxy_criterion": null,
+      "J_star": 1.0066098504899685,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 1.0043180298093783,
+      "psi": 0.01799452148647509,
+      "compliance": 29269.967150898374,
+      "psi_over_psi0_self": 0.5698232480205634,
+      "c_over_c0_self": 1.4388128115981933,
+      "J_paper_interpreted": 0.9003725106359182,
+      "psi_over_paper": 0.3946166992648046,
+      "c_over_paper": 1.4061283220070318,
+      "constraint_g": -0.005758960533366886,
+      "grey_fraction": 0.054423075169324875,
+      "v_f_whole_domain": 0.42086193825639734,
+      "v_f_design_domain": 0.39769641578665327,
+      "flow_residual_relative": 1.485504758249538e-14,
+      "thermal_residual_relative": 2.978384473010988e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5669350681591916,
+      "projection_root_slope": -4.128944568015605e-05,
+      "iteration": 14,
+      "phase": "r1n-vp32",
+      "seconds": 24.761586904525757,
+      "model_changed": false,
+      "kkt_proxy": 0.12831026493493738,
+      "design_step_norm": 0.4403877792798545,
+      "proxy_criterion": null,
+      "J_star": 1.0046796919510788,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 0.9995955302752567,
+      "psi": 0.016509502333756112,
+      "compliance": 30034.469140166853,
+      "psi_over_psi0_self": 0.522797911025018,
+      "c_over_c0_self": 1.4763931495254954,
+      "J_paper_interpreted": 0.9024527319208928,
+      "psi_over_paper": 0.3620504897753533,
+      "c_over_paper": 1.4428549740664323,
+      "constraint_g": -0.0029840118374985236,
+      "grey_fraction": 0.05269230902194977,
+      "v_f_whole_domain": 0.42192922621634665,
+      "v_f_design_domain": 0.3988063952650006,
+      "flow_residual_relative": 1.4677935516334068e-14,
+      "thermal_residual_relative": 3.004056049262059e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.571027135587457,
+      "projection_root_slope": -3.829232810351317e-05,
+      "iteration": 15,
+      "phase": "r1n-vp32",
+      "seconds": 25.385666847229004,
+      "model_changed": false,
+      "kkt_proxy": 0.07936916878828158,
+      "design_step_norm": 0.31066344171249893,
+      "proxy_criterion": null,
+      "J_star": 0.9999666386669426,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 0.998032218627542,
+      "psi": 0.017394710160961974,
+      "compliance": 29400.61676388225,
+      "psi_over_psi0_self": 0.5508293315688093,
+      "c_over_c0_self": 1.4452351056862747,
+      "J_paper_interpreted": 0.8969338337621191,
+      "psi_over_paper": 0.38146294212635906,
+      "c_over_paper": 1.412404725397879,
+      "constraint_g": -0.002701469694520564,
+      "grey_fraction": 0.05403846129775047,
+      "v_f_whole_domain": 0.4220378962713382,
+      "v_f_design_domain": 0.3989194121221918,
+      "flow_residual_relative": 1.479771768773605e-14,
+      "thermal_residual_relative": 3.160928774793939e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5695629909268682,
+      "projection_root_slope": -4.083764819841701e-05,
+      "iteration": 16,
+      "phase": "r1n-vp32",
+      "seconds": 26.089210510253906,
+      "model_changed": false,
+      "kkt_proxy": 0.08335599812082231,
+      "design_step_norm": 0.2931801525376187,
+      "proxy_criterion": null,
+      "J_star": 0.9983954950866961,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 0.994169487180387,
+      "psi": 0.016778748656219443,
+      "compliance": 29640.256341773485,
+      "psi_over_psi0_self": 0.5313239957057895,
+      "c_over_c0_self": 1.4570149786549844,
+      "J_paper_interpreted": 0.8959360088713467,
+      "psi_over_paper": 0.36795501439077727,
+      "c_over_paper": 1.4239170033519162,
+      "constraint_g": -0.0015647780296553782,
+      "grey_fraction": 0.05384615436196327,
+      "v_f_whole_domain": 0.4224750853732093,
+      "v_f_design_domain": 0.39937408878813785,
+      "flow_residual_relative": 1.3968368907884988e-14,
+      "thermal_residual_relative": 2.923194716650119e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5714971292931765,
+      "projection_root_slope": -4.023179912627694e-05,
+      "iteration": 17,
+      "phase": "r1n-vp32",
+      "seconds": 29.40358829498291,
+      "model_changed": false,
+      "kkt_proxy": 0.055600048657945274,
+      "design_step_norm": 0.23232104748726665,
+      "proxy_criterion": null,
+      "J_star": 0.9945357246460407,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 0.9955659938882748,
+      "psi": 0.01691028045032386,
+      "compliance": 29612.34278625039,
+      "psi_over_psi0_self": 0.535489145314846,
+      "c_over_c0_self": 1.4556428424617036,
+      "J_paper_interpreted": 0.8967077602812693,
+      "psi_over_paper": 0.3708394835597338,
+      "c_over_paper": 1.4225760370028049,
+      "constraint_g": -0.0011267682213305097,
+      "grey_fraction": 0.05403846129775047,
+      "v_f_whole_domain": 0.42264355068410364,
+      "v_f_design_domain": 0.39954929271146783,
+      "flow_residual_relative": 1.5105259580117625e-14,
+      "thermal_residual_relative": 2.9987472411671776e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5714832258583873,
+      "projection_root_slope": -4.0299983778591876e-05,
+      "iteration": 18,
+      "phase": "r1n-vp32",
+      "seconds": 28.462318420410156,
+      "model_changed": false,
+      "kkt_proxy": 0.07091914835859459,
+      "design_step_norm": 0.14071995125200432,
+      "proxy_criterion": null,
+      "J_star": 0.9959318864517214,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 0.9927545560683999,
+      "psi": 0.016836143341630208,
+      "compliance": 29545.714657139877,
+      "psi_over_psi0_self": 0.5331414836609131,
+      "c_over_c0_self": 1.4523676284758866,
+      "J_paper_interpreted": 0.8942944467507244,
+      "psi_over_paper": 0.3692136697725923,
+      "c_over_paper": 1.4193752237288566,
+      "constraint_g": -0.0006992629098634406,
+      "grey_fraction": 0.054423075169324875,
+      "v_f_whole_domain": 0.42280797580389873,
+      "v_f_design_domain": 0.39972029483605465,
+      "flow_residual_relative": 1.470319266265641e-14,
+      "thermal_residual_relative": 2.9211095297016425e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5720530188744655,
+      "projection_root_slope": -4.080208538598196e-05,
+      "iteration": 19,
+      "phase": "r1n-vp32",
+      "seconds": 31.40921378135681,
+      "model_changed": false,
+      "kkt_proxy": 0.039206979708874046,
+      "design_step_norm": 0.1340222604918845,
+      "proxy_criterion": null,
+      "J_star": 0.9931196253691572,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 0.9921096904418216,
+      "psi": 0.016944155273933104,
+      "compliance": 29449.89665772001,
+      "psi_over_psi0_self": 0.5365618419147334,
+      "c_over_c0_self": 1.4476575389689097,
+      "J_paper_interpreted": 0.8931772412406196,
+      "psi_over_paper": 0.371582352498533,
+      "c_over_paper": 1.414772129982706,
+      "constraint_g": -0.00045411602932377004,
+      "grey_fraction": 0.05403846129775047,
+      "v_f_whole_domain": 0.42290226306564466,
+      "v_f_design_domain": 0.3998183535882705,
+      "flow_residual_relative": 1.416981869002859e-14,
+      "thermal_residual_relative": 3.116393014325778e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5721040383170601,
+      "projection_root_slope": -4.128548831311302e-05,
+      "iteration": 20,
+      "phase": "r1n-vp32",
+      "seconds": 30.511956691741943,
+      "model_changed": false,
+      "kkt_proxy": 0.03840099729122695,
+      "design_step_norm": 0.14538043741826012,
+      "proxy_criterion": null,
+      "J_star": 0.992473575807431,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 0.9918793414629523,
+      "psi": 0.016852777294582587,
+      "compliance": 29499.389914225765,
+      "psi_over_psi0_self": 0.5336682224856086,
+      "c_over_c0_self": 1.450090460440296,
+      "J_paper_interpreted": 0.8933641169730722,
+      "psi_over_paper": 0.3695784494426006,
+      "c_over_paper": 1.4171497845035437,
+      "constraint_g": -0.00032616647711192215,
+      "grey_fraction": 0.054807692766189575,
+      "v_f_whole_domain": 0.42295147443188,
+      "v_f_design_domain": 0.39986953340915526,
+      "flow_residual_relative": 1.428588284470576e-14,
+      "thermal_residual_relative": 2.9790107059728057e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5724058894425679,
+      "projection_root_slope": -4.114533371324287e-05,
+      "iteration": 21,
+      "phase": "r1n-vp32",
+      "seconds": 27.74016046524048,
+      "model_changed": false,
+      "kkt_proxy": 0.04855059581582755,
+      "design_step_norm": 0.16671094250512342,
+      "proxy_criterion": null,
+      "J_star": 0.9922438383713441,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 0.9907142986298346,
+      "psi": 0.016949851873449946,
+      "compliance": 29389.45363743235,
+      "psi_over_psi0_self": 0.5367422331989251,
+      "c_over_c0_self": 1.4446863640607441,
+      "J_paper_interpreted": 0.8917878635364882,
+      "psi_over_paper": 0.3717072779265339,
+      "c_over_paper": 1.4118684491464426,
+      "constraint_g": -0.00038809454942734245,
+      "grey_fraction": 0.054807692766189575,
+      "v_f_whole_domain": 0.42292765594252785,
+      "v_f_design_domain": 0.3998447621802291,
+      "flow_residual_relative": 1.3886068901985093e-14,
+      "thermal_residual_relative": 2.903492920608392e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5726701893274209,
+      "projection_root_slope": -4.1552116828464964e-05,
+      "iteration": 22,
+      "phase": "r1n-vp32",
+      "seconds": 30.53030562400818,
+      "model_changed": false,
+      "kkt_proxy": 0.026598983593950333,
+      "design_step_norm": 0.14451714291687107,
+      "proxy_criterion": null,
+      "J_star": 0.9910774371564726,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 0.9908065600703706,
+      "psi": 0.016839372932677846,
+      "compliance": 29464.37746692181,
+      "psi_over_psi0_self": 0.5332437534579691,
+      "c_over_c0_self": 1.4483693666827722,
+      "J_paper_interpreted": 0.8923761408746059,
+      "psi_over_paper": 0.36928449413767206,
+      "c_over_paper": 1.4154677876115398,
+      "constraint_g": -0.00020620118671488274,
+      "grey_fraction": 0.054807692766189575,
+      "v_f_whole_domain": 0.4229976149281866,
+      "v_f_design_domain": 0.39991751952531407,
+      "flow_residual_relative": 1.40351350831813e-14,
+      "thermal_residual_relative": 2.9226801755282804e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5728045259896859,
+      "projection_root_slope": -4.104880143636443e-05,
+      "iteration": 23,
+      "phase": "r1n-vp32",
+      "seconds": 31.082826375961304,
+      "model_changed": false,
+      "kkt_proxy": 0.03561672737131929,
+      "design_step_norm": 0.14747488719394064,
+      "proxy_criterion": null,
+      "J_star": 0.9911706243620597,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 0.990222554911234,
+      "psi": 0.017018504894424434,
+      "compliance": 29325.220438326716,
+      "psi_over_psi0_self": 0.5389162330703587,
+      "c_over_c0_self": 1.4415288767521093,
+      "J_paper_interpreted": 0.890997757434205,
+      "psi_over_paper": 0.37321282663211475,
+      "c_over_paper": 1.408782688236295,
+      "constraint_g": -0.000273929913024884,
+      "grey_fraction": 0.054999999701976776,
+      "v_f_whole_domain": 0.42297156541806735,
+      "v_f_design_domain": 0.3998904280347901,
+      "flow_residual_relative": 1.4394597546612694e-14,
+      "thermal_residual_relative": 2.95560820179792e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5729609011114594,
+      "projection_root_slope": -4.205651738384886e-05,
+      "iteration": 24,
+      "phase": "r1n-vp32",
+      "seconds": 28.07663083076477,
+      "model_changed": false,
+      "kkt_proxy": 0.02612995116960243,
+      "design_step_norm": 0.17053394960563176,
+      "proxy_criterion": null,
+      "J_star": 0.9905848997671364,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 0.9897522889893317,
+      "psi": 0.016909983437633783,
+      "compliance": 29375.996121925848,
+      "psi_over_psi0_self": 0.5354797399668967,
+      "c_over_c0_self": 1.4440248380117666,
+      "J_paper_interpreted": 0.8910274603194086,
+      "psi_over_paper": 0.3708329701235479,
+      "c_over_paper": 1.4112219505152694,
+      "constraint_g": -0.00020120286227054418,
+      "grey_fraction": 0.054999999701976776,
+      "v_f_whole_domain": 0.42299953736066515,
+      "v_f_design_domain": 0.3999195188550918,
+      "flow_residual_relative": 1.4761079045491595e-14,
+      "thermal_residual_relative": 2.905761251043377e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5730567407993872,
+      "projection_root_slope": -4.174207355731433e-05,
+      "iteration": 25,
+      "phase": "r1n-vp32",
+      "seconds": 29.015206575393677,
+      "model_changed": false,
+      "kkt_proxy": 0.022465166389753117,
+      "design_step_norm": 0.14627747428815566,
+      "proxy_criterion": null,
+      "J_star": 0.9901152612337918,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 0.9895147500849744,
+      "psi": 0.016979126225687674,
+      "compliance": 29321.790064069395,
+      "psi_over_psi0_self": 0.5376692490402931,
+      "c_over_c0_self": 1.4413602511296557,
+      "J_paper_interpreted": 0.890483576248849,
+      "psi_over_paper": 0.372349259335256,
+      "c_over_paper": 1.408617893162442,
+      "constraint_g": -0.0001972707782395,
+      "grey_fraction": 0.054999999701976776,
+      "v_f_whole_domain": 0.4230010497006771,
+      "v_f_design_domain": 0.3999210916887042,
+      "flow_residual_relative": 1.4120116555522673e-14,
+      "thermal_residual_relative": 3.079578119784593e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5731999021836016,
+      "projection_root_slope": -4.240144883461825e-05,
+      "iteration": 26,
+      "phase": "r1n-vp32",
+      "seconds": 31.097938060760498,
+      "model_changed": false,
+      "kkt_proxy": 0.024382925153383993,
+      "design_step_norm": 0.16642280099789178,
+      "proxy_criterion": null,
+      "J_star": 0.9898770525548881,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 0.9895424014786975,
+      "psi": 0.01701195777171486,
+      "compliance": 29301.765156547204,
+      "psi_over_psi0_self": 0.5387089087060869,
+      "c_over_c0_self": 1.440375894251308,
+      "J_paper_interpreted": 0.8903625733002327,
+      "psi_over_paper": 0.3730692493797118,
+      "c_over_paper": 1.4076558972207536,
+      "constraint_g": -0.00017338326085214462,
+      "grey_fraction": 0.054999999701976776,
+      "v_f_whole_domain": 0.4230102372073645,
+      "v_f_design_domain": 0.39993064669565914,
+      "flow_residual_relative": 1.4130457244159381e-14,
+      "thermal_residual_relative": 2.9202052874534556e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5730598436891854,
+      "projection_root_slope": -4.275917562005376e-05,
+      "iteration": 27,
+      "phase": "r1n-vp32",
+      "seconds": 30.221480131149292,
+      "model_changed": false,
+      "kkt_proxy": 0.04026948811333816,
+      "design_step_norm": 0.24442904931547688,
+      "proxy_criterion": null,
+      "J_star": 0.989904456519193,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 0.9894182173295081,
+      "psi": 0.016854815207849382,
+      "compliance": 29397.943125039412,
+      "psi_over_psi0_self": 0.5337327560358752,
+      "c_over_c0_self": 1.4451036786231408,
+      "J_paper_interpreted": 0.8909497121965423,
+      "psi_over_paper": 0.36962314052301276,
+      "c_over_paper": 1.4122762838700718,
+      "constraint_g": -0.0003672054293848426,
+      "grey_fraction": 0.05384615436196327,
+      "v_f_whole_domain": 0.4229356902194673,
+      "v_f_design_domain": 0.39985311782824606,
+      "flow_residual_relative": 1.4514613534885356e-14,
+      "thermal_residual_relative": 2.9308329924736444e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5741607929660599,
+      "projection_root_slope": -4.137489956666387e-05,
+      "iteration": 28,
+      "phase": "r1n-vp32",
+      "seconds": 29.00464916229248,
+      "model_changed": false,
+      "kkt_proxy": 0.028170329554612943,
+      "design_step_norm": 0.2054377347278895,
+      "proxy_criterion": null,
+      "J_star": 0.9897814607529589,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_self": 0.9892048969364329,
+      "psi": 0.017012145341627778,
+      "compliance": 29287.912522066406,
+      "psi_over_psi0_self": 0.5387148483859551,
+      "c_over_c0_self": 1.4396949454869106,
+      "J_paper_interpreted": 0.8900318899205992,
+      "psi_over_paper": 0.3730733627549951,
+      "c_over_paper": 1.4069904170862033,
+      "constraint_g": -0.00025904012794120135,
+      "grey_fraction": 0.054615385830402374,
+      "v_f_whole_domain": 0.4229772922584841,
+      "v_f_design_domain": 0.39989638394882354,
+      "flow_residual_relative": 1.4284633045889142e-14,
+      "thermal_residual_relative": 2.8954766785990796e-12,
+      "projection": "volume_preserving",
+      "projection_eta": 0.5735426640011101,
+      "projection_root_slope": -4.1965018087975124e-05,
+      "iteration": 29,
+      "phase": "r1n-vp32",
+      "seconds": 30.180650234222412,
+      "model_changed": false,
+      "kkt_proxy": 0.028721914432523234,
+      "design_step_norm": 0.18618575635879137,
+      "proxy_criterion": null,
+      "J_star": 0.9895667808126276,
+      "volume_feasible": true
+    }
+  ],
+  "terminal": {
+    "alpha_max": 10000000.0,
+    "beta": 32.0,
+    "J_self": 0.989137210111605,
+    "psi": 0.016812100886114942,
+    "compliance": 29414.026369028645,
+    "psi_over_psi0_self": 0.5323801435995841,
+    "c_over_c0_self": 1.445894276623626,
+    "J_paper_interpreted": 0.8908676726789714,
+    "psi_over_paper": 0.36868642294111714,
+    "c_over_paper": 1.4130489224168257,
+    "constraint_g": -0.00025192063707013546,
+    "grey_fraction": 0.05384615436196327,
+    "v_f_whole_domain": 0.4229800305242037,
+    "v_f_design_domain": 0.39989923174517195,
+    "flow_residual_relative": 1.491742703556494e-14,
+    "thermal_residual_relative": 2.9386185138841484e-12,
+    "projection": "volume_preserving",
+    "projection_eta": 0.5746567759667878,
+    "projection_root_slope": -4.112791445090019e-05,
+    "iteration": 30,
+    "phase": "r1n-vp32",
+    "terminal": true,
+    "J_star": 0.9895006522609526,
+    "volume_feasible": true
+  },
+  "steps": [
+    {
+      "update": 1,
+      "l2": 2.1151549101292555,
+      "linf": 0.08948326745918411,
+      "rms": 0.029912807604248377
+    },
+    {
+      "update": 2,
+      "l2": 1.6556004222292593,
+      "linf": 0.08900663115347907,
+      "rms": 0.023413725709872407
+    },
+    {
+      "update": 3,
+      "l2": 1.3691914579361635,
+      "linf": 0.0996565696678175,
+      "rms": 0.019363291292987132
+    },
+    {
+      "update": 4,
+      "l2": 1.2813535463164154,
+      "linf": 0.09998133732635689,
+      "rms": 0.018121075633955364
+    },
+    {
+      "update": 5,
+      "l2": 1.1336152397085177,
+      "linf": 0.09989455861661745,
+      "rms": 0.01603174046508613
+    },
+    {
+      "update": 6,
+      "l2": 1.7195596927281331,
+      "linf": 0.09998874903271515,
+      "rms": 0.02431824638766238
+    },
+    {
+      "update": 7,
+      "l2": 1.2827932193473843,
+      "linf": 0.09999061890311317,
+      "rms": 0.018141435685213154
+    },
+    {
+      "update": 8,
+      "l2": 0.8482360706667987,
+      "linf": 0.09994724330189919,
+      "rms": 0.011995869552310499
+    },
+    {
+      "update": 9,
+      "l2": 0.7574018033414612,
+      "linf": 0.09998302985095209,
+      "rms": 0.010711279024513342
+    },
+    {
+      "update": 10,
+      "l2": 0.6354526324517287,
+      "linf": 0.09996992783073377,
+      "rms": 0.008986657310589204
+    },
+    {
+      "update": 11,
+      "l2": 0.6297540213573788,
+      "linf": 0.09995248105749388,
+      "rms": 0.008906066779626007
+    },
+    {
+      "update": 12,
+      "l2": 0.8275474914934041,
+      "linf": 0.09997565258218843,
+      "rms": 0.011703288859778057
+    },
+    {
+      "update": 13,
+      "l2": 0.6348478966913417,
+      "linf": 0.09976624400741241,
+      "rms": 0.00897810505544929
+    },
+    {
+      "update": 14,
+      "l2": 0.4452729588254696,
+      "linf": 0.08601035201938317,
+      "rms": 0.006297110573289758
+    },
+    {
+      "update": 15,
+      "l2": 0.4403877792798545,
+      "linf": 0.09996097364735151,
+      "rms": 0.006228023701609393
+    },
+    {
+      "update": 16,
+      "l2": 0.31066344171249893,
+      "linf": 0.08205084580738076,
+      "rms": 0.004393444526033194
+    },
+    {
+      "update": 17,
+      "l2": 0.2931801525376187,
+      "linf": 0.09966154809285699,
+      "rms": 0.004146193479373131
+    },
+    {
+      "update": 18,
+      "l2": 0.23232104748726665,
+      "linf": 0.07348661533263445,
+      "rms": 0.003285515761812163
+    },
+    {
+      "update": 19,
+      "l2": 0.14071995125200432,
+      "linf": 0.0407794857687096,
+      "rms": 0.001990080635570653
+    },
+    {
+      "update": 20,
+      "l2": 0.1340222604918845,
+      "linf": 0.07325521934780888,
+      "rms": 0.0018953609844752296
+    },
+    {
+      "update": 21,
+      "l2": 0.14538043741826012,
+      "linf": 0.09955228741361055,
+      "rms": 0.0020559898630063645
+    },
+    {
+      "update": 22,
+      "l2": 0.16671094250512342,
+      "linf": 0.09988027691279888,
+      "rms": 0.002357648758867468
+    },
+    {
+      "update": 23,
+      "l2": 0.14451714291687107,
+      "linf": 0.09964309865081278,
+      "rms": 0.0020437810350844993
+    },
+    {
+      "update": 24,
+      "l2": 0.14747488719394064,
+      "linf": 0.09991438418082904,
+      "rms": 0.002085609855791131
+    },
+    {
+      "update": 25,
+      "l2": 0.17053394960563176,
+      "linf": 0.09995840292420966,
+      "rms": 0.0024117142437733437
+    },
+    {
+      "update": 26,
+      "l2": 0.14627747428815566,
+      "linf": 0.09989055119221116,
+      "rms": 0.0020686758800799137
+    },
+    {
+      "update": 27,
+      "l2": 0.16642280099789178,
+      "linf": 0.09993773575391282,
+      "rms": 0.0023535738225933718
+    },
+    {
+      "update": 28,
+      "l2": 0.24442904931547688,
+      "linf": 0.0999173044798338,
+      "rms": 0.003456748765799095
+    },
+    {
+      "update": 29,
+      "l2": 0.2054377347278895,
+      "linf": 0.0998356755947809,
+      "rms": 0.002905328306753875
+    },
+    {
+      "update": 30,
+      "l2": 0.18618575635879137,
+      "linf": 0.09974769470900754,
+      "rms": 0.0026330642176329543
+    }
+  ],
+  "stop": {
+    "stop_reason": "phase_end",
+    "proxy_criterion": null,
+    "mma_updates": 30,
+    "convergence_verified": false,
+    "first_feasible_iteration": 0
+  },
+  "responses": {
+    "map_switch": {
+      "from": "the R1l pilot's terminal record, volume-preserving beta 16",
+      "to": "the zero step, volume-preserving beta 32, the same x",
+      "J": 0.025129294902146215,
+      "psi": -0.13498900098282018,
+      "compliance": 0.0834029780440384,
+      "g": [
+        -7.663935771029529e-05,
+        -7.663935771018426e-05
+      ],
+      "grey": [
+        0.0619230754673481,
+        0.04500000178813934
+      ],
+      "eta": [
+        0.5104288286568213,
+        0.5045494601133163
+      ]
+    },
+    "optimisation": {
+      "J": -0.02224764033435145,
+      "psi": 0.16865256503211912,
+      "compliance": -0.07771908917062575,
+      "g": [
+        -7.663935771018426e-05,
+        -0.00025192063707013546
+      ],
+      "grey": [
+        0.04500000178813934,
+        0.05384615436196327
+      ]
+    },
+    "export_gap": {
+      "J": 0.35807500180720475,
+      "psi": -0.23041679177355356,
+      "compliance": 0.574758441695566
+    }
+  },
+  "best_feasible_evaluated": {
+    "iteration": 30,
+    "is_terminal": true,
+    "J_self": 0.989137210111605,
+    "psi": 0.016812100886114942,
+    "compliance": 29414.026369028645,
+    "constraint_g": -0.00025192063707013546
+  },
+  "export": {
+    "terminal_volume_feasible": true,
+    "t": 0.3811882075659321,
+    "fluid_cells": 2000,
+    "fluid_fraction": 0.4,
+    "cells_changed_from_0.5": 28,
+    "connected": true,
+    "fluid_components": 1,
+    "volume_feasible": true,
+    "binary_sha256": "a8a6224e87651cd0f15fae906c9f16f8a425f546bdc355754545362c6f63c093",
+    "qualified": true,
+    "same_geometry_as": []
+  },
+  "against": {
+    "development": {
+      "x300": {
+        "kind": "qualified_comparison",
+        "J": -0.026980940177623758,
+        "J_star": -0.026982195069656933,
+        "psi": -0.010325073070130752,
+        "compliance": -0.029918655986626908
+      },
+      "pilot": {
+        "kind": "qualified_comparison",
+        "J": -0.018608826885295304,
+        "J_star": -0.018614142678591628,
+        "psi": 0.05603533472596278,
+        "compliance": -0.030934130914872404
+      }
+    },
+    "check": {
+      "x300": {
+        "kind": "qualified_comparison",
+        "J": -0.03477956492240564,
+        "J_star": -0.03478162668317719,
+        "psi": -0.0074922806132368125,
+        "compliance": -0.03960860100995023
+      },
+      "pilot": {
+        "kind": "qualified_comparison",
+        "J": -0.015578146432580153,
+        "J_star": -0.015583286664979212,
+        "psi": 0.055349196503969855,
+        "compliance": -0.02753120228450423
+      }
+    }
+  },
+  "check_layer": {
+    "flow_mesh": {
+      "elements": 20800,
+      "nodes": 21141,
+      "node_coords_sha256": "ffd2cf1dea997a7954babfe065412d1f479d4c07f1830cef61ecb880872dfdf3",
+      "geometry_sha256": "e99cb7f1c2ed5df5132d6038ab89b48efcebf6a1727a4328afa123d87b3fac87",
+      "region_sha256": "86c9944e74120dcb4d4572c7e5d9bd34e77abef68fe329d82d9b10ad0536b3ef"
+    },
+    "thermal_mesh": {
+      "elements": 332800,
+      "nodes": 334161,
+      "node_coords_sha256": "f35779ddfc7d3796a9dfc37d0ca782bcab82836ceb18daf58e5c7840644d5c7d",
+      "geometry_sha256": "2b268625dd3e60bab7de753053f9700387791e7208d7a1307f132ed71bfda2cd",
+      "region_sha256": "c146be832d1330d05f7aae7c848851b1023b5aad28c3800d917011a71c6369b2",
+      "q_source_sha256": "6025a2e1abb708e3cc93cbd57876916ec9a923fca2b89428000e4a158f4f69bc",
+      "dirichlet_sha256": "ac85ae87e3de6589bb7b99df57ee4d7a99438d63f65581ec7788278a15883f6c",
+      "quadrature": 3
+    },
+    "transfer": {
+      "coarse_elements": 5200,
+      "fine_elements": 20800,
+      "children_per_parent": [
+        4
+      ],
+      "total_area_coarse": 5.200000000000002e-05,
+      "total_area_fine": 5.200000000000001e-05,
+      "design_cells_coarse": 5000,
+      "design_cells_fine": 20000,
+      "coarse_v_f_whole_domain": 0.42307692307692296,
+      "coarse_v_f_design_domain": 0.4,
+      "fine_v_f_whole_domain": 0.423076923076923,
+      "fine_v_f_design_domain": 0.4
+    },
+    "thermal_material_is_the_parents": true
+  },
+  "cells": {
+    "x300/development": {
+      "design": "x300",
+      "layer": "development",
+      "state": "reused: R1l's record, x300's qualified binary design at flow h, thermal h/4",
+      "fluid_fractions": {
+        "v_f_whole_domain": 0.4230769230769231,
+        "v_f_design_domain": 0.4
+      },
+      "volume_feasible": true,
+      "flow_verification": {
+        "dofs": 16113,
+        "dirichlet_max_deviation": 0.0,
+        "residual_relative": 1.2312745411256636e-14,
+        "gate": 1e-08
+      },
+      "analysed": true,
+      "psi": 0.013073293244984735,
+      "compliance": 47748.55904067906,
+      "J": 1.3805716392185718,
+      "J_star": 1.3811616243742344,
+      "c_advective": 19040.727989947958,
+      "c_diffusive": 28707.831050731096,
+      "T_max": 21.721700261541237,
+      "T_min": 0.0,
+      "nodes_below_inlet": 0,
+      "H": 6353.593721404977,
+      "Q": 5200.0,
+      "r_D": -0.0718364889327724,
+      "D_T": 1153.6655578938692,
+      "D_T_over_Q": 0.2218587611334364,
+      "balance_closure_relative": 7.87062722688111e-15,
+      "integral_div_u_squared_flow_mesh": 0.24598809747773343,
+      "mass_imbalance_relative": 3.7947076036992655e-15,
+      "residual_flow": 1.2312745411256636e-14,
+      "residual_thermal": 5.5068851752503544e-12,
+      "gate_passed": true,
+      "anchor": {
+        "source": "R1l's record, x300's qualified binary design at flow h, thermal h/4",
+        "psi_relative": 0.0,
+        "compliance_relative": 0.0,
+        "reproduced": true
+      },
+      "t_report_s": 27.612015400023665,
+      "report": {
+        "mesh": {
+          "h_flow": 0.0001,
+          "flow_elements": 5200,
+          "flow_quadrature": 2,
+          "h_thermal": 2.5e-05,
+          "thermal_elements": 83200,
+          "thermal_nodes": 83881,
+          "thermal_quadrature": 3,
+          "maps_flow_to_thermal": {
+            "factor": 4,
+            "coarse_elements": 5200,
+            "coarse_nodes": 5371,
+            "fine_elements": 83200,
+            "fine_nodes": 83881,
+            "parents_sha256": "77798593a36bb06b35707d19e4879c1bcf47c795945532236aeecbe0be014ce4",
+            "node_map_sha256": "16f2c702d61d6213e09f3e3382fb774b2fd91b7be8a1598ede336c169eac6a21"
+          },
+          "nesting": {
+            "area_flow_mesh": 5.200000000000002e-05,
+            "area_thermal_mesh": 5.200000000000002e-05,
+            "heat_source_flow_mesh": 5200.000000000002,
+            "heat_source_thermal_mesh": 5200.0,
+            "design_cells_flow_mesh": 5000,
+            "design_cells_thermal_mesh": 80000
+          }
+        },
+        "residual_relative": {
+          "flow": 1.2312745411256636e-14,
+          "thermal": 5.5068851752503544e-12
+        },
+        "psi": 0.013073293244984735,
+        "c_advective": 19040.727989947958,
+        "c_diffusive": 28707.831050731096,
+        "compliance": 47748.55904067906,
+        "l_q": 52262.139921260765,
+        "d_supg": 4534.612906515613,
+        "f_supg": 21.032025933884036,
+        "closure": 2.1827872842550278e-11,
+        "closure_relative": 4.1766129124135766e-16,
+        "net_supg_over_c": 0.09452810663325807,
+        "t_max": 21.721700261541237,
+        "nodes_below_inlet": 0,
+        "fraction_below_inlet": 0.0,
+        "min_temperature": 0.0,
+        "undershoot_depth": 0.0,
+        "heat_in": 5200.0,
+        "mass": {
+          "inflow": 0.0002,
+          "outflow": 0.00019999999999999925,
+          "imbalance_relative": 3.7947076036992655e-15,
+          "wall_and_symmetry_flux": 0.0,
+          "note": "on the flow mesh, from the flow state itself"
+        },
+        "divergence": {
+          "flow_mesh": {
+            "integral_div_u": 3.3881317890172014e-20,
+            "integral_div_u_squared": 0.24598809747773343
+          },
+          "thermal_mesh": {
+            "integral_div_u": -1.2455619489374486e-18,
+            "integral_div_u_squared": 0.24598809747773323
+          },
+          "D_T": 1153.6655578938692,
+          "D_T2": 17128.60482104664,
+          "D_T_over_heat_in": 0.2218587611334364,
+          "minus_half_D_T2": -8564.30241052332,
+          "minus_half_D_T2_over_C": -0.1793625311965335,
+          "note": "algebraic shares of this solution, not errors and not the change a divergence-free velocity would produce"
+        },
+        "identities": {
+          "enthalpy": {
+            "statement": "H = int b_f u.grad T + D_T",
+            "H": 6353.593721404977,
+            "b_f_u_grad_T": 5199.928163511068,
+            "D_T": 1153.6655578938692,
+            "closure": 3.979039320256561e-11,
+            "closure_relative": 6.262659362136035e-15
+          },
+          "advective_half": {
+            "statement": "C_adv = 1/2 boundary int b_f T^2 u.n - 1/2 D_T2",
+            "c_advective": 19040.727989947958,
+            "half_boundary_t2_flux": 27605.03040047144,
+            "minus_half_D_T2": -8564.30241052332,
+            "closure": -1.6370904631912708e-10,
+            "closure_relative": 8.597835461204681e-15
+          },
+          "source": {
+            "statement": "H - Q = D_T + [int b_f u.grad T - Q]; the bracket is the Dirichlet reaction",
+            "H_minus_heat_in": 1153.5937214049773,
+            "D_T": 1153.6655578938692,
+            "bracket": -0.07183648893169448,
+            "dirichlet_reaction": -0.0718364889327724,
+            "bracket_minus_reaction": 1.0779294123963723e-12
+          },
+          "stabilisation": {
+            "statement": "C + D_SUPG - F_SUPG = L_Q",
+            "closure": 2.1827872842550278e-11,
+            "closure_relative": 4.1766129124135766e-16
+          }
+        },
+        "boundary": {
+          "inlet": {
+            "faces": 40,
+            "volume_flux": -0.0002,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": 0.07326685154818247
+          },
+          "outlet": {
+            "faces": 40,
+            "volume_flux": 0.00019999999999999922,
+            "enthalpy_flux": 6353.593721404977,
+            "half_t2_flux": 27605.03040047144,
+            "conduction_out": 0.5205370359000504
+          },
+          "wall": {
+            "faces": 800,
+            "volume_flux": 0.0,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": -24.902578722119372
+          },
+          "symmetry": {
+            "faces": 480,
+            "volume_flux": 0.0,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": -27.197190253672773
+          },
+          "total": {
+            "volume_flux": -7.860465750519907e-19,
+            "enthalpy_flux": 6353.593721404977,
+            "half_t2_flux": 27605.03040047144,
+            "conduction_out": -51.50596508834391
+          }
+        },
+        "reaction": {
+          "dirichlet_nodes": 41,
+          "reaction_at_dirichlet_nodes": -0.0718364889327724,
+          "sum_over_free_nodes": 2.1926564459989722e-13,
+          "sum_over_all_nodes": -0.07183648893255314
+        },
+        "heat": {
+          "mass_in": 0.00019999999999999993,
+          "mass_out": 0.00019999999999999925,
+          "mass_imbalance_rel": 3.3881317890172025e-15,
+          "wall_leak_rel": 0.0,
+          "inlet_flux_over_nominal": 0.9999999999999996,
+          "heat_in": 5200.000000000002,
+          "enthalpy_net_out": 6353.593721404979,
+          "conduction_net_out": -51.50596508833926,
+          "energy_imbalance_rel": 0.21193995313781488,
+          "temperature_weighted_divergence": 1153.6655578938692,
+          "temperature_weighted_divergence_rel": 0.2218587611334363
+        },
+        "tau": {
+          "whole_domain": {
+            "n": 83200,
+            "median": 2.7558016758262038e-06,
+            "p10": 2.755801293977137e-06,
+            "p90": 0.00016289149008966457
+          },
+          "fluid_s_lt_0.5": {
+            "n": 35200,
+            "median": 8.713280442384727e-05,
+            "p10": 5.6429228298353825e-05,
+            "p90": 0.0004288042063632424
+          }
+        },
+        "peclet": {
+          "definition": "b_f * |u at element centre| * h / (2 k)",
+          "h": 2.5e-05,
+          "whole_domain": {
+            "elements": 83200,
+            "median": 0.0006006299630643491,
+            "p90": 16.377420042078793,
+            "max": 25.706562711085052,
+            "fraction_above_1": 0.4020673076923077
+          },
+          "fluid_s_lt_0.5_incl_tabs": {
+            "elements": 35200,
+            "median": 12.247343870225876,
+            "p90": 18.947781439540716,
+            "max": 25.706562711085052,
+            "fraction_above_1": 0.9503409090909091
+          },
+          "fluid_s_lt_0.5_design_only": {
+            "elements": 32000,
+            "median": 11.740317680081688,
+            "p90": 18.1856905334895,
+            "max": 25.706562711085052,
+            "fraction_above_1": 0.94853125
+          }
+        },
+        "j_star": 1.3811616243742344
+      }
+    },
+    "pilot/development": {
+      "design": "pilot",
+      "layer": "development",
+      "state": "reused: R1l's record, pilot's qualified binary design at flow h, thermal h/4",
+      "fluid_fractions": {
+        "v_f_whole_domain": 0.4230769230769231,
+        "v_f_design_domain": 0.4
+      },
+      "volume_feasible": true,
+      "flow_verification": {
+        "dofs": 16113,
+        "dirichlet_max_deviation": 0.0,
+        "residual_relative": 1.1465662987351585e-14,
+        "gate": 1e-08
+      },
+      "analysed": true,
+      "psi": 0.012251778052786901,
+      "compliance": 47798.594302586935,
+      "J": 1.3687941722019996,
+      "J_star": 1.3693847755975077,
+      "c_advective": 19482.399810344286,
+      "c_diffusive": 28316.19449224265,
+      "T_max": 20.59226978751431,
+      "T_min": -0.07691571683698789,
+      "nodes_below_inlet": 2,
+      "H": 6184.10405264386,
+      "Q": 5200.0,
+      "r_D": -0.07183602916591521,
+      "D_T": 984.1758886729958,
+      "D_T_over_Q": 0.18926459397557613,
+      "balance_closure_relative": 5.793656153120817e-15,
+      "integral_div_u_squared_flow_mesh": 0.19454556047674543,
+      "mass_imbalance_relative": 7.995991022080595e-15,
+      "residual_flow": 1.1465662987351585e-14,
+      "residual_thermal": 6.208435521701915e-12,
+      "gate_passed": true,
+      "anchor": {
+        "source": "R1l's record, pilot's qualified binary design at flow h, thermal h/4",
+        "psi_relative": 0.0,
+        "compliance_relative": 0.0,
+        "reproduced": true
+      },
+      "t_report_s": 21.573632100014947,
+      "report": {
+        "mesh": {
+          "h_flow": 0.0001,
+          "flow_elements": 5200,
+          "flow_quadrature": 2,
+          "h_thermal": 2.5e-05,
+          "thermal_elements": 83200,
+          "thermal_nodes": 83881,
+          "thermal_quadrature": 3,
+          "maps_flow_to_thermal": {
+            "factor": 4,
+            "coarse_elements": 5200,
+            "coarse_nodes": 5371,
+            "fine_elements": 83200,
+            "fine_nodes": 83881,
+            "parents_sha256": "77798593a36bb06b35707d19e4879c1bcf47c795945532236aeecbe0be014ce4",
+            "node_map_sha256": "16f2c702d61d6213e09f3e3382fb774b2fd91b7be8a1598ede336c169eac6a21"
+          },
+          "nesting": {
+            "area_flow_mesh": 5.200000000000002e-05,
+            "area_thermal_mesh": 5.200000000000002e-05,
+            "heat_source_flow_mesh": 5200.000000000002,
+            "heat_source_thermal_mesh": 5200.0,
+            "design_cells_flow_mesh": 5000,
+            "design_cells_thermal_mesh": 80000
+          }
+        },
+        "residual_relative": {
+          "flow": 1.1465662987351585e-14,
+          "thermal": 6.208435521701915e-12
+        },
+        "psi": 0.012251778052786901,
+        "c_advective": 19482.399810344286,
+        "c_diffusive": 28316.19449224265,
+        "compliance": 47798.594302586935,
+        "l_q": 51871.32978344272,
+        "d_supg": 4095.136424351893,
+        "f_supg": 22.40094349609341,
+        "closure": 1.4551915228366852e-11,
+        "closure_relative": 2.8053869621464395e-16,
+        "net_supg_over_c": 0.08520617688197112,
+        "t_max": 20.59226978751431,
+        "nodes_below_inlet": 2,
+        "fraction_below_inlet": 2.3843301820436094e-05,
+        "min_temperature": -0.07691571683698789,
+        "undershoot_depth": 0.07691571683698789,
+        "heat_in": 5200.0,
+        "mass": {
+          "inflow": 0.0002,
+          "outflow": 0.0001999999999999984,
+          "imbalance_relative": 7.995991022080595e-15,
+          "wall_and_symmetry_flux": 0.0,
+          "note": "on the flow mesh, from the flow state itself"
+        },
+        "divergence": {
+          "flow_mesh": {
+            "integral_div_u": -7.792703114739563e-20,
+            "integral_div_u_squared": 0.19454556047674543
+          },
+          "thermal_mesh": {
+            "integral_div_u": -2.044314018198254e-18,
+            "integral_div_u_squared": 0.1945455604767454
+          },
+          "D_T": 984.1758886729958,
+          "D_T2": 14534.747159356795,
+          "D_T_over_heat_in": 0.18926459397557613,
+          "minus_half_D_T2": -7267.373579678398,
+          "minus_half_D_T2_over_C": -0.15204157540015933,
+          "note": "algebraic shares of this solution, not errors and not the change a divergence-free velocity would produce"
+        },
+        "identities": {
+          "enthalpy": {
+            "statement": "H = int b_f u.grad T + D_T",
+            "H": 6184.10405264386,
+            "b_f_u_grad_T": 5199.928163970833,
+            "D_T": 984.1758886729958,
+            "closure": 3.092281986027956e-11,
+            "closure_relative": 5.000371856139658e-15
+          },
+          "advective_half": {
+            "statement": "C_adv = 1/2 boundary int b_f T^2 u.n - 1/2 D_T2",
+            "c_advective": 19482.399810344286,
+            "half_boundary_t2_flux": 26749.773390022798,
+            "minus_half_D_T2": -7267.373579678398,
+            "closure": -1.1368683772161603e-10,
+            "closure_relative": 5.835361086330514e-15
+          },
+          "source": {
+            "statement": "H - Q = D_T + [int b_f u.grad T - Q]; the bracket is the Dirichlet reaction",
+            "H_minus_heat_in": 984.1040526438601,
+            "D_T": 984.1758886729958,
+            "bracket": -0.07183602916666132,
+            "dirichlet_reaction": -0.07183602916591521,
+            "bracket_minus_reaction": -7.461115059115286e-13
+          },
+          "stabilisation": {
+            "statement": "C + D_SUPG - F_SUPG = L_Q",
+            "closure": 1.4551915228366852e-11,
+            "closure_relative": 2.8053869621464395e-16
+          }
+        },
+        "boundary": {
+          "inlet": {
+            "faces": 40,
+            "volume_flux": -0.0002,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": 0.07326696327974697
+          },
+          "outlet": {
+            "faces": 40,
+            "volume_flux": 0.0001999999999999984,
+            "enthalpy_flux": 6184.10405264386,
+            "half_t2_flux": 26749.773390022798,
+            "conduction_out": 0.46690532823247965
+          },
+          "wall": {
+            "faces": 800,
+            "volume_flux": 0.0,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": -25.932020143846437
+          },
+          "symmetry": {
+            "faces": 480,
+            "volume_flux": 0.0,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": -29.299873026841308
+          },
+          "total": {
+            "volume_flux": -1.599198204416119e-18,
+            "enthalpy_flux": 6184.10405264386,
+            "half_t2_flux": 26749.773390022798,
+            "conduction_out": -54.69172087917552
+          }
+        },
+        "reaction": {
+          "dirichlet_nodes": 41,
+          "reaction_at_dirichlet_nodes": -0.07183602916591521,
+          "sum_over_free_nodes": -1.520790648685333e-13,
+          "sum_over_all_nodes": -0.0718360291660673
+        },
+        "heat": {
+          "mass_in": 0.00019999999999999993,
+          "mass_out": 0.00019999999999999844,
+          "mass_imbalance_rel": 7.453889935837846e-15,
+          "wall_leak_rel": 0.0,
+          "inlet_flux_over_nominal": 0.9999999999999996,
+          "heat_in": 5200.000000000002,
+          "enthalpy_net_out": 6184.104052643858,
+          "conduction_net_out": -54.69172087917503,
+          "energy_imbalance_rel": 0.1787331407239772,
+          "temperature_weighted_divergence": 984.1758886729958,
+          "temperature_weighted_divergence_rel": 0.18926459397557605
+        },
+        "tau": {
+          "whole_domain": {
+            "n": 83200,
+            "median": 2.7558016759450946e-06,
+            "p10": 2.755801294203831e-06,
+            "p90": 0.00016267998276879234
+          },
+          "fluid_s_lt_0.5": {
+            "n": 35200,
+            "median": 9.02807037912438e-05,
+            "p10": 5.4752596440488585e-05,
+            "p90": 0.0004028275170390008
+          }
+        },
+        "peclet": {
+          "definition": "b_f * |u at element centre| * h / (2 k)",
+          "h": 2.5e-05,
+          "whole_domain": {
+            "elements": 83200,
+            "median": 0.0006052468165311746,
+            "p90": 17.12318255345046,
+            "max": 25.65905613875744,
+            "fraction_above_1": 0.4054326923076923
+          },
+          "fluid_s_lt_0.5_incl_tabs": {
+            "elements": 35200,
+            "median": 11.817405840856221,
+            "p90": 19.5295917139843,
+            "max": 25.65905613875744,
+            "fraction_above_1": 0.9582954545454545
+          },
+          "fluid_s_lt_0.5_design_only": {
+            "elements": 32000,
+            "median": 11.168410551570595,
+            "p90": 18.879923864157252,
+            "max": 25.65905613875744,
+            "fraction_above_1": 0.95590625
+          }
+        },
+        "j_star": 1.3693847755975077
+      }
+    },
+    "new/development": {
+      "design": "new",
+      "layer": "development",
+      "state": "solved here",
+      "fluid_fractions": {
+        "v_f_whole_domain": 0.42307692307692296,
+        "v_f_design_domain": 0.4
+      },
+      "volume_feasible": true,
+      "t_flow_solve_s": 3.342486099980306,
+      "flow_verification": {
+        "dofs": 16113,
+        "dirichlet_max_deviation": 0.0,
+        "residual_relative": 1.2779488271067076e-14,
+        "gate": 1e-08
+      },
+      "flow_identity": {
+        "config": {
+          "element_length_mode": "min_edge",
+          "flow_form": {
+            "brinkman_in_supg_residual": true,
+            "brinkman_in_tau": true,
+            "viscous_form": "symmetric"
+          },
+          "outlet": "traction"
+        },
+        "dirichlet_sha256": "c0235e03a2e8678f3ca7250cea41070edb45b026f7c9be464083aadee0f33b45",
+        "kind": "zhao2d flow state: press_vel, (p, u, v) per node",
+        "material": {
+          "alpha_max": 10000000.0,
+          "alpha_min": 0.0,
+          "q_alpha": 0.2
+        },
+        "mesh": {
+          "dofs": 16113,
+          "elements": 5200,
+          "geometry_sha256": "ac96dae96ea53e6bc26ee3eaa0ba73bf551cd2f02c2d9dc544ac38ee134bddc6",
+          "nodes": 5371,
+          "quadrature": 2,
+          "region_sha256": "6f4bc48ab954ffa4745f1f366fb93ac5f637e13bfc6cd14dae3763c13f90155d"
+        },
+        "solid_fraction_sha256": "a8a6224e87651cd0f15fae906c9f16f8a425f546bdc355754545362c6f63c093",
+        "solver": {
+          "linear": "SCIPY_SPARSE",
+          "linear_rtol": 1e-10,
+          "newton_max_iter": 40,
+          "newton_threshold": 1e-11
+        },
+        "spec": {
+          "design_half_width": 0.005,
+          "design_height": 0.01,
+          "element_size": 0.0001,
+          "fluid_density": 1000.0,
+          "fluid_viscosity": 0.001,
+          "inlet_half_width": 0.001,
+          "inlet_speed": 0.2,
+          "q_alpha": 0.2,
+          "tab_length": 0.001
+        }
+      },
+      "t_thermal_solve_s": 9.756812899955548,
+      "analysed": true,
+      "psi": 0.01293831053696302,
+      "compliance": 46319.98632888384,
+      "J": 1.3433225184098916,
+      "J_star": 1.3438948520026446,
+      "c_advective": 19513.153427387817,
+      "c_diffusive": 26806.83290149602,
+      "T_max": 20.007145193366167,
+      "T_min": -0.04277272473114896,
+      "nodes_below_inlet": 1,
+      "H": 6242.891865286634,
+      "Q": 5200.0,
+      "r_D": -0.07183599499527345,
+      "D_T": 1042.963701281594,
+      "D_T_over_Q": 0.2005699425541527,
+      "balance_closure_relative": 6.8212102632969615e-15,
+      "integral_div_u_squared_flow_mesh": 0.20094204189587617,
+      "mass_imbalance_relative": 7.724940478959219e-15,
+      "residual_flow": 1.2779488271067076e-14,
+      "residual_thermal": 6.459165258498917e-12,
+      "gate_passed": true,
+      "t_report_s": 16.619423700030893,
+      "report": {
+        "mesh": {
+          "h_flow": 0.0001,
+          "flow_elements": 5200,
+          "flow_quadrature": 2,
+          "h_thermal": 2.5e-05,
+          "thermal_elements": 83200,
+          "thermal_nodes": 83881,
+          "thermal_quadrature": 3,
+          "maps_flow_to_thermal": {
+            "factor": 4,
+            "coarse_elements": 5200,
+            "coarse_nodes": 5371,
+            "fine_elements": 83200,
+            "fine_nodes": 83881,
+            "parents_sha256": "77798593a36bb06b35707d19e4879c1bcf47c795945532236aeecbe0be014ce4",
+            "node_map_sha256": "16f2c702d61d6213e09f3e3382fb774b2fd91b7be8a1598ede336c169eac6a21"
+          },
+          "nesting": {
+            "area_flow_mesh": 5.200000000000002e-05,
+            "area_thermal_mesh": 5.200000000000002e-05,
+            "heat_source_flow_mesh": 5200.000000000002,
+            "heat_source_thermal_mesh": 5200.0,
+            "design_cells_flow_mesh": 5000,
+            "design_cells_thermal_mesh": 80000
+          }
+        },
+        "residual_relative": {
+          "flow": 1.2779488271067076e-14,
+          "thermal": 6.459165258498917e-12
+        },
+        "psi": 0.01293831053696302,
+        "c_advective": 19513.153427387817,
+        "c_diffusive": 26806.83290149602,
+        "compliance": 46319.98632888384,
+        "l_q": 50622.755057494425,
+        "d_supg": 4325.457930094189,
+        "f_supg": 22.68920148358804,
+        "closure": 1.4551915228366852e-11,
+        "closure_relative": 2.874579862719763e-16,
+        "net_supg_over_c": 0.09289227112589873,
+        "t_max": 20.007145193366167,
+        "nodes_below_inlet": 1,
+        "fraction_below_inlet": 1.1921650910218047e-05,
+        "min_temperature": -0.04277272473114896,
+        "undershoot_depth": 0.04277272473114896,
+        "heat_in": 5200.0,
+        "mass": {
+          "inflow": 0.0002,
+          "outflow": 0.00019999999999999846,
+          "imbalance_relative": 7.724940478959219e-15,
+          "wall_and_symmetry_flux": 0.0,
+          "note": "on the flow mesh, from the flow state itself"
+        },
+        "divergence": {
+          "flow_mesh": {
+            "integral_div_u": 1.1011428314305904e-20,
+            "integral_div_u_squared": 0.20094204189587617
+          },
+          "thermal_mesh": {
+            "integral_div_u": -2.0595606112488313e-18,
+            "integral_div_u_squared": 0.2009420418958761
+          },
+          "D_T": 1042.963701281594,
+          "D_T2": 15469.018225566033,
+          "D_T_over_heat_in": 0.2005699425541527,
+          "minus_half_D_T2": -7734.5091127830165,
+          "minus_half_D_T2_over_C": -0.16697995240900998,
+          "note": "algebraic shares of this solution, not errors and not the change a divergence-free velocity would produce"
+        },
+        "identities": {
+          "enthalpy": {
+            "statement": "H = int b_f u.grad T + D_T",
+            "H": 6242.891865286634,
+            "b_f_u_grad_T": 5199.928164005007,
+            "D_T": 1042.963701281594,
+            "closure": 3.342393029015511e-11,
+            "closure_relative": 5.35391786553402e-15
+          },
+          "advective_half": {
+            "statement": "C_adv = 1/2 boundary int b_f T^2 u.n - 1/2 D_T2",
+            "c_advective": 19513.153427387817,
+            "half_boundary_t2_flux": 27247.662540170953,
+            "minus_half_D_T2": -7734.5091127830165,
+            "closure": -1.2005330063402653e-10,
+            "closure_relative": 6.152429492279035e-15
+          },
+          "source": {
+            "statement": "H - Q = D_T + [int b_f u.grad T - Q]; the bracket is the Dirichlet reaction",
+            "H_minus_heat_in": 1042.8918652866341,
+            "D_T": 1042.963701281594,
+            "bracket": -0.0718359949933074,
+            "dirichlet_reaction": -0.07183599499527345,
+            "bracket_minus_reaction": 1.9660523209452663e-12
+          },
+          "stabilisation": {
+            "statement": "C + D_SUPG - F_SUPG = L_Q",
+            "closure": 1.4551915228366852e-11,
+            "closure_relative": 2.874579862719763e-16
+          }
+        },
+        "boundary": {
+          "inlet": {
+            "faces": 40,
+            "volume_flux": -0.0002,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": 0.07326697158384243
+          },
+          "outlet": {
+            "faces": 40,
+            "volume_flux": 0.00019999999999999846,
+            "enthalpy_flux": 6242.891865286634,
+            "half_t2_flux": 27247.662540170953,
+            "conduction_out": 0.446310290639836
+          },
+          "wall": {
+            "faces": 800,
+            "volume_flux": 0.0,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": -25.808259911876284
+          },
+          "symmetry": {
+            "faces": 480,
+            "volume_flux": 0.0,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": -27.059943744400314
+          },
+          "total": {
+            "volume_flux": -1.5449880957918438e-18,
+            "enthalpy_flux": 6242.891865286634,
+            "half_t2_flux": 27247.662540170953,
+            "conduction_out": -52.34862639405292
+          }
+        },
+        "reaction": {
+          "dirichlet_nodes": 41,
+          "reaction_at_dirichlet_nodes": -0.07183599499527345,
+          "sum_over_free_nodes": 6.165178330877769e-13,
+          "sum_over_all_nodes": -0.07183599499465691
+        },
+        "heat": {
+          "mass_in": 0.00019999999999999993,
+          "mass_out": 0.0001999999999999985,
+          "mass_imbalance_rel": 7.18283939271647e-15,
+          "wall_leak_rel": 0.0,
+          "inlet_flux_over_nominal": 0.9999999999999996,
+          "heat_in": 5200.000000000002,
+          "enthalpy_net_out": 6242.891865286633,
+          "conduction_net_out": -52.34862639405244,
+          "energy_imbalance_rel": 0.19048908440241902,
+          "temperature_weighted_divergence": 1042.963701281594,
+          "temperature_weighted_divergence_rel": 0.2005699425541526
+        },
+        "tau": {
+          "whole_domain": {
+            "n": 83200,
+            "median": 2.755801678518052e-06,
+            "p10": 2.7558012253962166e-06,
+            "p90": 0.0001655005752557575
+          },
+          "fluid_s_lt_0.5": {
+            "n": 35200,
+            "median": 9.037245233065735e-05,
+            "p10": 5.385269504090536e-05,
+            "p90": 0.00042024859539936086
+          }
+        },
+        "peclet": {
+          "definition": "b_f * |u at element centre| * h / (2 k)",
+          "h": 2.5e-05,
+          "whole_domain": {
+            "elements": 83200,
+            "median": 0.0006546112445691528,
+            "p90": 17.221375169611687,
+            "max": 27.571994729298964,
+            "fraction_above_1": 0.4036778846153846
+          },
+          "fluid_s_lt_0.5_incl_tabs": {
+            "elements": 35200,
+            "median": 11.805322540556439,
+            "p90": 19.856788074517297,
+            "max": 27.571994729298964,
+            "fraction_above_1": 0.9541477272727272
+          },
+          "fluid_s_lt_0.5_design_only": {
+            "elements": 32000,
+            "median": 11.152531417365463,
+            "p90": 19.374896632072108,
+            "max": 27.571994729298964,
+            "fraction_above_1": 0.9523125
+          }
+        },
+        "j_star": 1.3438948520026446
+      },
+      "state_sha256": {
+        "s": "a8a6224e87651cd0f15fae906c9f16f8a425f546bdc355754545362c6f63c093",
+        "press_vel": "c71ed25b0ae709c20b660e84424318a3cd00ec1ad3dc7e65d1e55a6ebfd6c79c",
+        "temperature": "82a4511bd9eee3775f27cad854869ff9052327d9e825523a458541c5d58fd992"
+      }
+    },
+    "x300/check": {
+      "design": "x300",
+      "layer": "check",
+      "state": "reused: R1m's record, x300 at flow h/2, thermal h/8",
+      "fluid_fractions": {
+        "v_f_whole_domain": 0.4230769230769231,
+        "v_f_design_domain": 0.4
+      },
+      "volume_feasible": true,
+      "flow_verification": {
+        "dofs": 63423,
+        "dirichlet_max_deviation": 0.0,
+        "residual_relative": 1.4932652398241482e-14,
+        "gate": 1e-08
+      },
+      "analysed": true,
+      "psi": 0.013093272979362709,
+      "compliance": 47661.300432732634,
+      "J": 1.3787433138466865,
+      "J_star": 1.379332220827752,
+      "c_advective": 18503.8828820938,
+      "c_diffusive": 29157.417550638835,
+      "T_max": 20.808406758640206,
+      "T_min": 0.0,
+      "nodes_below_inlet": 0,
+      "H": 5497.400364861662,
+      "Q": 5200.000000000001,
+      "r_D": -0.07276300460968599,
+      "D_T": 297.47312786637985,
+      "D_T_over_Q": 0.05720637074353458,
+      "balance_closure_relative": 2.1032064978498962e-14,
+      "integral_div_u_squared_flow_mesh": 0.08941092397587667,
+      "mass_imbalance_relative": 6.234162491791651e-15,
+      "residual_flow": 1.4932652398241482e-14,
+      "residual_thermal": 2.0912695875543847e-11,
+      "gate_passed": true,
+      "anchor": {
+        "source": "R1m's record, x300 at flow h/2, thermal h/8",
+        "psi_relative": 0.0,
+        "compliance_relative": 0.0,
+        "reproduced": true
+      },
+      "t_report_s": 76.05022959999042,
+      "report": {
+        "mesh": {
+          "h_flow": 5e-05,
+          "flow_elements": 20800,
+          "flow_quadrature": 2,
+          "h_thermal": 1.25e-05,
+          "thermal_elements": 332800,
+          "thermal_nodes": 334161,
+          "thermal_quadrature": 3,
+          "maps_flow_to_thermal": {
+            "factor": 4,
+            "coarse_elements": 20800,
+            "coarse_nodes": 21141,
+            "fine_elements": 332800,
+            "fine_nodes": 334161,
+            "parents_sha256": "7013faf156caa8132a3d9593a4b3990aa5cdab35de8fe1de6f792181c1915d61",
+            "node_map_sha256": "2a295a576ab2234fc3b69cfba46f650dc8714b94554bbe450eb05e3605d9b756"
+          },
+          "nesting": {
+            "area_flow_mesh": 5.200000000000001e-05,
+            "area_thermal_mesh": 5.200000000000001e-05,
+            "heat_source_flow_mesh": 5200.000000000002,
+            "heat_source_thermal_mesh": 5200.000000000001,
+            "design_cells_flow_mesh": 20000,
+            "design_cells_thermal_mesh": 320000
+          }
+        },
+        "residual_relative": {
+          "flow": 1.4932652398241482e-14,
+          "thermal": 2.0912695875543847e-11
+        },
+        "psi": 0.013093272979362709,
+        "c_advective": 18503.8828820938,
+        "c_diffusive": 29157.417550638835,
+        "compliance": 47661.300432732634,
+        "l_q": 50185.11460181344,
+        "d_supg": 2532.0433433542885,
+        "f_supg": 8.229174273480616,
+        "closure": 0.0,
+        "closure_relative": 0.0,
+        "net_supg_over_c": 0.052953111773415086,
+        "t_max": 20.808406758640206,
+        "nodes_below_inlet": 0,
+        "fraction_below_inlet": 0.0,
+        "min_temperature": 0.0,
+        "undershoot_depth": 0.0,
+        "heat_in": 5200.000000000001,
+        "mass": {
+          "inflow": 0.00019999999999999998,
+          "outflow": 0.00019999999999999874,
+          "imbalance_relative": 6.234162491791651e-15,
+          "wall_and_symmetry_flux": 0.0,
+          "note": "on the flow mesh, from the flow state itself"
+        },
+        "divergence": {
+          "flow_mesh": {
+            "integral_div_u": 1.1858461261560205e-20,
+            "integral_div_u_squared": 0.08941092397587667
+          },
+          "thermal_mesh": {
+            "integral_div_u": 3.563679367335655e-18,
+            "integral_div_u_squared": 0.08941092397587676
+          },
+          "D_T": 297.47312786637985,
+          "D_T2": 5100.9685339268235,
+          "D_T_over_heat_in": 0.05720637074353458,
+          "minus_half_D_T2": -2550.4842669634118,
+          "minus_half_D_T2_over_C": -0.053512687312488864,
+          "note": "algebraic shares of this solution, not errors and not the change a divergence-free velocity would produce"
+        },
+        "identities": {
+          "enthalpy": {
+            "statement": "H = int b_f u.grad T + D_T",
+            "H": 5497.400364861662,
+            "b_f_u_grad_T": 5199.92723699539,
+            "D_T": 297.47312786637985,
+            "closure": -1.07775122160092e-10,
+            "closure_relative": 1.9604743152594468e-14
+          },
+          "advective_half": {
+            "statement": "C_adv = 1/2 boundary int b_f T^2 u.n - 1/2 D_T2",
+            "c_advective": 18503.8828820938,
+            "half_boundary_t2_flux": 21054.367149056947,
+            "minus_half_D_T2": -2550.4842669634118,
+            "closure": 2.646629582159221e-10,
+            "closure_relative": 1.4303103835143507e-14
+          },
+          "source": {
+            "statement": "H - Q = D_T + [int b_f u.grad T - Q]; the bracket is the Dirichlet reaction",
+            "H_minus_heat_in": 297.4003648616608,
+            "D_T": 297.47312786637985,
+            "bracket": -0.07276300461126084,
+            "dirichlet_reaction": -0.07276300460968599,
+            "bracket_minus_reaction": -1.5748513604307846e-12
+          },
+          "stabilisation": {
+            "statement": "C + D_SUPG - F_SUPG = L_Q",
+            "closure": 0.0,
+            "closure_relative": 0.0
+          }
+        },
+        "boundary": {
+          "inlet": {
+            "faces": 80,
+            "volume_flux": -0.0002,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": 0.07313743971342654
+          },
+          "outlet": {
+            "faces": 80,
+            "volume_flux": 0.00019999999999999874,
+            "enthalpy_flux": 5497.400364861662,
+            "half_t2_flux": 21054.367149056947,
+            "conduction_out": 0.3884784989944579
+          },
+          "wall": {
+            "faces": 1600,
+            "volume_flux": 0.0,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": -12.331772788970948
+          },
+          "symmetry": {
+            "faces": 960,
+            "volume_flux": 0.0,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": -15.236377137112694
+          },
+          "total": {
+            "volume_flux": -1.2739375526704677e-18,
+            "enthalpy_flux": 5497.400364861662,
+            "half_t2_flux": 21054.367149056947,
+            "conduction_out": -27.10653398737576
+          }
+        },
+        "reaction": {
+          "dirichlet_nodes": 81,
+          "reaction_at_dirichlet_nodes": -0.07276300460968599,
+          "sum_over_free_nodes": -1.0691023250576656e-12,
+          "sum_over_all_nodes": -0.0727630046107551
+        },
+        "heat": {
+          "mass_in": 0.0001999999999999999,
+          "mass_out": 0.00019999999999999882,
+          "mass_imbalance_rel": 5.4210108624275245e-15,
+          "wall_leak_rel": 0.0,
+          "inlet_flux_over_nominal": 0.9999999999999994,
+          "heat_in": 5200.000000000001,
+          "enthalpy_net_out": 5497.400364861665,
+          "conduction_net_out": -27.10653398737222,
+          "energy_imbalance_rel": 0.051979582860440826,
+          "temperature_weighted_divergence": 297.47312786637985,
+          "temperature_weighted_divergence_rel": 0.05720637074353458
+        },
+        "tau": {
+          "whole_domain": {
+            "n": 332800,
+            "median": 6.889504213264428e-07,
+            "p10": 6.889504023601174e-07,
+            "p90": 7.699676873624737e-05
+          },
+          "fluid_s_lt_0.5": {
+            "n": 140800,
+            "median": 4.28132477601236e-05,
+            "p10": 2.8537499688118202e-05,
+            "p90": 0.0001808550321117021
+          }
+        },
+        "peclet": {
+          "definition": "b_f * |u at element centre| * h / (2 k)",
+          "h": 1.25e-05,
+          "whole_domain": {
+            "elements": 332800,
+            "median": 0.00026935048148193805,
+            "p90": 8.247462444427798,
+            "max": 13.312398271800213,
+            "fraction_above_1": 0.38324519230769233
+          },
+          "fluid_s_lt_0.5_incl_tabs": {
+            "elements": 140800,
+            "median": 6.17164361537753,
+            "p90": 9.326276097099475,
+            "max": 13.312398271800213,
+            "fraction_above_1": 0.9058522727272728
+          },
+          "fluid_s_lt_0.5_design_only": {
+            "elements": 128000,
+            "median": 5.930710111272109,
+            "p90": 9.029113112660117,
+            "max": 13.312398271800213,
+            "fraction_above_1": 0.901515625
+          }
+        },
+        "j_star": 1.379332220827752
+      }
+    },
+    "pilot/check": {
+      "design": "pilot",
+      "layer": "check",
+      "state": "reused: R1m's record, pilot at flow h/2, thermal h/8",
+      "fluid_fractions": {
+        "v_f_whole_domain": 0.4230769230769231,
+        "v_f_design_domain": 0.4
+      },
+      "volume_feasible": true,
+      "flow_verification": {
+        "dofs": 63423,
+        "dirichlet_max_deviation": 0.0,
+        "residual_relative": 1.3727729627246586e-14,
+        "gate": 1e-08
+      },
+      "analysed": true,
+      "psi": 0.012313625240919703,
+      "compliance": 47069.37961177506,
+      "J": 1.3518505470279887,
+      "J_star": 1.352432140186298,
+      "c_advective": 19004.375159746785,
+      "c_diffusive": 28065.004452028275,
+      "T_max": 20.32285615474306,
+      "T_min": 0.0,
+      "nodes_below_inlet": 0,
+      "H": 5454.333872878675,
+      "Q": 5200.000000000001,
+      "r_D": -0.0727629788429816,
+      "D_T": 254.40663585761604,
+      "D_T_over_Q": 0.048924353049541534,
+      "balance_closure_relative": 1.9069873885130687e-14,
+      "integral_div_u_squared_flow_mesh": 0.07752111831201428,
+      "mass_imbalance_relative": 7.995991022080595e-15,
+      "residual_flow": 1.3727729627246586e-14,
+      "residual_thermal": 2.2800752675718982e-11,
+      "gate_passed": true,
+      "anchor": {
+        "source": "R1m's record, pilot at flow h/2, thermal h/8",
+        "psi_relative": 0.0,
+        "compliance_relative": 0.0,
+        "reproduced": true
+      },
+      "t_report_s": 65.27885960001731,
+      "report": {
+        "mesh": {
+          "h_flow": 5e-05,
+          "flow_elements": 20800,
+          "flow_quadrature": 2,
+          "h_thermal": 1.25e-05,
+          "thermal_elements": 332800,
+          "thermal_nodes": 334161,
+          "thermal_quadrature": 3,
+          "maps_flow_to_thermal": {
+            "factor": 4,
+            "coarse_elements": 20800,
+            "coarse_nodes": 21141,
+            "fine_elements": 332800,
+            "fine_nodes": 334161,
+            "parents_sha256": "7013faf156caa8132a3d9593a4b3990aa5cdab35de8fe1de6f792181c1915d61",
+            "node_map_sha256": "2a295a576ab2234fc3b69cfba46f650dc8714b94554bbe450eb05e3605d9b756"
+          },
+          "nesting": {
+            "area_flow_mesh": 5.200000000000001e-05,
+            "area_thermal_mesh": 5.200000000000001e-05,
+            "heat_source_flow_mesh": 5200.000000000002,
+            "heat_source_thermal_mesh": 5200.000000000001,
+            "design_cells_flow_mesh": 20000,
+            "design_cells_thermal_mesh": 320000
+          }
+        },
+        "residual_relative": {
+          "flow": 1.3727729627246586e-14,
+          "thermal": 2.2800752675718982e-11
+        },
+        "psi": 0.012313625240919703,
+        "c_advective": 19004.375159746785,
+        "c_diffusive": 28065.004452028275,
+        "compliance": 47069.37961177506,
+        "l_q": 49311.7825214613,
+        "d_supg": 2251.2685661621017,
+        "f_supg": 8.865656475853267,
+        "closure": 7.275957614183426e-12,
+        "closure_relative": 1.4755008320814218e-16,
+        "net_supg_over_c": 0.04764037529666696,
+        "t_max": 20.32285615474306,
+        "nodes_below_inlet": 0,
+        "fraction_below_inlet": 0.0,
+        "min_temperature": 0.0,
+        "undershoot_depth": 0.0,
+        "heat_in": 5200.000000000001,
+        "mass": {
+          "inflow": 0.00019999999999999998,
+          "outflow": 0.00019999999999999838,
+          "imbalance_relative": 7.995991022080595e-15,
+          "wall_and_symmetry_flux": 0.0,
+          "note": "on the flow mesh, from the flow state itself"
+        },
+        "divergence": {
+          "flow_mesh": {
+            "integral_div_u": 3.8116482626443515e-20,
+            "integral_div_u_squared": 0.07752111831201428
+          },
+          "thermal_mesh": {
+            "integral_div_u": 4.2461761645858076e-18,
+            "integral_div_u_squared": 0.07752111831201444
+          },
+          "D_T": 254.40663585761604,
+          "D_T2": 4173.731440193266,
+          "D_T_over_heat_in": 0.048924353049541534,
+          "minus_half_D_T2": -2086.865720096633,
+          "minus_half_D_T2_over_C": -0.04433595125554989,
+          "note": "algebraic shares of this solution, not errors and not the change a divergence-free velocity would produce"
+        },
+        "identities": {
+          "enthalpy": {
+            "statement": "H = int b_f u.grad T + D_T",
+            "H": 5454.333872878675,
+            "b_f_u_grad_T": 5199.927237021157,
+            "D_T": 254.40663585761604,
+            "closure": -9.868017514236271e-11,
+            "closure_relative": 1.8092067233552304e-14
+          },
+          "advective_half": {
+            "statement": "C_adv = 1/2 boundary int b_f T^2 u.n - 1/2 D_T2",
+            "c_advective": 19004.375159746785,
+            "half_boundary_t2_flux": 21091.240879843226,
+            "minus_half_D_T2": -2086.865720096633,
+            "closure": 1.9235812942497432e-10,
+            "closure_relative": 1.0121781316568016e-14
+          },
+          "source": {
+            "statement": "H - Q = D_T + [int b_f u.grad T - Q]; the bracket is the Dirichlet reaction",
+            "H_minus_heat_in": 254.3338728786739,
+            "D_T": 254.40663585761604,
+            "bracket": -0.07276297884345695,
+            "dirichlet_reaction": -0.0727629788429816,
+            "bracket_minus_reaction": -4.753558657810686e-13
+          },
+          "stabilisation": {
+            "statement": "C + D_SUPG - F_SUPG = L_Q",
+            "closure": 7.275957614183426e-12,
+            "closure_relative": 1.4755008320814218e-16
+          }
+        },
+        "boundary": {
+          "inlet": {
+            "faces": 80,
+            "volume_flux": -0.0002,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": 0.07313745658247353
+          },
+          "outlet": {
+            "faces": 80,
+            "volume_flux": 0.00019999999999999836,
+            "enthalpy_flux": 5454.333872878675,
+            "half_t2_flux": 21091.240879843226,
+            "conduction_out": 0.3251838904392934
+          },
+          "wall": {
+            "faces": 1600,
+            "volume_flux": 0.0,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": -12.63746536421592
+          },
+          "symmetry": {
+            "faces": 960,
+            "volume_flux": 0.0,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": -15.246353509568669
+          },
+          "total": {
+            "volume_flux": -1.6534083130403943e-18,
+            "enthalpy_flux": 5454.333872878675,
+            "half_t2_flux": 21091.240879843226,
+            "conduction_out": -27.485497526762824
+          }
+        },
+        "reaction": {
+          "dirichlet_nodes": 81,
+          "reaction_at_dirichlet_nodes": -0.0727629788429816,
+          "sum_over_free_nodes": 5.813210369499992e-14,
+          "sum_over_all_nodes": -0.07276297884292346
+        },
+        "heat": {
+          "mass_in": 0.0001999999999999999,
+          "mass_out": 0.00019999999999999836,
+          "mass_imbalance_rel": 7.724940478959222e-15,
+          "wall_leak_rel": 0.0,
+          "inlet_flux_over_nominal": 0.9999999999999994,
+          "heat_in": 5200.000000000001,
+          "enthalpy_net_out": 5454.333872878674,
+          "conduction_net_out": -27.485497526760202,
+          "energy_imbalance_rel": 0.04362468756767559,
+          "temperature_weighted_divergence": 254.40663585761604,
+          "temperature_weighted_divergence_rel": 0.048924353049541534
+        },
+        "tau": {
+          "whole_domain": {
+            "n": 332800,
+            "median": 6.889504213045847e-07,
+            "p10": 6.889504010045826e-07,
+            "p90": 7.573967621153424e-05
+          },
+          "fluid_s_lt_0.5": {
+            "n": 140800,
+            "median": 4.445017201995353e-05,
+            "p10": 2.7375075552442393e-05,
+            "p90": 0.00016808994424490726
+          }
+        },
+        "peclet": {
+          "definition": "b_f * |u at element centre| * h / (2 k)",
+          "h": 1.25e-05,
+          "whole_domain": {
+            "elements": 332800,
+            "median": 0.0002776478034184342,
+            "p90": 8.562115408929715,
+            "max": 12.318000885398249,
+            "fraction_above_1": 0.38747896634615386
+          },
+          "fluid_s_lt_0.5_incl_tabs": {
+            "elements": 140800,
+            "median": 5.938282198938004,
+            "p90": 9.72675578204913,
+            "max": 12.318000885398249,
+            "fraction_above_1": 0.915859375
+          },
+          "fluid_s_lt_0.5_design_only": {
+            "elements": 128000,
+            "median": 5.629426541821351,
+            "p90": 9.400211360016367,
+            "max": 12.318000885398249,
+            "fraction_above_1": 0.9113203125
+          }
+        },
+        "j_star": 1.352432140186298
+      }
+    },
+    "new/check": {
+      "design": "new",
+      "layer": "check",
+      "state": "solved here",
+      "fluid_fractions": {
+        "v_f_whole_domain": 0.423076923076923,
+        "v_f_design_domain": 0.4
+      },
+      "volume_feasible": true,
+      "t_flow_solve_s": 33.88153810001677,
+      "flow_verification": {
+        "dofs": 63423,
+        "dirichlet_max_deviation": 0.0,
+        "residual_relative": 1.5225265455146293e-14,
+        "gate": 1e-08
+      },
+      "flow_identity": {
+        "config": {
+          "element_length_mode": "min_edge",
+          "flow_form": {
+            "brinkman_in_supg_residual": true,
+            "brinkman_in_tau": true,
+            "viscous_form": "symmetric"
+          },
+          "outlet": "traction"
+        },
+        "dirichlet_sha256": "c7a56986a01adeb33aed356505b79912c872b68f19fe05b97759ed172437411f",
+        "kind": "zhao2d flow state: press_vel, (p, u, v) per node",
+        "material": {
+          "alpha_max": 10000000.0,
+          "alpha_min": 0.0,
+          "q_alpha": 0.2
+        },
+        "mesh": {
+          "dofs": 63423,
+          "elements": 20800,
+          "geometry_sha256": "e99cb7f1c2ed5df5132d6038ab89b48efcebf6a1727a4328afa123d87b3fac87",
+          "nodes": 21141,
+          "quadrature": 2,
+          "region_sha256": "86c9944e74120dcb4d4572c7e5d9bd34e77abef68fe329d82d9b10ad0536b3ef"
+        },
+        "solid_fraction_sha256": "e71dbb423fe3bffe884274204d01661f5c52fb5c34cffba4c191e53a090e181e",
+        "solver": {
+          "linear": "SCIPY_SPARSE",
+          "linear_rtol": 1e-10,
+          "newton_max_iter": 40,
+          "newton_threshold": 1e-11
+        },
+        "spec": {
+          "design_half_width": 0.005,
+          "design_height": 0.01,
+          "element_size": 5e-05,
+          "fluid_density": 1000.0,
+          "fluid_viscosity": 0.001,
+          "inlet_half_width": 0.001,
+          "inlet_speed": 0.2,
+          "q_alpha": 0.2,
+          "tab_length": 0.001
+        }
+      },
+      "t_thermal_solve_s": 295.3795470999903,
+      "analysed": true,
+      "psi": 0.012995174504055611,
+      "compliance": 45773.50300027716,
+      "J": 1.330791221251423,
+      "J_star": 1.3313568024508435,
+      "c_advective": 18934.735014078862,
+      "c_diffusive": 26838.767986198298,
+      "T_max": 19.585360501107502,
+      "T_min": 0.0,
+      "nodes_below_inlet": 0,
+      "H": 5473.855764512096,
+      "Q": 5200.000000000001,
+      "r_D": -0.07276297727956549,
+      "D_T": 273.92852748948576,
+      "D_T_over_Q": 0.052678562978747255,
+      "balance_closure_relative": 2.1294419219395e-14,
+      "integral_div_u_squared_flow_mesh": 0.07845356648846183,
+      "mass_imbalance_relative": 7.860465750519907e-15,
+      "residual_flow": 1.5225265455146293e-14,
+      "residual_thermal": 2.2683636801078325e-11,
+      "gate_passed": true,
+      "t_report_s": 59.276685299992096,
+      "report": {
+        "mesh": {
+          "h_flow": 5e-05,
+          "flow_elements": 20800,
+          "flow_quadrature": 2,
+          "h_thermal": 1.25e-05,
+          "thermal_elements": 332800,
+          "thermal_nodes": 334161,
+          "thermal_quadrature": 3,
+          "maps_flow_to_thermal": {
+            "factor": 4,
+            "coarse_elements": 20800,
+            "coarse_nodes": 21141,
+            "fine_elements": 332800,
+            "fine_nodes": 334161,
+            "parents_sha256": "7013faf156caa8132a3d9593a4b3990aa5cdab35de8fe1de6f792181c1915d61",
+            "node_map_sha256": "2a295a576ab2234fc3b69cfba46f650dc8714b94554bbe450eb05e3605d9b756"
+          },
+          "nesting": {
+            "area_flow_mesh": 5.200000000000001e-05,
+            "area_thermal_mesh": 5.200000000000001e-05,
+            "heat_source_flow_mesh": 5200.000000000002,
+            "heat_source_thermal_mesh": 5200.000000000001,
+            "design_cells_flow_mesh": 20000,
+            "design_cells_thermal_mesh": 320000
+          }
+        },
+        "residual_relative": {
+          "flow": 1.5225265455146293e-14,
+          "thermal": 2.2683636801078325e-11
+        },
+        "psi": 0.012995174504055611,
+        "c_advective": 18934.735014078862,
+        "c_diffusive": 26838.767986198298,
+        "compliance": 45773.50300027716,
+        "l_q": 48101.26134781848,
+        "d_supg": 2336.633483495215,
+        "f_supg": 8.875135953884593,
+        "closure": 7.275957614183426e-12,
+        "closure_relative": 1.5126334341985836e-16,
+        "net_supg_over_c": 0.05085383890167278,
+        "t_max": 19.585360501107502,
+        "nodes_below_inlet": 0,
+        "fraction_below_inlet": 0.0,
+        "min_temperature": 0.0,
+        "undershoot_depth": 0.0,
+        "heat_in": 5200.000000000001,
+        "mass": {
+          "inflow": 0.00019999999999999998,
+          "outflow": 0.0001999999999999984,
+          "imbalance_relative": 7.860465750519907e-15,
+          "wall_and_symmetry_flux": 0.0,
+          "note": "on the flow mesh, from the flow state itself"
+        },
+        "divergence": {
+          "flow_mesh": {
+            "integral_div_u": 5.929230630780102e-21,
+            "integral_div_u_squared": 0.07845356648846183
+          },
+          "thermal_mesh": {
+            "integral_div_u": 4.671704341462687e-18,
+            "integral_div_u_squared": 0.078453566488462
+          },
+          "D_T": 273.92852748948576,
+          "D_T2": 4336.094211320528,
+          "D_T_over_heat_in": 0.052678562978747255,
+          "minus_half_D_T2": -2168.047105660264,
+          "minus_half_D_T2_over_C": -0.04736467527178631,
+          "note": "algebraic shares of this solution, not errors and not the change a divergence-free velocity would produce"
+        },
+        "identities": {
+          "enthalpy": {
+            "statement": "H = int b_f u.grad T + D_T",
+            "H": 5473.855764512096,
+            "b_f_u_grad_T": 5199.927237022721,
+            "D_T": 273.92852748948576,
+            "closure": -1.1027623258996755e-10,
+            "closure_relative": 2.0145988008106907e-14
+          },
+          "advective_half": {
+            "statement": "C_adv = 1/2 boundary int b_f T^2 u.n - 1/2 D_T2",
+            "c_advective": 18934.735014078862,
+            "half_boundary_t2_flux": 21102.782119738884,
+            "minus_half_D_T2": -2168.047105660264,
+            "closure": 2.423803380224854e-10,
+            "closure_relative": 1.2800830740026952e-14
+          },
+          "source": {
+            "statement": "H - Q = D_T + [int b_f u.grad T - Q]; the bracket is the Dirichlet reaction",
+            "H_minus_heat_in": 273.85576451209545,
+            "D_T": 273.92852748948576,
+            "bracket": -0.07276297728003556,
+            "dirichlet_reaction": -0.07276297727956549,
+            "bracket_minus_reaction": -4.700684286262913e-13
+          },
+          "stabilisation": {
+            "statement": "C + D_SUPG - F_SUPG = L_Q",
+            "closure": 7.275957614183426e-12,
+            "closure_relative": 1.5126334341985836e-16
+          }
+        },
+        "boundary": {
+          "inlet": {
+            "faces": 80,
+            "volume_flux": -0.0002,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": 0.07313745760603527
+          },
+          "outlet": {
+            "faces": 80,
+            "volume_flux": 0.0001999999999999984,
+            "enthalpy_flux": 5473.855764512096,
+            "half_t2_flux": 21102.782119738884,
+            "conduction_out": 0.3119760360751437
+          },
+          "wall": {
+            "faces": 1600,
+            "volume_flux": 0.0,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": -12.605473987973273
+          },
+          "symmetry": {
+            "faces": 960,
+            "volume_flux": 0.0,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": -15.200526596867883
+          },
+          "total": {
+            "volume_flux": -1.599198204416119e-18,
+            "enthalpy_flux": 5473.855764512096,
+            "half_t2_flux": 21102.782119738884,
+            "conduction_out": -27.420887091159976
+          }
+        },
+        "reaction": {
+          "dirichlet_nodes": 81,
+          "reaction_at_dirichlet_nodes": -0.07276297727956549,
+          "sum_over_free_nodes": 4.993003446732993e-13,
+          "sum_over_all_nodes": -0.0727629772790662
+        },
+        "heat": {
+          "mass_in": 0.0001999999999999999,
+          "mass_out": 0.00019999999999999833,
+          "mass_imbalance_rel": 7.86046575051991e-15,
+          "wall_leak_rel": 0.0,
+          "inlet_flux_over_nominal": 0.9999999999999994,
+          "heat_in": 5200.000000000001,
+          "enthalpy_net_out": 5473.855764512097,
+          "conduction_net_out": -27.420887091149467,
+          "energy_imbalance_rel": 0.04739132258095126,
+          "temperature_weighted_divergence": 273.92852748948576,
+          "temperature_weighted_divergence_rel": 0.052678562978747255
+        },
+        "tau": {
+          "whole_domain": {
+            "n": 332800,
+            "median": 6.889504214365229e-07,
+            "p10": 6.889503975525707e-07,
+            "p90": 7.741721781655136e-05
+          },
+          "fluid_s_lt_0.5": {
+            "n": 140800,
+            "median": 4.426605652835982e-05,
+            "p10": 2.7165489644661573e-05,
+            "p90": 0.0001740680470669194
+          }
+        },
+        "peclet": {
+          "definition": "b_f * |u at element centre| * h / (2 k)",
+          "h": 1.25e-05,
+          "whole_domain": {
+            "elements": 332800,
+            "median": 0.00030183146647803547,
+            "p90": 8.620364082601592,
+            "max": 13.236696141595301,
+            "fraction_above_1": 0.3854597355769231
+          },
+          "fluid_s_lt_0.5_incl_tabs": {
+            "elements": 140800,
+            "median": 5.9636801824489485,
+            "p90": 9.802589311199222,
+            "max": 13.236696141595301,
+            "fraction_above_1": 0.9110866477272728
+          },
+          "fluid_s_lt_0.5_design_only": {
+            "elements": 128000,
+            "median": 5.63689989995055,
+            "p90": 9.583273013732455,
+            "max": 13.236696141595301,
+            "fraction_above_1": 0.906859375
+          }
+        },
+        "j_star": 1.3313568024508435
+      },
+      "state_sha256": {
+        "s": "e71dbb423fe3bffe884274204d01661f5c52fb5c34cffba4c191e53a090e181e",
+        "press_vel": "39d78e1f4e63b8411c56d363dcda003b9889f396a41b6bc45ff5d7fc558b02ec",
+        "temperature": "321dff880c3e83ed8de43c763c15071c0fedaddc3c9798d2763c333df8dd720c"
+      }
+    }
+  },
+  "checkpoints": [
+    {
+      "stage": "inputs",
+      "failures": []
+    },
+    {
+      "stage": "development layer: the reused states",
+      "failures": []
+    },
+    {
+      "stage": "development layer: the zero step's map",
+      "failures": []
+    },
+    {
+      "stage": "development: the new design's flow solve (3.3 s)",
+      "failures": []
+    },
+    {
+      "stage": "development: the new design's thermal solve (9.8 s)",
+      "failures": []
+    },
+    {
+      "stage": "check layer: before its solves",
+      "failures": []
+    },
+    {
+      "stage": "check: the new design's flow solve (33.9 s)",
+      "failures": []
+    },
+    {
+      "stage": "check: the new design's thermal solve (295.4 s)",
+      "failures": []
+    }
+  ],
+  "fields": {
+    "file": "zhao2d_r1n_fields.npz",
+    "arrays": [
+      "design",
+      "designs",
+      "elem_centres",
+      "flow_node_coords_h2",
+      "initial_design",
+      "new_press_vel_check",
+      "new_press_vel_development",
+      "new_solid_fraction_flow_h2",
+      "new_temperature_check",
+      "new_temperature_development",
+      "press_vel",
+      "solid_fraction",
+      "solid_fraction_binary",
+      "temperature"
+    ]
+  },
+  "cost": {
+    "build_development_s": 43.78843620000407,
+    "t_updates_including_terminal_s": 905.3414854000439,
+    "peak_working_set_mb_after_development": 4552.64453125,
+    "build_check_s": 189.7978053999832,
+    "peak_working_set_mb": 8289.25390625,
+    "wall_clock_total_s": 1772.9694937000168
+  }
+}
