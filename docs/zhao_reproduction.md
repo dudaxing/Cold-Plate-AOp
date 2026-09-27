@@ -28,7 +28,8 @@ governing equations, objective, constraint — is kept.
 | R1l | qualified binary baselines from R1d's and R1k's saved physical densities by one volume-threshold rule; then 30 updates from x₃₀ on the volume-preserving projection at β = 16, judged on the qualified binary design | **done** — qualified, x₃₀ is still +1.45% worse than x₃₀₀; the new-projection pilot's qualified binary terminal is −0.85% against x₃₀₀'s and −2.27% against x₃₀'s; budget used, not converged; the continuous–binary gap stays +38.7%. On thermal h/8 the ranking holds and the pilot's lead grows: −1.60% against x₃₀₀, −2.57% against x₃₀; closed in the review of 0f88624, which also found the binary designs' heat-balance deficit D_T/Q at 20–25% on h/8 |
 | R1m | x₃₀₀'s qualified baseline and the pilot's qualified terminal: flow h → h/2 on the common thermal h/8; at most 2 flow and 2 thermal solves, no MMA, no AD | **done** — the ranking holds on flow h/2 and the lead grows: the pilot −1.95% against x₃₀₀ (−1.60% on flow h), both objectives lower. Replacing the flow moves C by −8.0% and −8.4%, about the size of the thermal step h/4 → h/8 and of the opposite sign; D_T/Q falls from 24.7% and 21.0% to 5.7% and 4.9%; closed in the review of d56d6ab |
 | R1n | from the pilot's raw terminal design, one Xu β = 32 stage on the development model, at most 30 MMA updates; its qualified binary design evaluated on the development layer (flow h, thermal h/4) and the check layer (flow h/2, thermal h/8), at most 2 flow and 2 thermal solves | **done** — budget used, not converged. The new qualified binary design is ahead of the pilot's by 1.86% in J on the development layer and 1.56% on the check layer (lower C, higher Ψ: ahead for w below about 0.75), and of x₃₀₀'s by 2.70% and 3.48% with both objectives lower. The continuous–binary gap is +35.8%. Closed in the review of 35abba9, which made it the preferred candidate at w = 0.5, with the R1l pilot kept as the lower-dissipation alternative |
-| R1o | from R1n's raw terminal design, β = 32 fixed on the development model, at most 30 MMA updates; its qualified binary design evaluated on both layers, at most 2 flow and 2 thermal solves | **done** — budget used, not converged; the zero step reproduces R1n's terminal. The continuous J fell 0.13%, but the new qualified binary design does not improve on R1n's on both layers: +0.58% in J on the development layer (Ψ and C both higher), −0.48% on the check layer (lower C, higher Ψ). R1n's design stays preferred, by the contract |
+| R1o | from R1n's raw terminal design, β = 32 fixed on the development model, at most 30 MMA updates; its qualified binary design evaluated on both layers, at most 2 flow and 2 thermal solves | **done** — budget used, not converged; the zero step reproduces R1n's terminal. The continuous J fell 0.13%, but the new qualified binary design does not improve on R1n's on both layers: +0.58% in J on the development layer (Ψ and C both higher), −0.48% on the check layer (lower C, higher Ψ). Closed in the review of 6bd8cb9, which made the check layer the ranking layer: R1o's design now leads it at w = 0.5, R1n's leads the development layer and is kept as a control |
+| R1p | R1n's and R1o's qualified binary designs on the bridge model flow h / thermal h/8, reusing their saved h flows: at most 2 thermal solves, no flow solve, no MMA | proposed in the review of 6bd8cb9; not authorised |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -2366,8 +2367,9 @@ any update, and tests the zero-step anchor itself.
     −4.1×10⁻⁵; volume drift −1.7×10⁻¹⁶; the constraint gradient affine to
     1.7×10⁻¹⁷.
   - **The zero step reproduces R1n's continuous terminal:** Ψ exactly, C
-    within 1.0×10⁻¹⁵, J within 6.7×10⁻¹⁶. The small differences are rounding:
-    the terminal was evaluated without the gradient, the zero step with it.
+    within 1.0×10⁻¹⁵ relative (−2.9×10⁻¹¹ absolute), J within 6.7×10⁻¹⁶. The
+    small differences are rounding: the terminal was evaluated without the
+    gradient, the zero step with it.
 - **During the updates:** the driver gated every state.
 - **Before the check layer's solves:**
   - Its meshes are R1m's.
@@ -2380,9 +2382,12 @@ any update, and tests the zero-step anchor itself.
 
 **The run.**
 
-- Restarting MMA sent J up for two updates, to 1.1266 and 1.1506 (with g down
-  to −2.1%), as the earlier restarts did. After that it fell, rising again
-  only at updates 8 and 12.
+- After the reinitialisation, J rose for the first two updates, to 1.1266 and
+  1.1506 (with g down to −2.1%), as in the earlier restarts. No run kept MMA's
+  history, so the cause is not isolated; the fixed map rules out only a β
+  switch. J rose again only at updates 8 and 12, and first fell below the
+  start at update 20. (The first version said restarting MMA sent J up; the
+  review of 6bd8cb9 narrowed it.)
 - Every state was feasible, and the lowest evaluated J is the terminal's.
 - 4 of the 30 updates reached the near-limit band (L∞ ≥ 0.0999): updates 3,
   4, 6 and 7. The largest change anywhere was 0.09999. The last step was L∞
@@ -2422,7 +2427,9 @@ any update, and tests the zero-step anchor itself.
     it is ahead for any weight.
   - On the check layer, the new design is ahead at w = 0.5. That is a
     trade-off, lower C and higher Ψ, and it holds for w below 0.768.
-  - Both margins are under 0.6%.
+  - Both margins are under 0.6%. That is not a tie and not a statistical
+    statement: the differences are real in these discrete solutions, and no
+    error bound says which design is better in the continuous problem.
 - **Against the pilot the new design is ahead on both layers** at w = 0.5,
   for w below 0.713 (development) and 0.751 (check), again with lower C and
   higher Ψ.
@@ -2434,10 +2441,11 @@ any update, and tests the zero-step anchor itself.
   This is an algebraic decomposition, not a mechanism.
 - Its lowest temperature on h/4 is −0.038, at 1 node. On h/8 no node is below
   the inlet temperature.
-- **Candidates.** The new design does not improve on R1n's on both layers, so
-  by the contract R1n's design stays preferred. The R1o design is a third
-  verified candidate, ahead of R1n's on the check layer only. Whether that
-  changes the choice is for the review.
+- **Candidates.** The first version said that, since the new design does not
+  improve on R1n's on both layers, R1n's design stays preferred "by the
+  contract". The contract set no such rule. Keeping R1n's label was a
+  conservative default, not a ranking. The review of 6bd8cb9 set the rule,
+  below.
 - **Cost: 1481 s in all.**
   - Development layer: build 38 s; the candidates' reports 21 s and 17 s.
   - The zero step, 30 updates and the terminal: 805 s (about 25 s each).
@@ -2445,6 +2453,115 @@ any update, and tests the zero-step anchor itself.
   - Check layer: build 139 s; the candidates' reports 61 s and 55 s; the new
     design's flow 24 s and thermal 213 s.
   - Peak working set: 8309 MiB, the whole process's, cumulative.
+
+### After the review of 6bd8cb9
+
+The review closed R1o and R1n's closing edits. It checked the run
+independently:
+
+- **The zero-step gate runs before the first update.** It took the run's own
+  callback from the source, fed it to the real `driver.run` with a stand-in
+  evaluation, and checked both cases. A matching zero step reaches the update;
+  one with C off by 10⁻⁹ stops before it, with no update made.
+- **The designs and the export.** It rebuilt the 31 designs' filter, Xu root
+  and constraint (within 5.6×10⁻¹⁶ of the records, η within 2.2×10⁻¹⁶), and
+  redid the export and connectivity bit for bit. The new design differs from
+  R1n's in 22 cells, 11 each way.
+- **The three new saved states,** re-assembled without `tfopus` or JAX, match
+  the records: C within 1.7×10⁻¹⁴, residuals at most 6.1×10⁻¹³ (flow) and
+  2.4×10⁻¹¹ (thermal).
+
+Its wording corrections are made above: the restart, the zero step's relative
+C, what "under 0.6%" can mean, and the candidates.
+
+**How candidates are ranked from now on, as the review set it:**
+
+- The development layer generates candidates.
+- The check layer is the ranking layer, for every candidate from now on,
+  whichever design that favours.
+- A disagreement between the layers is reported. The development layer does
+  not veto the check layer.
+
+At w = 0.5 this gives:
+
+| candidate | development layer J | check layer J | its role now |
+|---|---|---|---|
+| the R1l pilot | 1.368794 | 1.351851 | the low-dissipation alternative |
+| R1n's design | **1.343323** | 1.330791 | the development layer's leader, kept as the model-sensitivity control |
+| R1o's design | 1.351082 | **1.324402** | the check layer's leader: the current lead candidate |
+
+The review adds limits to this ranking:
+
+- No candidate is dropped.
+- The R1o design is not claimed to be better in the continuous physical
+  problem. Its 0.48% lead is real in these discrete solutions, and no error
+  bound speaks for the continuous problem.
+
+**Where the order flips.** Writing Δ for R1o minus R1n, at w = 0.5 on the
+common denominators:
+
+| | development | check |
+|---|---|---|
+| 0.5 ΔΨ/Ψ₀ | +0.001043962 | +0.002775201 |
+| 0.5 ΔC/C₀ | +0.006715592 | −0.009164248 |
+| ΔJ | +0.007759554 | −0.006389047 |
+
+- From one layer to the other the dissipation term moves +0.00173124, against
+  R1o, and the thermal term −0.01587984. So it is the thermal compliance that
+  flips the order.
+- From the development to the check layer, R1n's C falls 546.48 and R1o's
+  1192.57: the two designs respond differently to the change of model.
+- Both meshes change between the layers, so this cannot be put down to the
+  thermal mesh, the flow mesh, the divergence or the undershoot alone.
+- D_T/Q, 20.45% and 4.90% for the new design, is not an error bound on C, and
+  cannot be subtracted from the 0.48%.
+
+**With all three candidates on the check layer**, reweighting these three fixed
+designs on the same denominators:
+
+- R1o has the lowest J for w below 0.75144601, and the pilot above it.
+- R1n would need w below 0.74693407 to beat the pilot and above 0.76756035 to
+  beat R1o. No weight satisfies both, so R1n's design is never the lowest of
+  the three.
+
+This is not a front, and it is no reason to drop R1n.
+
+**The fixed-β restarts stop here.** Another 30 updates with the same settings
+and a reinitialised MMA is not recommended. This one moved the continuous J by
+0.13%, the export gap grew, and the layers now disagree. A long run at fixed β
+would be planned separately, keeping MMA's history, rather than restarted every
+30 updates.
+
+## R1p: the contract (as proposed in the review of 6bd8cb9; not yet authorised)
+
+Along the path from the development layer to the check layer, does the order
+of R1n and R1o flip when the temperature is refined, or only when the flow is
+replaced? The bridge is the missing middle model, flow h with thermal h/8:
+
+    A = (flow h, thermal h/4)  →  B = (flow h, thermal h/8)  →  D = (flow h/2, thermal h/8)
+
+A and D exist for both designs; B is new.
+
+- **Designs:** R1n's and R1o's qualified binary designs, as saved. They are not
+  filtered, projected or exported again.
+- **Reused:** each design's saved flow on h, with its identity and residual
+  checked first, and the A and D states. Any failed identity or anchor stops the
+  run before a new solve.
+- **New:** one thermal solve on h/8 per design, that is 2 thermal solves at
+  most, 0 flow solves, 0 MMA, 0 AD. The thermal form, 3×3 quadrature, τ rule,
+  boundaries, source and materials are unchanged.
+- **Scale:** the same denominators as a common scale; no new reference.
+- **Reported:**
+  - ΔJ, ΔΨ and ΔC between the designs at A, B and D, and the steps ΔB − ΔA and
+    ΔD − ΔB;
+  - every new temperature, with its paired flow and density identities, its
+    residuals and the heat balance.
+- **Reading:** if the order has already flipped at B, then along this path it
+  flips in the thermal refinement; if not, in the flow replacement. That is an
+  attribution along one path, not the full interaction and not a unique
+  mechanism.
+- **Then stop:** no h/16, no other cross cell, no change of q, β, reference or
+  scheme, no extra budget.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
