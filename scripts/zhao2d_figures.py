@@ -3,7 +3,7 @@
 Nothing is solved or re-optimised here: every field and number is read from
 results/ and drawn, so a figure shows exactly the state the records describe
 -- including that the R1d run is budget-limited and not converged, and that the
-thermal compliance still moves with the thermal mesh. Nine figures, written to
+thermal compliance still moves with the thermal mesh. Ten figures, written to
 docs/figures/:
 
   zhao2d_r1d_fields.png        the R1d design in the layout of Zhao Figs. 8 and
@@ -34,6 +34,9 @@ docs/figures/:
   zhao2d_r1o.png               R1o: thirty more updates at beta = 32 from R1n, its
                                binary design, and the three candidates' J on both
                                layers
+  zhao2d_r1p.png               R1p: R1o's and R1n's difference along the path
+                               development -> bridge -> check, split into its terms,
+                               and each design's C
 
     python scripts/zhao2d_figures.py [--results results] [--out docs/figures]
 """
@@ -1098,6 +1101,76 @@ def r1o_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
     return path
 
 
+# -- figure 10: R1p, where along the path R1n's and R1o's order flips ----------------------
+
+def r1p_figure(res: pathlib.Path, out: pathlib.Path) -> pathlib.Path:
+    rec = json.loads((res / "zhao2d_r1p_bridge.json").read_text(encoding="utf-8"))
+    layers = ("A", "B", "D")
+    labels = ("A\nflow h, thermal h/4", "B\nflow h, thermal h/8", "D\nflow h/2, thermal h/8")
+    diff = rec["r1o_minus_r1n"]
+    x = np.arange(len(layers))
+
+    fig = plt.figure(figsize=(11.0, 5.2))
+    grid = fig.add_gridspec(1, 2, left=0.08, right=0.97, top=0.78, bottom=0.24, wspace=0.32)
+
+    ax = fig.add_subplot(grid[0, 0])
+    width = 0.3
+    diss = [diff[k]["dissipation_term"] for k in layers]
+    therm = [diff[k]["thermal_term"] for k in layers]
+    total = [diff[k]["dJ"] for k in layers]
+    ax.bar(x - width / 2 - 0.02, diss, width, color=MUTED, label="dissipation term, 0.5 ΔΨ/Ψ₀")
+    ax.bar(x + width / 2 + 0.02, therm, width, color=INK2, label="thermal term, 0.5 ΔC/C₀")
+    ax.plot(x, total, color=INK, lw=1.2, zorder=3)
+    ax.plot(x, total, "o", color=INK, ms=8, zorder=4, label="ΔJ, their sum")
+    for xi, t in zip(x, total):
+        ax.annotate(f"{t:+.4f}", (xi, t), xytext=(-12, 0), textcoords="offset points",
+                    ha="right", va="center", fontsize=8, color=INK)
+    ax.axhline(0.0, color=AXIS, lw=1.0)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=8.5)
+    ax.set_xlim(-0.6, len(layers) - 0.4)
+    ax.grid(axis="y", color=GRID, lw=0.6)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    ax.set_ylabel("R1o minus R1n, on the h/4 scale")
+    ax.text(0.02, 0.03, "above 0: R1n ahead\nbelow 0: R1o ahead", transform=ax.transAxes,
+            ha="left", va="bottom", fontsize=7.5, color=MUTED)
+    ax.set_title("(a) The difference between the designs, split into its terms", loc="left",
+                 fontsize=9.5)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=3, frameon=False, fontsize=8)
+
+    ax = fig.add_subplot(grid[0, 1])
+    for name, colour, label in (("r1n", SERIES[1], "R1n's design"), ("r1o", SERIES[2], "R1o's design")):
+        c = [rec["layers"][name][k]["compliance"] for k in layers]
+        ax.plot(x, c, color=colour, lw=2, zorder=2)
+        ax.plot(x, c, "o", color=colour, ms=8, zorder=3, label=label)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=8.5)
+    ax.set_xlim(-0.4, len(layers) - 0.6)
+    ax.grid(axis="y", color=GRID, lw=0.6)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    ax.set_ylabel("thermal compliance C")
+    ax.set_title("(b) Each design's C along the path", loc="left", fontsize=9.5)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=2, frameon=False, fontsize=8)
+
+    steps = rec["steps"]
+    fig.suptitle("R1p — along A → B → D, the order of R1n's and R1o's designs flips in the flow "
+                 "replacement", x=0.02, ha="left", fontsize=11.5, color=INK, y=0.97)
+    fig.text(0.02, 0.905,
+             f"Refining the temperature (A → B) moves ΔJ by {steps['thermal_refinement_A_to_B']['dJ']:+.4f}, "
+             f"which narrows R1n's lead; replacing the flow (B → D) moves it by "
+             f"{steps['flow_replacement_B_to_D']['dJ']:+.4f}, which flips it. One path only, not the "
+             "full interaction.\nThe binary designs are given s; every state passed the 10⁻⁸ gate.",
+             fontsize=8.5, color=INK2, ha="left", va="top")
+    footer(fig, "Drawn from results/zhao2d_r1p_bridge.json — scripts/zhao2d_figures.py; "
+           "no state is re-solved.")
+    path = out / "zhao2d_r1p.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--results", type=pathlib.Path, default=REPO / "results")
@@ -1114,7 +1187,7 @@ def main() -> None:
              "zhao2d_r1l_baselines.json", "zhao2d_r1l_vp_pilot.json", "zhao2d_r1l_h8_check.json",
              "zhao2d_r1m_flow_check.json", "zhao2d_r1m_fields.npz",
              "zhao2d_r1n_beta32.json", "zhao2d_r1n_fields.npz", "zhao2d_r1o.json",
-             "zhao2d_r1o_fields.npz"]
+             "zhao2d_r1o_fields.npz", "zhao2d_r1p_bridge.json"]
     for n in names:
         print(f"read results/{n}  sha256 {sha(res / n)}")
     sources = [f"results/{n}" for n in names]
@@ -1122,7 +1195,7 @@ def main() -> None:
                  status_figure(res, args.out), r1k_figure(res, args.out, g),
                  terminal_figure(res, args.out, g), r1l_figure(res, args.out, g),
                  r1m_figure(res, args.out, g), r1n_figure(res, args.out, g),
-                 r1o_figure(res, args.out, g)):
+                 r1o_figure(res, args.out, g), r1p_figure(res, args.out)):
         print(f"wrote {path.relative_to(REPO) if path.is_relative_to(REPO) else path}")
 
 

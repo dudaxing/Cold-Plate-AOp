@@ -29,7 +29,7 @@ governing equations, objective, constraint — is kept.
 | R1m | x₃₀₀'s qualified baseline and the pilot's qualified terminal: flow h → h/2 on the common thermal h/8; at most 2 flow and 2 thermal solves, no MMA, no AD | **done** — the ranking holds on flow h/2 and the lead grows: the pilot −1.95% against x₃₀₀ (−1.60% on flow h), both objectives lower. Replacing the flow moves C by −8.0% and −8.4%, about the size of the thermal step h/4 → h/8 and of the opposite sign; D_T/Q falls from 24.7% and 21.0% to 5.7% and 4.9%; closed in the review of d56d6ab |
 | R1n | from the pilot's raw terminal design, one Xu β = 32 stage on the development model, at most 30 MMA updates; its qualified binary design evaluated on the development layer (flow h, thermal h/4) and the check layer (flow h/2, thermal h/8), at most 2 flow and 2 thermal solves | **done** — budget used, not converged. The new qualified binary design is ahead of the pilot's by 1.86% in J on the development layer and 1.56% on the check layer (lower C, higher Ψ: ahead for w below about 0.75), and of x₃₀₀'s by 2.70% and 3.48% with both objectives lower. The continuous–binary gap is +35.8%. Closed in the review of 35abba9, which made it the preferred candidate at w = 0.5, with the R1l pilot kept as the lower-dissipation alternative |
 | R1o | from R1n's raw terminal design, β = 32 fixed on the development model, at most 30 MMA updates; its qualified binary design evaluated on both layers, at most 2 flow and 2 thermal solves | **done** — budget used, not converged; the zero step reproduces R1n's terminal. The continuous J fell 0.13%, but the new qualified binary design does not improve on R1n's on both layers: +0.58% in J on the development layer (Ψ and C both higher), −0.48% on the check layer (lower C, higher Ψ). Closed in the review of 6bd8cb9, which made the check layer the ranking layer: R1o's design now leads it at w = 0.5, R1n's leads the development layer and is kept as a control |
-| R1p | R1n's and R1o's qualified binary designs on the bridge model flow h / thermal h/8, reusing their saved h flows: at most 2 thermal solves, no flow solve, no MMA | proposed in the review of 6bd8cb9; not authorised |
+| R1p | R1n's and R1o's qualified binary designs on the bridge model flow h / thermal h/8, reusing their saved h flows: at most 2 thermal solves, no flow solve, no MMA | **done** — along development → bridge → check, the order of the two designs flips in the flow replacement: refining the temperature narrows R1n's lead (ΔJ +0.0078 → +0.0048) without flipping it; replacing the flow moves it to −0.0064. One path only, not the full interaction |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -116,6 +116,13 @@ continuous design and its qualified binary design, 22 cells different from
 terminal, which update 0 reproduces. (e) The three candidates on both layers:
 the new design is behind R1n's on the development layer and ahead on the check
 layer.
+
+![R1p: where the order of R1n's and R1o's designs flips](figures/zhao2d_r1p.png)
+
+R1p. (a) R1o's design minus R1n's at the development layer A, the bridge B
+(flow h, thermal h/8) and the check layer D, split into the dissipation and
+thermal terms: R1n leads at A and B, R1o at D. (b) Each design's C along the
+same path.
 
 ## R1d: the 300-update run
 
@@ -2532,7 +2539,7 @@ and a reinitialised MMA is not recommended. This one moved the continuous J by
 would be planned separately, keeping MMA's history, rather than restarted every
 30 updates.
 
-## R1p: the contract (as proposed in the review of 6bd8cb9; not yet authorised)
+## R1p: the contract (as proposed in the review of 6bd8cb9; authorised and run)
 
 Along the path from the development layer to the check layer, does the order
 of R1n and R1o flip when the temperature is refined, or only when the flow is
@@ -2562,6 +2569,68 @@ A and D exist for both designs; B is new.
   mechanism.
 - **Then stop:** no h/16, no other cross cell, no change of q, β, reference or
   scheme, no extra budget.
+
+## R1p: what it found
+
+Authorised on the local CPU. `scripts/zhao2d_r1p_bridge.py`; record
+`results/zhao2d_r1p_bridge.json` (and `.log`); fields
+`results/zhao2d_r1p_fields.npz` (the two bridge temperatures); figure
+`docs/figures/zhao2d_r1p.png`. `validation/test_zhao2d_binary.py` tests that a
+Ψ that does not reproduce the A record stops the run before any thermal solve.
+
+**Gates; all passed.**
+
+- **Inputs:** both designs' A and D states are the ones R1n and R1o recorded,
+  by hash, and the two yardsticks agree.
+- **The bridge problem:** its flow and thermal sides are R1m's flow-h row, by
+  identity.
+- **Before any solve:** each saved h flow re-verifies (1.3×10⁻¹⁴), and the Ψ it
+  gives reproduces the A record exactly.
+- **After each solve:**
+  - the h/8 temperature ran to upstream's 40-iteration cap, at 2.5 and
+    2.6×10⁻¹¹, and passed the 10⁻⁸ gate;
+  - the heat balance closes to 2.5×10⁻¹⁴;
+  - no node is below the inlet temperature.
+
+| | R1n's design | R1o's design |
+|---|---|---|
+| A (flow h, thermal h/4): C, J | 46319.99, 1.343323 | 46593.22, 1.351082 |
+| B (flow h, thermal h/8): C, J | 49907.90, 1.431507 | 50062.09, 1.436341 |
+| D (flow h/2, thermal h/8): C, J | 45773.50, 1.330791 | 45400.64, 1.324402 |
+| D_T/Q at B | 22.19% | 22.58% |
+
+R1o minus R1n, at w = 0.5 on the common denominators:
+
+| | 0.5 ΔΨ/Ψ₀ | 0.5 ΔC/C₀ | ΔJ | ahead |
+|---|---|---|---|---|
+| A | +0.001043962 | +0.006715592 | +0.007759554 | R1n |
+| B | +0.001043962 | +0.003789620 | +0.004833581 | R1n |
+| D | +0.002775201 | −0.009164248 | −0.006389047 | R1o |
+
+- **Along this path the order flips in the flow replacement.**
+  - Refining the temperature (A → B) moves ΔJ by −0.00292597, all in the
+    thermal term, since the flow, and so Ψ, does not change. That removes 38%
+    of R1n's lead but leaves R1n ahead.
+  - Replacing the flow (B → D) moves ΔJ by −0.01122263: +0.00173124 in the
+    dissipation term, against R1o, and −0.01295387 in the thermal term. That
+    flips the order.
+- **Each design's C along the path:**
+  - The thermal refinement raises R1n's C by 7.75% and R1o's by 7.45%.
+  - The flow replacement lowers them by 8.28% and 9.31%. The thermal term's
+    −0.01295 in that step is the arithmetic of R1o's C falling further.
+- **What this does not say.**
+  - It is an attribution along one path. The other path, through (flow h/2,
+    thermal h/4), was not computed, so the interaction of the two steps is not
+    known.
+  - Nothing here names a mechanism: replacing the flow changes the velocity
+    field, its divergence and the inlet-wins slip together.
+  - The ranking of the candidates does not change. The check layer ranks, and
+    R1o's design leads it at w = 0.5.
+- **Cost: 580 s.**
+  - Build: 114 s.
+  - Thermal solves: 185 s and 182 s.
+  - Reports: 47 s and 45 s.
+  - Peak working set: 5217 MiB, the whole process's.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -2824,6 +2893,7 @@ python scripts/zhao2d_r1l_h8_check.py --out DIR          # R1l's qualified binar
 python scripts/zhao2d_r1m_flow_check.py --out DIR        # R1m: two of them with the flow on h/2, thermal h/8 (~22 min)
 python scripts/zhao2d_r1n_beta32_pilot.py --out DIR      # R1n: one beta = 32 stage, its binary on both layers (~30 min)
 python scripts/zhao2d_r1o_beta32_continue.py --out DIR   # R1o: thirty more updates at beta = 32 from R1n (~25 min)
+python scripts/zhao2d_r1p_bridge.py --out DIR            # R1p: R1n's and R1o's designs on flow h / thermal h/8 (~10 min)
 python scripts/zhao2d_figures.py                         # docs/figures/ from the saved results, no solves
 ```
 

@@ -1,0 +1,25 @@
+D:\Coding\thermalFluid\thermal-fluid-opus\external\TOFLUX\toflux\src\solver.py:21: UserWarning: petsc4py not found; the PETSC linear solver is unavailable.
+  warnings.warn("petsc4py not found; the PETSC linear solver is unavailable.")
+checkpoint passed: inputs
+built the bridge: flow 5200 el, thermal 332800 el (113.8 s)
+r1n/B: flow |R| 1.3e-14, Psi 1.293831054e-02 (A record 1.293831054e-02)
+r1o/B: flow |R| 1.3e-14, Psi 1.300424534e-02 (A record 1.300424534e-02)
+checkpoint passed: bridge: identities, flows and Psi, before any solve
+NR converged in 40 iters, res_norm/res_norm_0: 2.475815625821529e-11
+r1n/B: Psi 1.293831054e-02  C 49907.904728  J 1.431507499  D_T/Q 22.1878%  |R| 1.3e-14/2.5e-11  thermal 185.0 s
+checkpoint passed: bridge: r1n's thermal solve (185.0 s)
+NR converged in 40 iters, res_norm/res_norm_0: 2.6408263425225844e-11
+r1o/B: Psi 1.300424534e-02  C 50062.090242  J 1.436341080  D_T/Q 22.5814%  |R| 1.3e-14/2.6e-11  thermal 182.5 s
+checkpoint passed: bridge: r1o's thermal solve (182.5 s)
+
+R1o minus R1n (w = 0.5, the common denominators):
+  A: J +0.5776%  Psi +0.5096%  C +0.5899%   terms +0.001043962 +0.006715592 = +0.007759554  -> r1n ahead
+  B: J +0.3377%  Psi +0.5096%  C +0.3089%   terms +0.001043962 +0.003789620 = +0.004833581  -> r1n ahead
+  D: J -0.4801%  Psi +1.3488%  C -0.8146%   terms +0.002775201 -0.009164248 = -0.006389047  -> r1o ahead
+  thermal_refinement_A_to_B: dissipation +0.000000000  thermal -0.002925973  dJ -0.002925973
+  flow_replacement_B_to_D: dissipation +0.001731240  thermal -0.012953868  dJ -0.011222628
+  r1n: C A->B +7.746%, B->D -8.284%
+  r1o: C A->B +7.445%, B->D -9.311%
+
+the order flips in the flow replacement B -> D
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1p_bridge.json and D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1p_fields.npz; total 580 s

@@ -200,10 +200,16 @@ export.
 - None of this says which design is better in the continuous physical
   problem.
 
-Repeating the same 30-update restart is not planned. The proposed next stage,
-R1p, adds one bridge model, flow h with thermal h/8, for R1n's and R1o's
-designs (two thermal solves), to see where along the path their order flips.
-It is not yet authorised.
+Repeating the same 30-update restart is not planned.
+
+**The order of those two designs flips when the flow is refined.** R1p added
+the bridge model flow h with thermal h/8, for R1n's and R1o's designs (two
+thermal solves).
+- Refining only the temperature narrows R1n's lead but keeps it ahead.
+- Replacing the flow as well, with the temperature held on h/8, puts R1o's
+  design ahead.
+- That is one path from the development model to the check model, not the
+  full interaction, and it names no mechanism.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
@@ -271,6 +277,7 @@ python scripts/zhao2d_r1l_h8_check.py --out DIR         # the three qualified bi
 python scripts/zhao2d_r1m_flow_check.py --out DIR       # two of them with the flow on h/2, thermal h/8
 python scripts/zhao2d_r1n_beta32_pilot.py --out DIR     # one beta = 32 stage from the pilot, its binary on both layers
 python scripts/zhao2d_r1o_beta32_continue.py --out DIR  # thirty more updates at beta = 32 from R1n, the same check
+python scripts/zhao2d_r1p_bridge.py --out DIR           # R1n's and R1o's designs on flow h / thermal h/8
 python scripts/zhao2d_figures.py                        # docs/figures/, drawn from the saved results
 ```
 

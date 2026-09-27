@@ -403,6 +403,45 @@ def test_r1o_stops_at_a_failed_candidate_anchor_before_any_update(tmp_path, monk
     assert "zero_step_map" not in record and not (tmp_path / ro.FIELDS).exists()
 
 
+def test_r1p_stops_at_a_failed_psi_anchor_before_any_thermal_solve(tmp_path, monkeypatch):
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
+    import zhao2d_r1p_bridge as rp
+
+    root = pathlib.Path(__file__).resolve().parent.parent / "results"
+    rows = json.loads((root / "zhao2d_r1m_flow_check.json").read_text(encoding="utf-8"))["rows"]["flow_h"]
+    a = {name: json.loads((root / file).read_text(encoding="utf-8"))["cells"]["new/development"]
+         for name, file in (("r1n", "zhao2d_r1n_beta32.json"), ("r1o", "zhao2d_r1o.json"))}
+    flows = {name: np.load(root / file)["new_press_vel_development"]
+             for name, file in (("r1n", "zhao2d_r1n_fields.npz"), ("r1o", "zhao2d_r1o_fields.npz"))}
+
+    def psi(pv, alpha):
+        name = next(k for k, f in flows.items() if np.array_equal(f, pv))
+        return a[name]["psi"] * (1.0 + 1e-9 if name == "r1o" else 1.0)
+
+    fake = SimpleNamespace(
+        flow_mesh=z.build_mesh(z.Zhao2DSpec(), dofs_per_node=3),
+        thermal_mesh=SimpleNamespace(num_elems=1),
+        flow=SimpleNamespace(dissipated_power=psi),
+        solve_thermal=lambda *a_, **k: pytest.fail("solved a temperature after an anchor failed"))
+
+    monkeypatch.setattr(rp.sys, "argv", ["r1p", "--out", str(tmp_path)])
+    monkeypatch.setattr(rp.faulthandler, "dump_traceback_later", lambda *a_, **k: None)
+    monkeypatch.setattr(rp.dual, "Zhao2DDualProblem", lambda *a_, **k: fake)
+    monkeypatch.setattr(rp, "mesh_identity", lambda planar: rows["flow_mesh"])
+    monkeypatch.setattr(rp, "thermal_identity", lambda problem: rows["thermal_mesh"])
+    monkeypatch.setattr(rp.fs, "verify_flow_state",
+                        lambda problem, pv, s, alpha_max, tol: {"residual_relative": 0.0})
+    with pytest.raises(SystemExit) as stop:
+        rp.main()
+    assert "nothing after it was built or solved" in str(stop.value.code)
+    record = json.loads((tmp_path / rp.RECORD).read_text(encoding="utf-8"))
+    assert [c["stage"] for c in record["checkpoints"]] == [
+        "inputs", "bridge: identities, flows and Psi, before any solve"]
+    assert [f.split(":")[0] for f in record["checkpoints"][-1]["failures"]] == ["r1o/B"]
+    assert record["cells"]["r1n/B"]["psi_anchor"]["reproduced"]
+    assert not (tmp_path / rp.FIELDS).exists()
+
+
 def test_r1o_zero_step_anchor_reproduces_or_refuses():
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
     import zhao2d_r1o_beta32_continue as ro
