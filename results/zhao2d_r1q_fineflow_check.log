@@ -1,0 +1,42 @@
+D:\Coding\thermalFluid\thermal-fluid-opus\external\TOFLUX\toflux\src\solver.py:21: UserWarning: petsc4py not found; the PETSC linear solver is unavailable.
+  warnings.warn("petsc4py not found; the PETSC linear solver is unavailable.")
+checkpoint passed: inputs
+built: design 5200 el (5000 variables), flow 20800 el, thermal 332800 el (174.2 s)
+checkpoint passed: identities and the common scale
+anchor r1n: Psi 1.299517450e-02  C 45773.503000  J 1.330791221  |R| 1.5e-14/2.3e-11  ok
+anchor r1o: Psi 1.317045139e-02  C 45400.643879  J 1.324402175  |R| 1.6e-14/2.1e-11  ok
+checkpoint passed: anchors: the given binary designs, nothing solved
+checkpoint passed: main point: root, eta and volume
+NR converged in 8 iters, res_norm/res_norm_0: 2.1736990962867178e-14
+NR converged in 40 iters, res_norm/res_norm_0: 1.1636697790940173e-11
+main point: J 1.000923345 (development model 0.987859525)  Psi 1.691258689e-02  C 29828.827656  g -1.011e-04  |R| 1.8e-14/1.2e-11  (335.3 s, one forward solve and two reverse passes)
+checkpoint passed: main point: value and gradient
+NR converged in 8 iters, res_norm/res_norm_0: 2.1675964010431092e-14
+NR converged in 40 iters, res_norm/res_norm_0: 1.1600772744322947e-11
+  seed 11 step 1e-04 sign +1: J 1.000929728726  |R| 1.8e-14/1.2e-11  (275.1 s)
+NR converged in 8 iters, res_norm/res_norm_0: 2.1662343170412494e-14
+NR converged in 40 iters, res_norm/res_norm_0: 1.1684818209262376e-11
+  seed 11 step 1e-04 sign -1: J 1.000917360259  |R| 1.8e-14/1.2e-11  (260.1 s)
+NR converged in 8 iters, res_norm/res_norm_0: 2.1661920102410895e-14
+NR converged in 40 iters, res_norm/res_norm_0: 1.2566572235190923e-11
+  seed 11 step 1e-05 sign +1: J 1.000923965555  |R| 1.8e-14/1.3e-11  (258.2 s)
+NR converged in 8 iters, res_norm/res_norm_0: 2.1665019047684377e-14
+NR converged in 40 iters, res_norm/res_norm_0: 1.2575946876708075e-11
+  seed 11 step 1e-05 sign -1: J 1.000922728717  |R| 1.8e-14/1.3e-11  (256.3 s)
+seed 11: best-step relative error psi 8.6e-07  c 4.3e-06  g 1.2e-12  J 7.1e-08
+NR converged in 8 iters, res_norm/res_norm_0: 2.1496850558718305e-14
+NR converged in 40 iters, res_norm/res_norm_0: 1.1725642542446396e-11
+  seed 12 step 1e-04 sign +1: J 1.000920593189  |R| 1.9e-14/1.2e-11  (259.9 s)
+NR converged in 8 iters, res_norm/res_norm_0: 2.170230488974708e-14
+NR converged in 40 iters, res_norm/res_norm_0: 1.1646855649199652e-11
+  seed 12 step 1e-04 sign -1: J 1.000926492795  |R| 1.8e-14/1.2e-11  (272.7 s)
+NR converged in 8 iters, res_norm/res_norm_0: 2.1702656596729985e-14
+NR converged in 40 iters, res_norm/res_norm_0: 1.1586832887615839e-11
+  seed 12 step 1e-05 sign +1: J 1.000923052153  |R| 1.8e-14/1.2e-11  (252.8 s)
+NR converged in 8 iters, res_norm/res_norm_0: 2.163150918496282e-14
+NR converged in 40 iters, res_norm/res_norm_0: 1.1694594417008867e-11
+  seed 12 step 1e-05 sign -1: J 1.000923642090  |R| 1.8e-14/1.2e-11  (259.8 s)
+seed 12: best-step relative error psi 3.4e-08  c 7.6e-07  g 1.2e-08  J 4.0e-07
+
+verdict: PASS at 1e-05; worst best-step relative error 4.3e-06
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1q_fineflow_check.json and D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1q_fields.npz; total 2672 s

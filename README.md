@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done here; the work continues in its own repository, Cooling-conformal-AOp |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8, 1.95% with the flow also refined to h/2); one β = 32 stage from it gives a second qualified binary design, 1.86% better again on the development model and 1.56% on the finer check model (lower C, higher Ψ), then the preferred candidate at w = 0.5; 30 more updates at the same β give a third design, 0.58% worse on the development model and 0.48% better on the check model, which now ranks: it is the current lead candidate. The two models' order of those designs flips with the flow mesh; next proposed, not authorised: the check model made differentiable on the same design variables |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8, 1.95% with the flow also refined to h/2); one β = 32 stage from it gives a second qualified binary design, 1.86% better again on the development model and 1.56% on the finer check model (lower C, higher Ψ), then the preferred candidate at w = 0.5; 30 more updates at the same β give a third design, 0.58% worse on the development model and 0.48% better on the check model, which now ranks: it is the current lead candidate. The two models' order of those designs flips with the flow mesh, so the check model has been made differentiable in the same design variables, its gradient verified; no optimisation on it yet |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -211,11 +211,16 @@ thermal solves).
 - That is one path from the development model to the check model, not the
   full interaction, and it names no mechanism.
 
-The proposed next stage, R1q, is software rather than a search. It wires the
-check model (flow h/2, thermal h/8) to the same 5000 coarse design variables,
-without changing the design space or the filter length. It then verifies that
-model's states and total gradient on a small mesh and at one working point,
-with no optimisation. It is not yet authorised.
+**The check model is now differentiable in the same design variables.** R1q
+(`tfopus/zhao2d_fineflow.py`) wires the check model (flow h/2, thermal h/8) to
+the 5000 coarse design variables, without changing the design space or the
+filter length. It evaluates J on the development model's Ψ₀ and C₀, declared
+as a common scale.
+- For R1n's and R1o's binary designs it reproduces their check-model values
+  exactly.
+- Its total gradient matches central differences to 10⁻⁵, on a small mesh and
+  at R1o's continuous design on the full mesh.
+- No optimisation has been run on it yet.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
@@ -284,6 +289,7 @@ python scripts/zhao2d_r1m_flow_check.py --out DIR       # two of them with the f
 python scripts/zhao2d_r1n_beta32_pilot.py --out DIR     # one beta = 32 stage from the pilot, its binary on both layers
 python scripts/zhao2d_r1o_beta32_continue.py --out DIR  # thirty more updates at beta = 32 from R1n, the same check
 python scripts/zhao2d_r1p_bridge.py --out DIR           # R1n's and R1o's designs on flow h / thermal h/8
+python scripts/zhao2d_r1q_fineflow_check.py --out DIR   # the check model's gradient in the coarse design variables
 python scripts/zhao2d_figures.py                        # docs/figures/, drawn from the saved results
 ```
 
