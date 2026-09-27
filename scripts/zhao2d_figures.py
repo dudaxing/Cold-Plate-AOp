@@ -889,7 +889,8 @@ def r1n_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
 
     panels = (
         (fb["solid_fraction_binary"], "(a) The pilot (R1l, β = 16), qualified binary",
-         f"t = {pilot['export']['t']:.4f}, 2000 fluid cells\nthe candidate R1n starts from"),
+         f"t = {pilot['export']['t']:.4f}, 2000 fluid cells\nshown for the start; R1n starts "
+         "from its raw x"),
         (fn["solid_fraction"], "(b) After R1n, continuous (β = 32)",
          f"30 updates, not converged\ngrey {term['grey_fraction']:.1%}; J = {term['J_self']:.4f}"),
         (fn["solid_fraction_binary"], "(c) After R1n, qualified binary",

@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done here; the work continues in its own repository, Cooling-conformal-AOp |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8, 1.95% with the flow also refined to h/2); one β = 32 stage from it gives a second qualified binary design, 1.86% better again on the development model and 1.56% on the finer check model (lower C, higher Ψ) |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8, 1.95% with the flow also refined to h/2); one β = 32 stage from it gives a second qualified binary design, 1.86% better again on the development model and 1.56% on the finer check model (lower C, higher Ψ), now the preferred candidate at w = 0.5; next proposed, not authorised: 30 more updates at the same β |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -181,6 +181,12 @@ the finer check model.
   is still 36%.
 - It does not show that β = 32 beats 16, because the new map, a restarted MMA
   and 30 more updates all contributed.
+
+The review of that stage made the R1n design the preferred candidate at
+w = 0.5, and kept the R1l pilot as the lower-dissipation alternative. Neither
+dominates the other. The next proposed stage, R1o, holds β = 32 for at most 30
+more updates from the R1n design, with the same two-layer check of its binary
+design. It is not yet authorised.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied

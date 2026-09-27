@@ -27,7 +27,8 @@ governing equations, objective, constraint — is kept.
 | — | the volume-preserving projection of Xu, Cai & Cheng (2010) becomes the default; earlier record scripts pinned to the tanh projection | **done**; see "The volume-preserving projection" |
 | R1l | qualified binary baselines from R1d's and R1k's saved physical densities by one volume-threshold rule; then 30 updates from x₃₀ on the volume-preserving projection at β = 16, judged on the qualified binary design | **done** — qualified, x₃₀ is still +1.45% worse than x₃₀₀; the new-projection pilot's qualified binary terminal is −0.85% against x₃₀₀'s and −2.27% against x₃₀'s; budget used, not converged; the continuous–binary gap stays +38.7%. On thermal h/8 the ranking holds and the pilot's lead grows: −1.60% against x₃₀₀, −2.57% against x₃₀; closed in the review of 0f88624, which also found the binary designs' heat-balance deficit D_T/Q at 20–25% on h/8 |
 | R1m | x₃₀₀'s qualified baseline and the pilot's qualified terminal: flow h → h/2 on the common thermal h/8; at most 2 flow and 2 thermal solves, no MMA, no AD | **done** — the ranking holds on flow h/2 and the lead grows: the pilot −1.95% against x₃₀₀ (−1.60% on flow h), both objectives lower. Replacing the flow moves C by −8.0% and −8.4%, about the size of the thermal step h/4 → h/8 and of the opposite sign; D_T/Q falls from 24.7% and 21.0% to 5.7% and 4.9%; closed in the review of d56d6ab |
-| R1n | from the pilot's raw terminal design, one Xu β = 32 stage on the development model, at most 30 MMA updates; its qualified binary design evaluated on the development layer (flow h, thermal h/4) and the check layer (flow h/2, thermal h/8), at most 2 flow and 2 thermal solves | **done** — budget used, not converged. The new qualified binary design is ahead of the pilot's by 1.86% in J on the development layer and 1.56% on the check layer (lower C, higher Ψ: ahead for w below about 0.75), and of x₃₀₀'s by 2.70% and 3.48% with both objectives lower. The continuous–binary gap is +35.8% |
+| R1n | from the pilot's raw terminal design, one Xu β = 32 stage on the development model, at most 30 MMA updates; its qualified binary design evaluated on the development layer (flow h, thermal h/4) and the check layer (flow h/2, thermal h/8), at most 2 flow and 2 thermal solves | **done** — budget used, not converged. The new qualified binary design is ahead of the pilot's by 1.86% in J on the development layer and 1.56% on the check layer (lower C, higher Ψ: ahead for w below about 0.75), and of x₃₀₀'s by 2.70% and 3.48% with both objectives lower. The continuous–binary gap is +35.8%. Closed in the review of 35abba9, which made it the preferred candidate at w = 0.5, with the R1l pilot kept as the lower-dissipation alternative |
+| R1o | from R1n's raw terminal design, β = 32 fixed on the development model, at most 30 MMA updates; its qualified binary design evaluated on both layers, at most 2 flow and 2 thermal solves | proposed in the review of 35abba9; not authorised |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -97,7 +98,8 @@ each flow.
 
 ![R1n: one β = 32 stage from the pilot](figures/zhao2d_r1n.png)
 
-R1n. (a) The pilot's qualified binary design, where R1n starts. (b, c) After
+R1n. (a) The qualified binary design of the pilot, shown for the design R1n
+starts from; the run itself starts from the pilot's raw design x. (b, c) After
 30 updates at β = 32: the continuous design and its qualified binary design,
 which differs from (a) in 42 cells. (d) The continuous J and the volume over
 the updates; the dashed line is the pilot's β = 16 terminal, the same x as
@@ -2180,9 +2182,13 @@ the development layer stops it before any update.
   stayed feasible.
 - J rose at updates 1, 6, 12, 18, 23 and 27. The lowest evaluated J is the
   terminal's.
-- The move limit bound (largest single change ≥ 0.0999) at 13 of the 30
-  updates, including the last. The last step was L2 0.186, L∞ 0.0997,
-  RMS 0.0026.
+- 13 of the 30 updates reached the near-limit band defined here, a largest
+  single change of at least 0.0999: updates 4, 6–12, 15, 24, 25, 27 and 28. No
+  update exceeded 0.1; the largest change anywhere was 0.09999. The last step
+  was also close to 0.1 but below the band: L∞ 0.0997, L2 0.186, RMS 0.0026.
+  A near-limit count is not proof that the move limit was strictly active.
+  (The first version said the 13 included the last step; the review of
+  35abba9 corrected it.)
 - The KKT proxy went from 0.19 to 0.029 and did not fire. The budget ended the
   run (`phase_end`); it is not converged.
 
@@ -2220,14 +2226,16 @@ layers.** J is on the h/4 model's constants, qualified to qualified:
   - Against x₃₀₀, both objectives are lower on both layers, so that order holds
     for any weight.
   - Against the pilot it is a trade-off: lower C, higher Ψ. With these
-    denominators the new design is ahead for w below 0.770 (development) and
-    0.747 (check). That includes the contract's w = 0.5; above those weights
-    the pilot would be ahead.
+    denominators the new design is ahead for w below 0.7698 (development) and
+    0.7469 (check). That includes the contract's w = 0.5. Above 0.7698 the
+    pilot is ahead on both layers, and between the two values the layers
+    disagree. These are two fixed designs reweighted, not designs optimised at
+    those weights, and not a Pareto front.
 - Its lowest temperature on h/4 is −0.043, at 1 node (the pilot's is −0.077, at
   2 nodes). On h/8 no node is below the inlet temperature.
 - **Candidates.** The pilot stays a verified candidate, as the contract says.
-  The new design is a second one, ahead of it at w = 0.5 on both layers. Which
-  one to carry forward is not decided here.
+  The new design is a second one, ahead of it at w = 0.5 on both layers. The
+  review of 35abba9 made the new design the preferred one (below).
 - **What this does not say.**
   - It does not show that β = 32 beats 16. The map switch, a reinitialised
     MMA and 30 more updates all went into the new design, and there is no
@@ -2241,7 +2249,92 @@ layers.** J is on the h/4 model's constants, qualified to qualified:
   - Check layer: build 190 s; the reused states' reports 76 s and 65 s; the
     new design's flow 34 s and thermal 295 s.
   - Cumulative peak working set: 8289 MiB (4553 MiB after the development
-    layer).
+    layer). That is the whole process's peak, including whatever the
+    optimisation left resident, not what one model needs.
+
+### After the review of 35abba9
+
+The review closed R1n and R1m's closing edits.
+
+- **It checked the geometry and the history.** It rebuilt the filter and the
+  Xu root independently for all 31 designs: the constraint matches the record
+  within 7.8×10⁻¹⁶ and η within 2.2×10⁻¹⁶. It redid the export and the
+  connectivity; the mask matches bit for bit.
+- **It re-assembled the three new saved states** without `tfopus` or JAX: the
+  continuous terminal, and the new binary design on both layers. C matches
+  within 1.8×10⁻¹⁴, with residuals at most 6.0×10⁻¹³ (flow) and 2.5×10⁻¹¹
+  (thermal). It did not re-assemble the four reused baseline states again.
+- **Corrections, text only:**
+  - the near-limit count above;
+  - the caption of the figure's panel (a), whose binary design is shown for
+    the pilot while the run starts from its raw design x;
+  - the peak memory, which is the whole process's.
+
+What the review added, checked here:
+
+- **Thresholding at 0.5 would not qualify.** The R1n terminal thresholded at
+  s = 0.5 has 2028 fluid cells, over the bound. As with the pilot, the
+  qualified design comes from the export rule, not from the projection making
+  0.5 thresholding feasible.
+- **The continuous J got slightly worse, and the binary design better.** The
+  new continuous terminal's J is 0.23% above the pilot's β = 16 continuous
+  terminal, yet the new binary design is better. On the development layer:
+
+      J_bin,new − J_bin,old = (J_cont,new − J_cont,old)
+                            + [(J_bin,new − J_cont,new) − (J_bin,old − J_cont,old)]
+                            = +0.00229203 + (0.35418531 − 0.38194900) = −0.02547165
+
+  This is an algebraic decomposition, not an isolated mechanism. It does say
+  that the stage cannot be judged by the continuous J alone.
+- **The last updates:** the continuous J fell 0.30% over the last 10 updates
+  and 0.06% over the last 5, while the design steps stayed large. That is not
+  a same-point KKT convergence test.
+
+**The candidates, as the review set them.** At the contract's w = 0.5 the R1n
+qualified binary design is the preferred candidate of this set. The R1l pilot
+is kept as the lower-dissipation alternative. Neither dominates the other;
+they are two designs, not a front.
+
+## R1o: the contract (as proposed in the review of 35abba9; not yet authorised)
+
+A bounded consolidation at the same β, to see how much more of the present
+parametrisation carries into a qualified binary design. The map does not
+change again, and β = 64 is not tried yet: that would change the map and the
+optimiser's budget at once.
+
+- **Start:** R1n's raw terminal design, `results/zhao2d_r1n_fields.npz["design"]`,
+  with MMA's history reinitialised. The files hold no full MMA state, so this
+  is a warm start, not an exact resume; a general checkpoint system is not
+  needed first.
+- **Model:** the volume-preserving projection, explicitly, with β = 32 fixed and
+  η solved at every evaluation. Everything else is unchanged: flow h and
+  thermal h/4, α_max = 10⁷, q_α = q_κ = 0.2, the filter, the boundaries, the
+  source, the quadrature, the thermal residual, the reference, w = 0.5 and the
+  move limit 0.1.
+- **The zero step must reproduce R1n's continuous terminal**, since the map is
+  the same. Changes early in the run come from restarting MMA and are not a β
+  effect.
+- **At most 30 updates,** with the present state and projection gates, and the
+  terminal evaluated at the same point. The budget, a failure or the proxy
+  criterion stops the run; no optimality is claimed.
+- **Export and two-layer evaluation, as in R1n:**
+  - Export by the one rule, if the terminal is feasible as a continuous
+    design. If the export does not qualify or is not connected, record that
+    and stop.
+  - Otherwise, one flow solve and one thermal solve on the development layer
+    (flow h, thermal h/4) and on the check layer (flow h/2, thermal h/8): at
+    most 2 flow and 2 thermal solves.
+  - The R1n and R1l candidates' states on both layers are reused after their
+    identities are checked, never recomputed.
+  - A geometry identical to a verified candidate's reuses its states by full
+    identity.
+  - The check layer runs even if the development layer shows no gain.
+- **Compared:** the new design against the R1n and R1l candidates, by the
+  same-layer J, Ψ and C at w = 0.5. The grey fraction and the continuous J do
+  not stand in for them. No improvement closes the stage normally, with R1n's
+  design still preferred.
+- **Not done:** β = 64, a q or w sweep, a new reference, the interaction cell,
+  h/16, fine-flow AD, 3D.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
