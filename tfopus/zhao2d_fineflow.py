@@ -30,6 +30,10 @@ development model's Psi_0 and C_0 as a declared common scale (`CommonScale`),
 which records that reference's identity -- checked, when it is made, to be the
 development model's -- and this model's. `check_reference` stays strict: an
 ordinary reference is accepted only if it was frozen for THIS model.
+
+`run` (from R1r) optimises on this model: `zhao2d_driver.run_loop` with
+`evaluate` on the declared common scale, over the same coarse design vector.
+Nothing is relabelled for it, and the old driver entry is unchanged.
 """
 
 from __future__ import annotations
@@ -51,6 +55,7 @@ from tfopus import fe_thermal as _fe_thermal
 from tfopus import materials as _materials
 from tfopus import zhao2d as _z
 from tfopus import zhao2d_analysis as _za
+from tfopus import zhao2d_driver as _driver
 from tfopus import zhao2d_dual as _dual
 from tfopus import zhao2d_r1 as _r1
 from tfopus import zhao2d_refine as _refine
@@ -251,6 +256,10 @@ class Zhao2DFineFlowProblem(_r1.Zhao2DProblem):
 
     def check_reference(self, reference: _r1.ReferenceValues) -> None:
         """Refuse any reference not frozen for THIS model -- the development one included."""
+        if isinstance(reference, CommonScale):
+            raise TypeError(
+                "a CommonScale is not a reference of this model; optimise on it with "
+                "zhao2d_fineflow.run, which checks it with check_common_scale")
         if reference.identity != self.reference_identity():
             raise ValueError(
                 "this reference was not frozen for the fine-flow model (flow refinement "
@@ -410,3 +419,34 @@ def evaluate(problem: Zhao2DFineFlowProblem, scale: CommonScale, x, alpha_max: f
     }
     state = (np.asarray(s), np.asarray(press_vel), np.asarray(temperature))
     return record, state, grads
+
+
+# --------------------------------------------------------------------------
+# The optimisation entry
+# --------------------------------------------------------------------------
+
+
+def run(problem: Zhao2DFineFlowProblem, scale: CommonScale, phases: list, move_limit: float = 0.1,
+        budget: int | None = None, on_iteration=None, initial_design=None):
+    """The driver's MMA loop on this model, J on the declared common scale.
+
+    The scale is checked against this model before anything is solved, and so
+    is `initial_design`: the raw design variables, `problem.num_design` of them
+    on the design mesh. Every iterate is one `evaluate` -- one forward solve,
+    its two reverse passes, the gate on that solve's states -- and MMA is given
+    J_common_scale with its gradient, and g with its own. The loop, its
+    terminal pairing and its stop reasons are `zhao2d_driver.run_loop`'s.
+
+    Returns a `zhao2d_driver.RunResult`; its records carry J_common_scale, and
+    no J_self.
+    """
+    problem.check_common_scale(scale)
+
+    def evaluator(x, alpha_max, beta, gradient=True):
+        record, state, grads = evaluate(problem, scale, x, alpha_max, beta, gradient)
+        if grads is None:
+            return record, state, record["J_common_scale"], None, None
+        return record, state, record["J_common_scale"], grads["J"], grads["g"]
+
+    return _driver.run_loop(problem, evaluator, phases, move_limit, budget, on_iteration,
+                            initial_design)

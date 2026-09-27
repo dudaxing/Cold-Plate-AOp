@@ -31,7 +31,7 @@ governing equations, objective, constraint — is kept.
 | R1o | from R1n's raw terminal design, β = 32 fixed on the development model, at most 30 MMA updates; its qualified binary design evaluated on both layers, at most 2 flow and 2 thermal solves | **done** — budget used, not converged; the zero step reproduces R1n's terminal. The continuous J fell 0.13%, but the new qualified binary design does not improve on R1n's on both layers: +0.58% in J on the development layer (Ψ and C both higher), −0.48% on the check layer (lower C, higher Ψ). Closed in the review of 6bd8cb9, which made the check layer the ranking layer: R1o's design now leads it at w = 0.5, R1n's leads the development layer and is kept as a control |
 | R1p | R1n's and R1o's qualified binary designs on the bridge model flow h / thermal h/8, reusing their saved h flows: at most 2 thermal solves, no flow solve, no MMA | **done** — along development → bridge → check, the order of the two designs flips in the flow replacement: refining the temperature narrows R1n's lead (ΔJ +0.0078 → +0.0048) without flipping it; replacing the flow moves it to −0.0064. One path only, not the full interaction. Closed in the review of b230f58 |
 | R1q | the check layer D = (flow h/2, thermal h/8) wired to the same 5000 coarse design variables as a differentiable model; its states and total gradient verified on a small mesh and at one main working point (1 value-and-gradient, at most 8 perturbed evaluations), no MMA | **done** — `tfopus/zhao2d_fineflow.py`: the design stays on h (5000 variables, filter 2×10⁻⁴), flow h/2, thermal h/8, on the development model's Ψ₀ and C₀ as a declared common scale. It reproduces R1n's and R1o's check-layer states exactly; the total gradient passes the directional-difference check at R1o's raw terminal design (worst best-step error 4.3×10⁻⁶) and on a small mesh; the suite passes (324). Closed in the review of b57cd61, which kept the development model's Ψ₀ and C₀ as the common scale, with no reference of D's own; on D itself, R1o's export gap is 32.32% |
-| R1r | from R1o's raw terminal design, a budgeted optimisation on D at the common scale: β = 32 fixed, at most 20 MMA updates, then the terminal's qualified binary design evaluated once on D (1 flow and 1 thermal solve); first a thin common-scale driver entry and its small-mesh chain tests | proposed in the review of b57cd61; not authorised |
+| R1r | from R1o's raw terminal design, a budgeted optimisation on D at the common scale: β = 32 fixed, at most 20 MMA updates, then the terminal's qualified binary design evaluated once on D (1 flow and 1 thermal solve); first a thin common-scale driver entry and its small-mesh chain tests | **done** — `zhao2d_driver.run_loop` split out, `zhao2d_fineflow.run` added, the old entry unchanged; 6 chain tests. The zero step reproduces R1q's main point exactly; budget used, not converged. The continuous J on D fell 0.53%. The new qualified binary design differs from R1o's in 36 cells and has J 2.03% below R1o's on D (C −3.77%, Ψ +7.26%: lowest of the four for w below 0.735); the export gap on D is 30.3%. D generated and ranked it, so this is analysis on one model |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -125,6 +125,16 @@ R1p. (a) R1o's design minus R1n's at the development layer A, the bridge B
 (flow h, thermal h/8) and the check layer D, split into the dissipation and
 thermal terms: R1n leads at A and B, R1o at D. (b) Each design's C along the
 same path.
+
+![R1r: twenty updates on the check layer D from R1o's design](figures/zhao2d_r1r.png)
+
+R1r. (a) R1o's qualified binary design, the lead candidate on D; R1r starts
+from R1o's raw continuous design. (b) The continuous design after 20 updates
+on D, and (c) its qualified binary design, 36 cells from (a). (d) The
+continuous J on D and the volume constraint over the updates: the first update
+raises J 12.1%, and J is back below the start from update 12. (e) The four
+qualified binary designs on D, Ψ against C, with the lines of equal J through
+R1o's design and the new one.
 
 ## R1d: the 300-update run
 
@@ -3052,7 +3062,7 @@ and ranks it, the comparison is analysis and ranking on one model, no longer a
 check independent of the generator. That does not, by itself, call for
 another mesh layer.
 
-## R1r: the contract (as proposed in the review of b57cd61; not yet authorised)
+## R1r: the contract (as proposed in the review of b57cd61; authorised and run)
 
 **The question.** With the design space, the filter, the projection, β and
 the objective's coefficients all unchanged, does moving the generating model
@@ -3115,6 +3125,199 @@ improvement is accepted; the fine flow is not presumed to help.
 ranking it, the result is analysis on one model. It does not make D
 physically accurate, and it does not, by itself, authorise another mesh
 layer.
+
+## R1r: what it found
+
+Authorised on the local CPU, in the version the review file states: at most
+20 updates, and the binary design checked on D only. The pasted variant, 30
+updates with 2F + 2T on D and A, was not run. Script
+`scripts/zhao2d_r1r_d_optimise.py`; record `results/zhao2d_r1r.json` (and
+`.log`); fields `results/zhao2d_r1r_fields.npz` (every raw design, the initial
+and terminal states, the binary design and its D states); figure
+`docs/figures/zhao2d_r1r.png`.
+
+### The entry first
+
+`zhao2d_driver.run` could not take the common scale, for the three reasons the
+review gave. The fix separates the loop from the objective's scale, and
+relabels nothing:
+
+- **`zhao2d_driver.run_loop` is the old loop:** the phases, MMA, the terminal
+  pairing and the stop reasons. It takes any evaluator that returns, from one
+  gated solve, the record, the states, the value MMA minimises and the two
+  gradients.
+- **`zhao2d_driver.run` is that loop with `evaluate` on a frozen reference.**
+  Its behaviour is unchanged, and the old driver tests pass as they were.
+- **`zhao2d_fineflow.run` is the loop with R1q's `evaluate` on a declared
+  common scale.**
+  - It checks the scale before anything is solved.
+  - MMA gets J_common_scale with its gradient, and g with its own.
+  - The design vector is the coarse design's (`num_design`, 5000 on the main
+    mesh).
+- **The old entry refuses the scale by name.** The fine-flow model's
+  `check_reference` refuses a `CommonScale` with a `TypeError` naming the new
+  entry, where it used to fail with an `AttributeError`.
+
+**Its small-mesh chain tests**, in `validation/test_zhao2d_fineflow_run.py` (6
+tests; 208 design-mesh cells, 200 of them variables, flow 832 cells, thermal
+3328; β = 32):
+
+- **The design and what MMA is given.** MMA gets a 200-long design, not the
+  design mesh's 208 or the flow mesh's 832. It gets each record's own
+  J_common_scale and g, and at the start its gradients are the entry's.
+- **A real proxy stop.** With a move limit of 10⁻⁹ the second step is under
+  step_tol. The stop is reported as a proxy, and the terminal is still
+  evaluated at the saved design.
+- **Refused before anything is solved:**
+  - a scale made for another model, or with an edited source;
+  - a start of the wrong length, or outside [0, 1].
+
+  The old entry refuses both the development reference and the common scale.
+- **The zero-step anchor.** One that raises in `on_iteration` stops the run
+  before MMA's first update.
+- **The gate on the same solve.** A temperature spoiled by 1% on the second
+  iterate is refused by the gate on that solve's own states. No second solve
+  takes its place, and MMA never sees it.
+- **The script.** It stops at a zero step that does not reproduce R1q's main
+  point, with its record written, before any update.
+
+The 5 entry tests with the old driver and dual driver tests: 26 passed in
+581 s. The script test on its own: 1 passed. The whole suite, run after R1r:
+330 passed (324 before, 6 new), 1430 s.
+
+### The run
+
+8937 s in all. Every gate passed, and every state passed the 10⁻⁸ gate:
+
+- the flows converged in 8 Newton iterations (at most 2.4×10⁻¹⁴);
+- every h/8 temperature ran to upstream's 40-iteration cap, at 1.1–1.4×10⁻¹¹
+  (2.0×10⁻¹¹ for the binary design).
+
+**Before the first update.**
+
+- **Inputs:** the start is R1o's last saved design row and R1q's main point,
+  by hash. The candidates' D values and binary designs are the recorded ones.
+- **The model:** the flow and thermal sides are R1m's check layer, the design
+  mesh is the development model's h mesh, and there are 5000 variables. The
+  scale is R1q's.
+- **The zero step's map:** the root is non-degenerate (slope −4.0×10⁻⁵), and
+  η and g are R1q's.
+- **The zero step reproduces R1q's main point exactly.** Ψ, C, J, g and η all
+  differ by 0. That same evaluation was the first update's basis.
+
+**The updates.**
+
+| | J on D | Ψ | C | g | grey |
+|---|---|---|---|---|---|
+| zero step (R1o's raw terminal) | 1.000923 | 0.0169126 | 29828.83 | −1.0×10⁻⁴ | 5.48% |
+| after the 1st update | 1.122068 | 0.0228312 | 30945.01 | −8.2×10⁻³ | 4.40% |
+| terminal (20 updates) | **0.995639** | 0.0170627 | 29517.12 | −1.4×10⁻⁴ | 5.65% |
+
+- **The first update raised J 12.1%.** Its Ψ rose 35%, and the design dropped
+  below the fluid bound (g −8.2×10⁻³).
+  - The same happened in R1l, R1n and R1o, whose MMA histories were also
+    reinitialised: their first updates raised J 8.7%, 32% and 13.9%.
+  - No run that keeps MMA's history isolates the cause.
+- **Every iterate was feasible.** g reached −2.5×10⁻² at update 5.
+- **J rose and fell over the first five updates, then fell at every update.**
+  Ψ and C kept swinging against each other, less each time, to about update
+  11. J has been below the start since update 12.
+- **The terminal.**
+  - J is 0.53% below the start: C −1.05%, Ψ +0.89%.
+  - The best feasible evaluated point is the terminal itself.
+  - η rose from 0.6449 to 0.7026. The root stayed non-degenerate throughout
+    (slopes at most −2.8×10⁻⁵).
+- **Budget used, not converged.** The stop is phase_end: all 20 updates were
+  used, and neither proxy fired.
+  - The largest single change reached the move limit (at least 0.0999) in
+    updates 3, 5, 8, 9, 10, 11 and 13.
+  - The last two updates were smaller: L2 0.168 and 0.101, L∞ 0.072 and
+    0.036.
+  - Upstream's mixed-point KKT proxy was 1.3×10⁻² at the last update. It is a
+    proxy, not a convergence measure.
+- **How far the design moved.** The raw x moved 2.87 in L2 (at most 0.28 in
+  one variable). The physical density moved 0.037 RMS; 7 cells moved by more
+  than 0.5.
+
+**The export.** R1l's rule, unchanged:
+
+- t = 0.4266334591, giving 2000 fluid cells. A cut at s = 0.5 would give
+  2026, so 26 cells differ from that cut.
+- One fluid component, and inlet and outlet connected: qualified.
+- It differs from R1o's binary design in 36 cells, 18 each way. It differs
+  from R1n's in 36 cells, and from the pilot's in 54.
+
+**The binary design on D, once.** On R1m's check-layer route (a dual model
+built on h/2, the design copied down):
+
+- The route's flow mesh and thermal side are R1m's.
+- The copy to h/2 is the optimised model's own E_DF copy, bit for bit.
+- The h/8 material is the parents' material.
+- One flow solve (24 s) and one thermal solve (221 s), each gated.
+
+The four qualified binary designs on D, at w = 0.5 on the common scale. The
+three old ones are their saved values, nothing re-solved:
+
+| design | J on D | Ψ | C | D_T/Q | T_max |
+|---|---|---|---|---|---|
+| the R1l pilot | 1.351851 | 0.0123136 | 47069.38 | 4.89% | 20.32 |
+| R1n's | 1.330791 | 0.0129952 | 45773.50 | 5.27% | 19.59 |
+| R1o's | 1.324402 | 0.0131705 | 45400.64 | 4.90% | 19.06 |
+| after R1r | **1.297504** | 0.0141268 | 43690.18 | 5.61% | 19.65 |
+
+- **Against R1o's design: J −2.03%.** C is 3.77% lower and Ψ 7.26% higher.
+  - In the common-scale terms, 0.5 ΔΨ/Ψ₀ = +0.01514 and
+    0.5 ΔC/C₀ = −0.04204.
+  - Against R1n's design, J −2.50%; against the pilot's, −4.02%. Both are the
+    same trade-off, lower C and higher Ψ.
+- **Its maximum temperature is higher than R1o's** (19.65 against 19.06),
+  though its C is lower.
+- **Its D_T/Q is 5.61%.** That is a heat-balance measure of this state, not
+  an error bound on C, and it cannot be subtracted from the 2.03%.
+- **Reweighting the four fixed designs** on the same denominators:
+  - the new design has the lowest J for w below 0.73519742;
+  - R1o's design from there to 0.75144601;
+  - the pilot's above that.
+
+  R1n's design is never the lowest. This is not a front.
+- **The export gap on D:** from the terminal to its binary design, J +30.3%
+  (Ψ −17.2%, C +48.0%). R1o's gap on D was 32.3%.
+
+**Cost:**
+
+- Build 224 s.
+- The 20 value-and-gradient evaluations: 422.6 s for the first, 382.7–395.6 s
+  for each of the others. The updates with the terminal took 8206 s.
+- The check-layer route: build 194 s, flow 24 s, thermal 221 s.
+- Solves: 22 flow and 22 thermal (20 iterates, the terminal and the binary
+  design), with 40 reverse passes.
+- Peak working set: 7571 MiB, the whole process's cumulative peak.
+- The review's "about two hours" was estimated from R1q's 335 s per
+  evaluation; here they averaged 392 s. Why is not isolated.
+
+### What R1r says, and what it does not
+
+- **What it found on D.** At the common scale, 20 updates on D from R1o's
+  continuous design gave a qualified binary design with J 2.03% below R1o's.
+  At w = 0.5 it is the lowest of the four candidates, by lower C and higher
+  Ψ. It stays the lowest for w below 0.735.
+- **This is analysis on one model.** D generated this design and D ranked it,
+  so the ranking is not a check independent of the generator. As the contract
+  says, no development-model run was needed to rank it, and none was made.
+  Which design to carry forward is for the review.
+- **Budget used, not converged.**
+  - The continuous J moved 0.53%, less than the binary designs' difference.
+  - The export gap on D is still 30%.
+  - Nothing isolates which change in the design moved the binary J.
+- **Not claimed:**
+  - that the new design is better in the continuous physical problem; no
+    error bound speaks for it;
+  - that generating on D beats generating on the development model. No run
+    on the development model starts from the same point with the same budget:
+    R1o's 30 updates there started from R1n's design.
+- **Not done, by the contract:** more than 20 updates, β = 64, a new
+  reference, a new thermal stopping threshold, a q sweep, the interaction
+  matrix, 3D, and a second binary check.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -3379,6 +3582,7 @@ python scripts/zhao2d_r1n_beta32_pilot.py --out DIR      # R1n: one beta = 32 st
 python scripts/zhao2d_r1o_beta32_continue.py --out DIR   # R1o: thirty more updates at beta = 32 from R1n (~25 min)
 python scripts/zhao2d_r1p_bridge.py --out DIR            # R1p: R1n's and R1o's designs on flow h / thermal h/8 (~10 min)
 python scripts/zhao2d_r1q_fineflow_check.py --out DIR    # R1q: the check model's value and gradient at R1o's x (~45 min)
+python scripts/zhao2d_r1r_d_optimise.py --out DIR        # R1r: 20 updates on the check model from R1o's x, its binary on D (~2.5 h)
 python scripts/zhao2d_figures.py                         # docs/figures/ from the saved results, no solves
 ```
 

@@ -57,6 +57,13 @@ problem, the single-mesh one -- is refused at the entry. Earlier, the gate ran
 on one solve, the reported values came from a second, the gradient from a
 third through a different function, and C used the flow mesh's velocity layout
 whatever the thermal mesh was.
+
+**The loop, apart from the objective's scale.** `run_loop` is the loop itself:
+it takes any evaluator that returns, from one gated solve, the record, the
+states, the value MMA minimises and the two gradients. `run` gives it
+`evaluate` on a frozen reference; `zhao2d_fineflow.run` gives it that module's
+`evaluate` on a declared common scale. So the terminal pairing and the stop
+reasons still exist once.
 """
 
 from __future__ import annotations
@@ -399,8 +406,35 @@ def run(
     as `exc.partial`: the history, the designs it was evaluated at, and the
     iteration and design that failed.
     """
-    spec = problem.spec
     problem.check_reference(reference)
+
+    def evaluator(x, alpha_max, beta, gradient=True):
+        record, state, dj, dg = evaluate(problem, reference, x, alpha_max, beta, gradient=gradient)
+        return record, state, record["J_self"], dj, dg
+
+    return run_loop(problem, evaluator, phases, move_limit, budget, on_iteration, initial_design)
+
+
+def run_loop(
+    problem: "_r1.Zhao2DProblem",
+    evaluator: Callable,
+    phases: list[Phase],
+    move_limit: float = 0.1,
+    budget: int | None = None,
+    on_iteration: Callable[[dict], None] | None = None,
+    initial_design: np.ndarray | None = None,
+) -> RunResult:
+    """The phased MMA loop, for an evaluator the caller has already checked.
+
+    `evaluator(x, alpha_max, beta, gradient=True)` returns (record, state, j,
+    dj, dg) from ONE forward solve, and has gated THAT solve's states: j is
+    what MMA minimises, `record` carries at least alpha_max, beta and
+    constraint_g, `state` is (s, press_vel, temperature), and dj and dg are
+    None without `gradient`. `run` is this loop with `evaluate` on a frozen
+    reference; `zhao2d_fineflow.run` is it with a declared common scale. The
+    design vector is `problem.num_design` long, whatever mesh the states are on.
+    """
+    spec = problem.spec
     validate_schedule(phases, spec)
     budget = budget or sum(p.iterations for p in phases)
 
@@ -431,7 +465,7 @@ def run(
 
     def gated(x, alpha_max, beta, **kwargs):
         try:
-            return evaluate(problem, reference, x, alpha_max, beta, **kwargs)
+            return evaluator(x, alpha_max, beta, **kwargs)
         except _r1.NotConverged as exc:
             exc.partial = {
                 "history": list(history),
@@ -450,7 +484,7 @@ def run(
             x = jnp.asarray(state.x.reshape(-1))
             t0 = time.time()
 
-            record, iterate_state, dj, dg = gated(x, alpha_max, phase.beta)
+            record, iterate_state, j, dj, dg = gated(x, alpha_max, phase.beta)
             if initial_state is None:
                 initial_state = iterate_state
             designs.append(np.array(x))
@@ -474,7 +508,7 @@ def run(
             state = _mma.update_mma(
                 state,
                 params,
-                record["J_self"],
+                j,
                 np.asarray(dj).reshape((-1, 1)),
                 np.array([record["constraint_g"]]),
                 np.asarray(dg).reshape((1, -1)),
@@ -503,7 +537,7 @@ def run(
     final_phase = history[-1]["phase"]
 
     x_final = jnp.asarray(state.x.reshape(-1))
-    terminal, (s, press_vel, temperature), _, _ = gated(
+    terminal, (s, press_vel, temperature), _, _, _ = gated(
         x_final, final_alpha_max, final_beta, gradient=False
     )
     terminal.update(iteration=step, phase=final_phase, terminal=True)
