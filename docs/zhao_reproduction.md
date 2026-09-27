@@ -29,7 +29,8 @@ governing equations, objective, constraint — is kept.
 | R1m | x₃₀₀'s qualified baseline and the pilot's qualified terminal: flow h → h/2 on the common thermal h/8; at most 2 flow and 2 thermal solves, no MMA, no AD | **done** — the ranking holds on flow h/2 and the lead grows: the pilot −1.95% against x₃₀₀ (−1.60% on flow h), both objectives lower. Replacing the flow moves C by −8.0% and −8.4%, about the size of the thermal step h/4 → h/8 and of the opposite sign; D_T/Q falls from 24.7% and 21.0% to 5.7% and 4.9%; closed in the review of d56d6ab |
 | R1n | from the pilot's raw terminal design, one Xu β = 32 stage on the development model, at most 30 MMA updates; its qualified binary design evaluated on the development layer (flow h, thermal h/4) and the check layer (flow h/2, thermal h/8), at most 2 flow and 2 thermal solves | **done** — budget used, not converged. The new qualified binary design is ahead of the pilot's by 1.86% in J on the development layer and 1.56% on the check layer (lower C, higher Ψ: ahead for w below about 0.75), and of x₃₀₀'s by 2.70% and 3.48% with both objectives lower. The continuous–binary gap is +35.8%. Closed in the review of 35abba9, which made it the preferred candidate at w = 0.5, with the R1l pilot kept as the lower-dissipation alternative |
 | R1o | from R1n's raw terminal design, β = 32 fixed on the development model, at most 30 MMA updates; its qualified binary design evaluated on both layers, at most 2 flow and 2 thermal solves | **done** — budget used, not converged; the zero step reproduces R1n's terminal. The continuous J fell 0.13%, but the new qualified binary design does not improve on R1n's on both layers: +0.58% in J on the development layer (Ψ and C both higher), −0.48% on the check layer (lower C, higher Ψ). Closed in the review of 6bd8cb9, which made the check layer the ranking layer: R1o's design now leads it at w = 0.5, R1n's leads the development layer and is kept as a control |
-| R1p | R1n's and R1o's qualified binary designs on the bridge model flow h / thermal h/8, reusing their saved h flows: at most 2 thermal solves, no flow solve, no MMA | **done** — along development → bridge → check, the order of the two designs flips in the flow replacement: refining the temperature narrows R1n's lead (ΔJ +0.0078 → +0.0048) without flipping it; replacing the flow moves it to −0.0064. One path only, not the full interaction |
+| R1p | R1n's and R1o's qualified binary designs on the bridge model flow h / thermal h/8, reusing their saved h flows: at most 2 thermal solves, no flow solve, no MMA | **done** — along development → bridge → check, the order of the two designs flips in the flow replacement: refining the temperature narrows R1n's lead (ΔJ +0.0078 → +0.0048) without flipping it; replacing the flow moves it to −0.0064. One path only, not the full interaction. Closed in the review of b230f58 |
+| R1q | the check layer D = (flow h/2, thermal h/8) wired to the same 5000 coarse design variables as a differentiable model; its states and total gradient verified on a small mesh and at one main working point (1 value-and-gradient, at most 8 perturbed evaluations), no MMA | proposed in the review of b230f58; not authorised |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -2609,21 +2610,28 @@ R1o minus R1n, at w = 0.5 on the common denominators:
 
 - **Along this path the order flips in the flow replacement.**
   - Refining the temperature (A → B) moves ΔJ by −0.00292597, all in the
-    thermal term, since the flow, and so Ψ, does not change. That removes 38%
-    of R1n's lead but leaves R1n ahead.
+    thermal term, since the flow, and so Ψ, does not change. That is 37.7% of
+    the difference at A on the common scale, not 37.7% of any error in C, and
+    it leaves R1n ahead. Each design's own C still rises by 7.75% and 7.45%;
+    most of those rises are shared by the two designs.
   - Replacing the flow (B → D) moves ΔJ by −0.01122263: +0.00173124 in the
     dissipation term, against R1o, and −0.01295387 in the thermal term. That
     flips the order.
 - **Each design's C along the path:**
   - The thermal refinement raises R1n's C by 7.75% and R1o's by 7.45%.
-  - The flow replacement lowers them by 8.28% and 9.31%. The thermal term's
-    −0.01295 in that step is the arithmetic of R1o's C falling further.
+  - The flow replacement lowers them by 8.28% and 9.31%, that is by 4134.40
+    and 4661.45. The difference C_R1o − C_R1n goes from +154.19 at B to −372.86
+    at D. The thermal term's −0.01295 in that step is the arithmetic of R1o's C
+    falling further. The dissipation term moves against R1o.
 - **What this does not say.**
   - It is an attribution along one path. The other path, through (flow h/2,
     thermal h/4), was not computed, so the interaction of the two steps is not
     known.
   - Nothing here names a mechanism: replacing the flow changes the velocity
     field, its divergence and the inlet-wins slip together.
+  - It compares two fixed binary designs. It is not a directional derivative in
+    the continuous design space. It does not show that the development model's
+    gradients are wrong, or that optimising on a finer flow would do better.
   - The ranking of the candidates does not change. The check layer ranks, and
     R1o's design leads it at w = 0.5.
 - **Cost: 580 s.**
@@ -2631,6 +2639,117 @@ R1o minus R1n, at w = 0.5 on the common denominators:
   - Thermal solves: 185 s and 182 s.
   - Reports: 47 s and 45 s.
   - Peak working set: 5217 MiB, the whole process's.
+
+### After the review of b230f58
+
+The review closed R1p and R1o's closing edits.
+
+- **It re-assembled the two reused h flows and the two new h/8 temperatures**
+  without `tfopus` or JAX. C matches the record within 2.1×10⁻¹⁴, the
+  residuals are at most 2.9×10⁻¹³ (flow) and 2.8×10⁻¹¹ (thermal), and neither
+  design has a node below the inlet temperature.
+- **It found the ordering of the checks right:** both designs' identities,
+  volumes, flows and Ψ are checked before the first thermal solve.
+- **Its clarifications are added above:** the 37.7% is of the common-scale
+  difference at A; the C differences through the path; what a comparison of
+  two fixed designs cannot say.
+
+**The review's conclusion.** Refining only the temperature does not bring the
+development model's order of these two designs in line with the check layer's;
+along this path the order flips when the flow is replaced. So the next step
+turns to the flow model the candidates are generated on, and not to:
+
+- more fixed-design diagnostics;
+- the other cross cell;
+- repeating the 30-update restarts on the coarse flow.
+
+Doing that is a research choice. Nothing yet shows the development model's
+gradients are wrong, or that generating on a finer flow would give better
+designs.
+
+**A trap the review pointed out, confirmed in the code.** `Zhao2DDualProblem`
+builds its flow mesh, and takes its design elements, from the same spec, and its
+filter radius is `filter_radius_elements × spec.element_size`. Setting the
+element size to h/2 would turn the 5000 design variables into 20000 and halve
+the physical filter radius from 2×10⁻⁴ to 10⁻⁴. That changes the design space
+and the regularisation as well, which is not what the evidence points to.
+
+## R1q: the contract (as proposed in the review of b230f58; not yet authorised)
+
+To make the check layer D = (flow h/2, thermal h/8) a differentiable model of
+the same coarse design variables, and to verify its states and total gradient
+before any optimisation on it.
+
+**The chain.** The design stays on h: 5000 raw variables, the physical filter
+radius 2×10⁻⁴, the volume-preserving projection at β = 32 with η solved on the
+coarse design volume.
+
+    x_D → filter, projection → s_D
+    s_F = E_DF s_D                each coarse design cell copied to its 4 flow cells
+    R_F(U_F, s_F) = 0             flow on h/2
+    s_T = E_FT E_DF s_D = E_DT s_D
+    u_T = P_FT u_F                the fine flow's exact Q1 prolongation to the thermal mesh
+    R_T(T_T, u_T, s_T) = 0        temperature on h/8
+    Ψ on F, C on T, g on D
+
+- **Reuse:** the existing FE kernels and `NestedMaps`, with the residuals
+  unchanged.
+- **Reverse mode:**
+  - the density contributions go back through Eᵀ, summed over the children,
+    not averaged;
+  - the flow, the materials, the stabilisation τ and η all keep their
+    dependence on the design.
+- **No frozen flows.** No saved flow is treated as a constant in the gradient
+  chain. Reusing saved states is for checking given designs only.
+
+**The objective's scale.** Keep Ψ₀, C₀ and w = 0.5, as a D entry declared to
+use the common scale. It must bind both the old reference's source and values
+and the D model's full identity. It must not loosen `check_reference`, and it
+must not pass the old reference's identity off as D's own. No new reference is
+computed. Before any optimisation on D, one of two things is decided: keep
+this common objective, or freeze a reference of D's own and deal with the
+change of weights.
+
+**Verification, then stop.**
+
+- **On a small mesh:**
+  - parent–child material, regions and source;
+  - E and P against their transposes (dot products);
+  - with a flow refinement of 1, the new chain reproduces the present dual
+    model;
+  - residuals, objective and gradient on the same states;
+  - a wrong common-scale identity is refused;
+  - full directional finite differences.
+
+  The existing suite must not regress.
+- **Anchors on the main mesh:** R1n's and R1o's given binary designs, from
+  their saved D states. The new entry recomputes their objectives and
+  residuals; nothing is re-solved.
+- **One main working point:** R1o's raw continuous terminal x, not its binary
+  mask.
+  - First its identity, a non-degenerate root and the volume are checked.
+  - Then one value-and-gradient evaluation.
+  - Then 2 directions fixed in advance × 2 step sizes × both signs: at most 8
+    perturbed evaluations.
+  - The protocol is the existing 10⁻⁵ directional-difference test with the
+    10⁻⁸ state gate. Every step's absolute and relative difference is
+    reported, and near-zero derivatives are handled as before.
+  - No clipped perturbations, no relaxed gates, no added steps. Every
+    perturbation re-solves the flow.
+- **Cost:** the solve calls, the AD time and the peak memory are recorded. No
+  duration is promised; each perturbed evaluation re-solves the fine flow and
+  the h/8 temperature.
+- **Not done:** MMA, a change of β or q, a change of thermal form, h/16, the
+  interaction matrix, 3D.
+
+**What it would not settle.**
+
+- It removes one kind of difference: generating candidates on a different
+  discrete flow from the one that ranks them.
+- It does not close the 35–37% continuous–binary export gap, and it does not
+  make the model physically accurate.
+- If D later generates candidates, checking them on D is no longer a check
+  independent of the generator. That does not by itself call for a finer mesh.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
