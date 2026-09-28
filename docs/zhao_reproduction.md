@@ -32,7 +32,8 @@ governing equations, objective, constraint — is kept.
 | R1p | R1n's and R1o's qualified binary designs on the bridge model flow h / thermal h/8, reusing their saved h flows: at most 2 thermal solves, no flow solve, no MMA | **done** — along development → bridge → check, the order of the two designs flips in the flow replacement: refining the temperature narrows R1n's lead (ΔJ +0.0078 → +0.0048) without flipping it; replacing the flow moves it to −0.0064. One path only, not the full interaction. Closed in the review of b230f58 |
 | R1q | the check layer D = (flow h/2, thermal h/8) wired to the same 5000 coarse design variables as a differentiable model; its states and total gradient verified on a small mesh and at one main working point (1 value-and-gradient, at most 8 perturbed evaluations), no MMA | **done** — `tfopus/zhao2d_fineflow.py`: the design stays on h (5000 variables, filter 2×10⁻⁴), flow h/2, thermal h/8, on the development model's Ψ₀ and C₀ as a declared common scale. It reproduces R1n's and R1o's check-layer states exactly; the total gradient passes the directional-difference check at R1o's raw terminal design (worst best-step error 4.3×10⁻⁶) and on a small mesh; the suite passes (324). Closed in the review of b57cd61, which kept the development model's Ψ₀ and C₀ as the common scale, with no reference of D's own; on D itself, R1o's export gap is 32.32% |
 | R1r | from R1o's raw terminal design, a budgeted optimisation on D at the common scale: β = 32 fixed, at most 20 MMA updates, then the terminal's qualified binary design evaluated once on D (1 flow and 1 thermal solve); first a thin common-scale driver entry and its small-mesh chain tests | **done** — `zhao2d_driver.run_loop` split out, `zhao2d_fineflow.run` added, the old entry unchanged; 6 chain tests. The zero step reproduces R1q's main point exactly; budget used, not converged. The continuous J on D fell 0.53%. The new qualified binary design differs from R1o's in 36 cells and has J 2.03% below R1o's on D (C −3.77%, Ψ +7.26%, T_max +3.08%: lowest of the four for w below 0.735); the export gap on D is 30.3%. D generated and ranked it, so this is analysis on one model. Closed in the review of 266ce00, which made it the first choice of the four at w = 0.5 on D, keeping R1o's, R1n's and the pilot's |
-| R1s | the thermal solve as one linear solve for a given flow and density, as an optional path beside upstream's Newton loop: equivalence on a small mesh (state, objectives, transpose solve, full design gradient), then on the main mesh two fixed-flow temperatures and at most one full D value and gradient; at most 1F + 3T, no MMA | **done** — `tfopus/affine_solve.py` and `thermal_path="linear"`, the Newton path still the default; 10 tests. On the main mesh, within criteria fixed beforehand: the temperatures agree with the Newton path's to 2–5×10⁻¹² and C to 1.4–3.8×10⁻¹²; at R1q's main point Ψ, g and their gradients are bit for bit R1q's, J's and C's gradients within 9.2×10⁻¹² and 1.8×10⁻¹². Each fixed-flow temperature took 16–20 s. The value and gradient took 122.8 s. Not paired with the Newton path's timings, so no factor is claimed |
+| R1s | the thermal solve as one linear solve for a given flow and density, as an optional path beside upstream's Newton loop: equivalence on a small mesh (state, objectives, transpose solve, full design gradient), then on the main mesh two fixed-flow temperatures and at most one full D value and gradient; at most 1F + 3T, no MMA | **done** — `tfopus/affine_solve.py` and `thermal_path="linear"`, the Newton path still the default; 10 tests. On the main mesh, within criteria fixed beforehand: the temperatures agree with the Newton path's to 2–5×10⁻¹² and C to 1.4–3.8×10⁻¹²; at R1q's main point Ψ, g and their gradients are bit for bit R1q's, J's and C's gradients within 9.2×10⁻¹² and 1.8×10⁻¹². Each fixed-flow temperature took 16–20 s. The value and gradient took 122.8 s. Not paired with the Newton path's timings, so no factor is claimed. Closed in the review of e664d79, which allows the next authorised run to choose the linear path explicitly; the default stays Newton |
+| R1t | from R1r's raw terminal design, on D with the linear thermal path chosen explicitly: at most 20 MMA updates, then at most 1F + 1T for its qualified binary design; first a thin save and restore of MMA's real state (including `kktnorm`), tested as 4 updates against 2 + save + load + 2 | proposed in the review of e664d79; not authorised |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -3531,7 +3532,10 @@ temperatures and the four gradients).
 ### The path
 
 - **`affine_solve(problem, x0, *params)`** takes the state in one step,
-  x = x0 − K⁻¹ R(x0), with one assembly and one solve.
+  x = x0 − K⁻¹ R(x0), with one assembly and one solve per thermal forward.
+  A whole value-and-gradient evaluation assembles more than once: the
+  implicit reverse pass assembles again at the returned state, and so does
+  the residual gate.
   - Its derivative is upstream's implicit-function rule for its Newton
     solvers, unchanged and taken at the state it returns. It uses the same
     `solve`, with the same transpose solve.
@@ -3609,14 +3613,21 @@ The whole suite, run after R1s: 340 passed (330 before, 10 new), 1831 s.
   - The flow is R1q's saved flow bit for bit, so Ψ and g are R1q's exactly.
   - J differs from R1q's by 1.0×10⁻¹² and C by 1.4×10⁻¹².
   - The gradients of Ψ and g are R1q's bit for bit. Those of J and C differ by
-    9.2×10⁻¹² and 1.8×10⁻¹² in relative L2.
+    9.2×10⁻¹² and 1.8×10⁻¹² in relative L2. That is not a bound per
+    component: the largest differences in one component are 1.0×10⁻¹³ (J)
+    and 4.2×10⁻⁹ (C).
+  - C's temperature is A's, bit for bit, so it is not a third independent
+    thermal state.
   - Along R1q's two directions, the projections differ from R1q's own by at
     most 1.5×10⁻¹¹. So their errors against R1q's recorded central
     differences are R1q's: at worst 4.3×10⁻⁶, for C along seed 11.
 - **Cost:**
   - Build 237 s.
   - Each fixed-flow temperature: 16–20 s.
-  - The full value and gradient: 122.8 s.
+  - The full value and gradient: 122.8 s. The forward pass and the two
+    reverse passes add to 100.8 s. The other 22.0 s went to the root, the
+    constraint, the gate and the report, which are not timed separately.
+    JIT compilation is not isolated.
   - Solves: one flow (8 Newton iterations) and three thermal (one linear
     solve each), with two reverse passes.
   - Peak working set: 6581 MiB, the whole process's cumulative peak.
@@ -3627,21 +3638,190 @@ The whole suite, run after R1s: 340 passed (330 before, 10 new), 1831 s.
 
 ### What R1s says, and what it does not
 
-- **The equivalence.** On the same discrete model, the one-solve path gives
-  the Newton path's states, objectives and gradients, to round-off. That
-  holds at two fixed-flow points and one full evaluation on the main mesh,
-  and on the small mesh, within the criteria fixed beforehand.
+- **The equivalence.** On the same discrete model, the one-solve path agrees
+  with the Newton path in states, objectives and gradients, by differences
+  of the size that numerical solution and round-off give. That holds at the
+  points tested, within the criteria fixed beforehand: two fixed-flow points
+  and one full evaluation on the main mesh, and the small mesh.
 - **How far that goes.**
   - It is not a proof for every design, though the gate checks every state
     either path returns.
+  - It does not say that other environments, or long MMA runs, agree bit for
+    bit. A long run can amplify differences in the last digits.
   - It changes nothing in the model, the objective or the physics.
-- **The default is unchanged.** The Newton path stays the default. Routine
-  use of the linear path in an optimisation needs, by the contract, a
-  corresponding full regression first.
+- **The default is unchanged.** The Newton path stays the default. The review
+  of e664d79 counts the 340-test run after this change as its full
+  regression (see below).
 - **Still to be decided:** whether to go on optimising on D, and whether a
   longer run keeps MMA's history.
 - **Still open:** the physical error, the finite-Brinkman binary
   approximation, the 3D extrusion and the 30% export gap.
+
+### After the review of e664d79
+
+The review closed R1r's closing edits and R1s. The next authorised run may
+use `thermal_path="linear"` explicitly; the default stays Newton. No new
+design came out of R1s, and R1r's design is still the first choice on D at
+w = 0.5. What the review checked, without solving anything on the main mesh:
+
+- **Provenance.**
+  - Against 266ce00: 157 files unchanged, 3 modified, 6 added, none deleted.
+  - 29 sources and 5 inputs match the record: 21 byte for byte, 13 after
+    LF → CRLF. The common reference, the 14 upstream sources and 12 array
+    identities match as well.
+  - There was no separate snapshot of 0fa3474.
+- **The derivative.** Its syntax tree is that of upstream's modified-Newton
+  rule, once the docstrings and annotations are dropped, the local names
+  renamed, the last temporary inlined and the forward function's name
+  replaced. That is the implicit-differentiation structure of TOFLUX's
+  appendix A, eqs. (16)–(17), not a reverse pass through 40 iterations.
+- **Tests, in its environment.**
+  - The 10 new tests passed in 4 processes, 234.45 s in all; not one run of
+    all 10 together.
+  - Two small real checks of its own passed (62.38 s):
+    - `fineflow.run` made 2 real MMA updates on each path (50 variables,
+      β = 32). The terminal designs differ by at most 3.1×10⁻¹², and the
+      terminal J by 1.5×10⁻¹². This does not predict that long runs agree
+      bit for bit.
+    - With a nonzero fixed inlet temperature (on that small case only) and a
+      changed free initial guess, one linear solve moved by 3.7×10⁻¹⁴, and
+      the fixed nodes stayed bit for bit. The source's derivative matched
+      central differences to 6.2×10⁻¹², the SUPG source included.
+  - It collected the 340 tests but did not run them. The 340 passes in
+    1831 s are this repository's report.
+- **The two new temperatures, re-assembled without `tfopus` or JAX.**
+  - C matches the record to 1.7×10⁻¹⁴.
+  - The residuals are 7.4×10⁻¹³ and 6.3×10⁻¹³ (flow), and 7.07×10⁻¹¹ and
+    1.16×10⁻¹⁰ (thermal).
+  - The integral identities close to 2.1×10⁻¹², and the heat balance with
+    the consistent reaction to 1.2×10⁻¹². The closures come from the new
+    states' own larger residuals, not the old ones.
+  - The main point has T_max 13.21 and D_T/Q 0.542%; the binary design 19.65
+    and 5.61%. No node lies below the inlet temperature.
+- **What the record alone carries.** C's recomputed flow and density were
+  not saved, so "C's flow is R1q's bit for bit" rests on the run's record.
+  The review accepted that without a re-run.
+- **The directions.** The comparison is with R1q's recorded central
+  differences, the largest relative difference 4.26×10⁻⁶. No perturbed
+  solves were made here. R1q's missing ± scalars stay an inherited limit of
+  the evidence.
+
+**Why the larger residual does not undo the result.** The one solve's
+residuals are 6.02 and 5.68 times the Newton states'. The path is accepted
+because it solves the same matrix with the same implicit rule, and because
+the states and full gradients agree directly. The gate being wide is not
+the reason.
+
+**Wording corrected above.**
+
+- "One assembly" is per thermal forward.
+- The gradient differences are relative L2.
+- The 122.8 s is not the sum of the timed passes.
+- The equivalence holds at the points tested.
+- 6581 MiB is the CPU process's cumulative peak memory, not GPU memory, and
+  not one solve's own.
+
+**The regression.** The 340-test run after this change is its full
+regression. Using the path "formally", with the source unchanged, does not
+call for running the same suite again. A later change to the common loop is
+tested for that change, and regressed where it reaches.
+
+**Before the next run.**
+
+- The script selects `thermal_path="linear"` itself. The default and the
+  older scripts are left alone.
+- The zero step's design, model and reference identities must match
+  strictly.
+- Its T, C and J come from the other thermal path, so they are compared by
+  R1s's equivalence criteria, not bit for bit and not by the 10⁻¹² anchor.
+  Every state still passes the 10⁻⁸ gate.
+
+**Not claimed for the path.** It has not been checked for temperature-
+dependent properties or any other thermal nonlinearity. None is in the
+model now, so no costly affine check runs on every call.
+
+## R1t: the contract (as proposed in the review of e664d79; not yet authorised)
+
+To go on optimising on D where R1r stopped, on the linear thermal path, and
+from now on to keep MMA's real state, so that a paused run can resume
+instead of restarting.
+
+**Keeping MMA's state, first.**
+
+- **What is saved** is the state MMA actually uses, bound to the model, the
+  scale, the optimiser's parameters and the budget it belongs to:
+  - x and the two previous designs;
+  - low and upp;
+  - epoch;
+  - the stopping measures, including the KKT residual MMA actually writes.
+    That is `kktnorm`, a dynamic attribute, not the declared `kkt_norm`
+    that upstream's `to_array` serialises.
+- **How.** Upstream's `MMAState.to_array` and `from_array` can be reused for
+  the declared fields. Only a thin save and restore for this one phase is
+  built, not a general scheduling or recovery system.
+- **The test, on a small mesh.** 4 consecutive updates are compared with 2
+  updates, a save, a load and 2 more. They must agree in:
+  - the design history;
+  - low and upp;
+  - epoch;
+  - the measures;
+  - the pairing of records and states.
+
+  A wrong model identity is refused before anything runs. A pause must not
+  become a reinitialisation.
+- If the common loop changes for this, the change is tested, and regressed
+  where it reaches.
+
+**The run.**
+
+- **Start:** R1r's raw 5000-variable continuous terminal design, not its
+  binary mask.
+- **The model:** D (design h, flow h/2, thermal h/8), with
+  `thermal_path="linear"` chosen explicitly.
+- **Held fixed:**
+  - the volume-preserving projection at β = 32, and α_max = 10⁷;
+  - both q = 0.2, and the filter radius 2×10⁻⁴;
+  - the physics and the quadrature;
+  - the common scale, w = 0.5, and the move limit 0.1.
+- **MMA:** R1r did not save MMA's state, so this start reinitialises it once
+  more. It is a warm start, not an exact continuation.
+- **The zero step.** Before the first update, its evaluation is checked
+  against R1r's continuous terminal: J = 0.995639419935, with Ψ, C and g.
+  - The identities must match strictly.
+  - T, C and J, now on the other thermal path, are compared by R1s's
+    equivalence criteria.
+  - The same evaluation is the first update's basis; no extra solve.
+- **The budget:** at most 20 consecutive MMA updates, then a same-point
+  evaluation of the terminal. Every state passes the 10⁻⁸ gate.
+
+**The binary design, and the comparison.**
+
+- If the continuous terminal is feasible, it is exported by the same volume
+  rule.
+- If that design is qualified and connected, it is evaluated on D at most
+  once (1F + 1T).
+- It is compared, on the common scale, with R1r's design and the older
+  candidates. Their D states are reused by identity, not recomputed, and all
+  are kept.
+- No improvement closes the stage normally, and R1r's design stays the first
+  choice.
+
+**Not done:**
+
+- more than 20 updates (not 30, 40 or 60), or β = 64;
+- a change of q, the objective, the reference or the thermal form;
+- a development-layer run, a new mesh, or 3D.
+
+The main run needs the user's authorisation, and a machine the conformal
+session has released.
+
+**What it would not settle.**
+
+- It tests bounded optimisation continued on the verified faster path. It
+  does not presume a better candidate, and R1r's design is usable as it
+  stands.
+- Physical accuracy, convergence, the finite-Brinkman binary approximation
+  and the export gap stay open.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
