@@ -1,0 +1,16 @@
+D:\Coding\thermalFluid\thermal-fluid-opus\external\TOFLUX\toflux\src\solver.py:21: UserWarning: petsc4py not found; the PETSC linear solver is unavailable.
+  warnings.warn("petsc4py not found; the PETSC linear solver is unavailable.")
+checkpoint passed: inputs
+checkpoint passed: the geometry: R1t's isolated cell
+geometry: cell 3750 at [3.55, 5.05] mm (s in R1t's continuous design 0.3496) filled; components [2199, 1] -> [2199], 1999 fluid cells, v_f 0.399800, inlet-outlet True
+checkpoint passed: the geometry: the filled design
+built the check-layer route: flow 20800 el, thermal 332800 el (187.7 s)
+checkpoint passed: the check-layer route: before its solves
+NR converged in 8 iters, res_norm/res_norm_0: 1.867326446543151e-14
+checkpoint passed: the flow solve (36.8 s)
+filled/check: Psi 1.399203487e-02  C 43708.551215  J 1.295821723  D_T/Q 5.6322%  T_max 19.3018  |R| 1.6e-14/1.2e-10  flow 36.8 s, thermal 18.1 s
+checkpoint passed: the thermal solve (18.1 s)
+filled design against r1t on D: J +0.026%  Psi +0.048%  C +0.022%  T_max +0.008%  (terms +0.00010653 +0.00023339) [qualified_comparison]
+filled design against r1r on D: J -0.130%  Psi -0.954%  C +0.042%  T_max -1.766%  (terms -0.00213372 +0.00045158) [qualified_comparison]
+
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1u.json and D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1u_fields.npz; total 312 s

@@ -452,3 +452,29 @@ def test_r1o_zero_step_anchor_reproduces_or_refuses():
     off = ro.zero_step_anchor({**terminal, "compliance": terminal["compliance"] * (1 + 1e-9)},
                               terminal)
     assert not off["reproduced"]
+
+
+def test_r1u_fills_only_the_cell_it_finds_isolated_and_stops_otherwise(tmp_path, monkeypatch):
+    """R1u fills the cell the review named only if R1t's fluid, by shared edges,
+    really is one main component plus that cell alone. Told to fill another
+    cell, it stops at the geometry, with its record written, before it builds
+    the check layer."""
+    import json
+    import pathlib
+    import sys
+
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
+    import zhao2d_r1u_fill_check as ru
+
+    monkeypatch.setattr(ru.sys, "argv", ["r1u", "--out", str(tmp_path)])
+    monkeypatch.setattr(ru.faulthandler, "dump_traceback_later", lambda *a, **k: None)
+    monkeypatch.setattr(ru, "FILLED_CELL", 3749)
+    monkeypatch.setattr(ru.dual, "Zhao2DDualProblem",
+                        lambda *a, **k: pytest.fail("built the check layer for the wrong cell"))
+    with pytest.raises(SystemExit, match="CHECKS FAILED at the geometry"):
+        ru.main()
+    record = json.loads((tmp_path / ru.RECORD).read_text(encoding="utf-8"))
+    assert record["geometry"]["components_before"] == [2199, 1]
+    assert [c["stage"] for c in record["checkpoints"]] == [
+        "inputs", "the geometry: R1t's isolated cell"]
+    assert not (tmp_path / ru.FIELDS).exists()
