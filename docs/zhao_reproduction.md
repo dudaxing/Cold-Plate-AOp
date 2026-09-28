@@ -34,7 +34,8 @@ governing equations, objective, constraint — is kept.
 | R1r | from R1o's raw terminal design, a budgeted optimisation on D at the common scale: β = 32 fixed, at most 20 MMA updates, then the terminal's qualified binary design evaluated once on D (1 flow and 1 thermal solve); first a thin common-scale driver entry and its small-mesh chain tests | **done** — `zhao2d_driver.run_loop` split out, `zhao2d_fineflow.run` added, the old entry unchanged; 6 chain tests. The zero step reproduces R1q's main point exactly; budget used, not converged. The continuous J on D fell 0.53%. The new qualified binary design differs from R1o's in 36 cells and has J 2.03% below R1o's on D (C −3.77%, Ψ +7.26%, T_max +3.08%: lowest of the four for w below 0.735); the export gap on D is 30.3%. D generated and ranked it, so this is analysis on one model. Closed in the review of 266ce00, which made it the first choice of the four at w = 0.5 on D, keeping R1o's, R1n's and the pilot's |
 | R1s | the thermal solve as one linear solve for a given flow and density, as an optional path beside upstream's Newton loop: equivalence on a small mesh (state, objectives, transpose solve, full design gradient), then on the main mesh two fixed-flow temperatures and at most one full D value and gradient; at most 1F + 3T, no MMA | **done** — `tfopus/affine_solve.py` and `thermal_path="linear"`, the Newton path still the default; 10 tests. On the main mesh, within criteria fixed beforehand: the temperatures agree with the Newton path's to 2–5×10⁻¹² and C to 1.4–3.8×10⁻¹²; at R1q's main point Ψ, g and their gradients are bit for bit R1q's, J's and C's gradients within 9.2×10⁻¹² and 1.8×10⁻¹². Each fixed-flow temperature took 16–20 s. The value and gradient took 122.8 s. Not paired with the Newton path's timings, so no factor is claimed. Closed in the review of e664d79, which allows the next authorised run to choose the linear path explicitly; the default stays Newton |
 | R1t | from R1r's raw terminal design, on D with the linear thermal path chosen explicitly: at most 20 MMA updates, then at most 1F + 1T for its qualified binary design; first a thin save and restore of MMA's real state (including `kktnorm`), tested as 4 updates against 2 + save + load + 2 | **done** — `MMACheckpoint` with `resume` and `stop_after`; 4 updates equal 2 + save + load + 2 bit for bit; 5 tests. The zero step matches R1r's terminal across the thermal paths (C 1.7×10⁻¹², J 1.2×10⁻¹²). Budget used, not converged: the continuous J on D fell 0.085%, and MMA's state after the 20 updates is saved. The new qualified binary design differs from R1r's in 16 cells and has J 0.156% below it on D (Ψ −1.00%, C +0.02%, T_max −1.77%). It has one fluid cell isolated by shared edges (it touches the main channel at a corner), which the rule allows and none of the other candidates has. Lowest of the five for 0.0888 < w < 0.7579. Evaluations averaged 118 s, not paired with R1r's. Closed in the review of 0650e7b, which accepted the numbers, made R1t the numerical first under the rule with R1r kept as the choice without an isolated cell, and found two gaps in the checkpoint: its binding missed the optimisation problem (fixed since), and a spent 20/20 budget cannot be extended yet |
-| R1u | a diagnostic geometry: R1t's qualified binary design with its isolated fluid cell 3750 filled, nothing else changed (1999 fluid cells); on D with the linear path, at most 1F + 1T, no MMA, no AD | **done** — the isolated cell found by shared edges and filled, nothing else: 1999 fluid cells, one component. On D, J is 0.026% above R1t's (Ψ +0.048%, C +0.022%), and still 0.130% below R1r's (Ψ −0.95%, C +0.04%, T_max −1.77%). Among the designs with no isolated cell it is lowest for 0.1747 < w < 0.7566. 1F + 1T, 312 s |
+| R1u | a diagnostic geometry: R1t's qualified binary design with its isolated fluid cell 3750 filled, nothing else changed (1999 fluid cells); on D with the linear path, at most 1F + 1T, no MMA, no AD | **done** — the isolated cell found by shared edges and filled, nothing else: 1999 fluid cells, one component. On D, J is 0.026% above R1t's (Ψ +0.048%, C +0.022%), and still 0.130% below R1r's (Ψ −0.95%, C +0.04%, T_max −1.77%). Among the designs with no isolated cell it is lowest for 0.1747 < w < 0.7566. 1F + 1T, 312 s. Closed in the review of 7786ce7 with the binding fix. The filled design keeps 83.19% of R1t's absolute advantage in J over R1r's; the cell is not without effect. R1t stays the numerical first and the optimisation trajectory. The filled design ("R1t, filled") becomes the representative with no isolated component |
+| R1v | a real continuation of R1t's run. Part 1: migrate R1t's checkpoint to the new binding from its own record, and an append-only budget operation, tested on a small mesh (2 of 2, then 2 appended, equals 4 at once). Part 2, with separate confirmation: at most 20 appended updates (20 → at most 40) from R1t's raw design and MMA history on D, then at most 1F + 1T | proposed in the review of 7786ce7; not authorised |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -4251,7 +4252,8 @@ re-solved:
 - **Against R1r's design, the filled one is still 0.130% lower in J.**
   - Ψ is 0.954% lower, C 0.042% higher and T_max 1.766% lower.
   - In terms: −0.00213372 and +0.00045158.
-  - Of R1t's lead of 0.156%, 0.130% remains.
+  - Of R1t's lead of 0.156%, 0.130% remains: 83.19% of the absolute
+    difference in J, on the same scale.
 - **Reweighting.** Among all six fixed designs, the filled one is never the
   lowest. Among the five with no isolated cell:
   - R1r's design has the lowest J for w below 0.1747;
@@ -4263,12 +4265,13 @@ re-solved:
 
 ### What R1u says, and what it does not
 
-- **R1t's lead does not rest on the isolated cell.** On D at w = 0.5, with
-  the cell filled, the design is still 0.130% lower in J than R1r's. It has
-  one fluid component and 1999 fluid cells.
-- **On this model the cell did not hurt R1t's J.** Filling it raises both
-  objectives, slightly. Whether that comes from the finite-Brinkman flow at
-  the corner or from the conductivity is not isolated.
+- **R1t's lead does not rest wholly on the isolated cell.** On D at w = 0.5,
+  with the cell filled, the design is still 0.130% lower in J than R1r's,
+  which keeps 83% of the absolute advantage. It has one fluid component and
+  1999 fluid cells.
+- **The cell is not without effect.** Filling it raises both objectives,
+  slightly. Whether that comes from the finite-Brinkman flow at the corner or
+  from the conductivity is not isolated.
 - **The margins are small, 0.13–0.16%.** They are on one discrete model,
   which both generated and ranked the designs, and no error bound speaks for
   the physical problem.
@@ -4276,6 +4279,165 @@ re-solved:
   the optimisation from R1t's raw design with its checkpoint. The filled
   design is a diagnostic geometry, and it is not passed into R1t's
   checkpoint.
+
+### After the review of 7786ce7
+
+The review closed the binding fix (c31b3c2) and R1u (7786ce7). The
+append-only budget operation stays a deferred prerequisite; it is not part
+of the binding fix. What the review checked, without solving anything on the
+main mesh:
+
+- **Provenance.**
+  - 0650e7b → c31b3c2: 166 files unchanged, 6 modified.
+  - c31b3c2 → 7786ce7: 169 unchanged, 3 modified, 4 added, none deleted.
+  - R1u's 29 sources (19 byte for byte, 10 after LF → CRLF) and 5 inputs
+    (1 and 4) match. So do the reference and the 14 upstream sources.
+- **The binding fix, with the real entry.** Each of the five settings was
+  changed on a real small problem. In every case the reference identity
+  stayed the same and the common scale still served, but the binding
+  changed, and the old checkpoint was refused before anything was solved.
+  The 4 against 2 + 2 test and its restart counterexample passed again.
+- **R1t's checkpoint is untouched.**
+  - Its entry still has only the model, the scale and the thermal path.
+  - It has 20 updates, epoch 20, a budget of 20 and kktnorm 0.00668…
+  - Its is_converged flag is the budget's, not a KKT test.
+
+  It has not been migrated.
+- **R1u's geometry, rebuilt independently** from the saved coordinates by
+  shared edges:
+  - only cell 3750 changed, from s = 0 to 1;
+  - 1999 of 5000 design cells are fluid, the tabs are fluid, there is one
+    component of 2199 cells, and inlet and outlet connect;
+  - the flow material changed in its four children only (14900, 14901,
+    15100, 15101), the thermal material in its 64;
+  - the source integral is still 5200.
+- **R1u's state, re-assembled without `tfopus` or JAX:**
+  - Ψ 0.01399203487126011, C 43708.551214910854, J 1.2958217225524635;
+  - residuals 6.2×10⁻¹³ (flow) and 1.16×10⁻¹⁰ (thermal);
+  - the identities close to 2.0×10⁻¹², and the heat balance with the
+    consistent reaction to 1.05×10⁻¹²;
+  - T_max 19.3018, T_min 0, and no negative node.
+- **Tests, in its environment.**
+  - The 6 checkpoint tests passed, in batches.
+  - R1u's negative test first stopped at an earlier gate, see below.
+  - It collected 347 tests and did not run them.
+
+**What the numbers say, exactly.**
+
+- **Against R1t's design:** ΔJ = +0.000106530578 (dissipation)
+  + 0.000233387028 (thermal compliance) = +0.000339917606. Both objectives
+  rise, so R1t's design is lower at every non-negative weight.
+- **Against R1r's design:** ΔJ = −0.002133720032 + 0.000451580078
+  = −0.001682139954 (−0.1296%). Ψ is 0.9539% lower, C 0.0421% higher and
+  T_max 1.7655% lower. It is a trade of lower dissipation for slightly
+  higher compliance, not both objectives better.
+- **How much of the lead survives:** 83.19% of R1t's absolute advantage in J
+  over R1r's.
+  - This is not an attribution: it does not share the rest out among the
+    other 15 changed cells.
+  - It does not separate conduction, the corner flow or the finite-Brinkman
+    model.
+  - The differences are far above round-off, but no error bound of the
+    physical discretisation goes with them.
+- **One component by shared edges** is not a check of the minimum channel
+  width, of manufacture, of the interface or of 3D. None of those is asked
+  here.
+
+**The candidates, as the review set them.** Three uses, which do not
+conflict:
+
+| design | its use |
+|---|---|
+| R1t's | the numerical first of all six under the rule as frozen, and the optimisation trajectory: its raw x and MMA history |
+| R1t's, filled (R1u) | the representative with no isolated component by shared edges: first of the five single-component designs for 0.1747 < w < 0.7566, w = 0.5 among them |
+| R1r's and the others | kept |
+
+- Taking the filled design as that representative is a declared geometric
+  preference. It is not a re-ranking. It does not disqualify R1t's design,
+  and it does not show the filled one easier to make.
+- The filled design has no raw variables and no MMA history of its own. It
+  is never written into R1t's checkpoint.
+- No global rule follows that every future export is to be filled.
+- 1999 fluid cells are within the bound. No cell is added back.
+
+**Reproducing R1u's test on an LF checkout.**
+
+- The run records hash the development reference,
+  `tfopus/zhao2d_reference_dual_r4q3_v1.json`, as the bytes on the Windows
+  checkout, with CRLF line ends.
+- On an LF checkout that file hashes differently. The scripts from R1r on
+  compare the scale's hash with R1q's record, so they stop at their inputs
+  before solving anything, and so does R1u's negative test.
+- The review restored that one file to the recorded CRLF bytes, and checked
+  its sha256 and JSON content. The same test then passed.
+- To replay on such a checkout, do the same: check out that file with CRLF
+  line ends (for example `git config core.autocrlf true` before checking out)
+  and compare its sha256 with `scale.source_sha256` in the record.
+- The hash gate is not relaxed.
+
+## R1v: the contract (as proposed in the review of 7786ce7; not yet authorised)
+
+To continue R1t's run for real for the first time: from its raw design and
+its MMA history, not from the same x with MMA reinitialised again.
+
+**Part 1: migrate R1t's checkpoint, and append budget. No main-mesh solve.**
+
+- **The migration.** R1t's configuration and design map are rebuilt from its
+  own record and the source it was run with. The checkpoint is then signed
+  with the current binding.
+  - The original file is kept.
+  - The migration's sources are recorded.
+  - The migration must change the signature only, not one number in the
+    state.
+  - No field is guessed from today's defaults.
+- **The append operation.** It adds future budget and schedule only.
+  - The schedule already run is kept, and so are the objective, the
+    constraint, the projection, the filter, the model, the scale and every
+    MMA setting except the budget.
+  - x, x_old_1, x_old_2, low, upp, epoch and the actual kktnorm are kept.
+  - The budget's stop flag is kept apart from a real proxy stop.
+  - No signature is cleared or forged, no NPZ edited by hand, and MMA's
+    asymptotes are never reinitialised.
+- **Its test, on a small mesh.**
+  - A finished 2-of-2 run with 2 appended equals 4 at once from the same
+    start.
+  - A changed prefix, or a changed optimisation setting, is refused before
+    anything is solved.
+  - The old checkpoint and its evidence are not overwritten.
+  - Pausing within a budget keeps working.
+
+  No general job-recovery system is built.
+
+**Part 2: at most 20 appended updates on D. Only with the user's separate
+confirmation, after Part 1 passes.**
+
+- **From:** R1t's raw continuous terminal and its MMA history, migrated.
+  Updates 20 → at most 40.
+- **Held fixed:**
+  - D and the linear thermal path;
+  - the volume-preserving projection at β = 32, and α_max = 10⁷;
+  - both q = 0.2, and the filter length;
+  - the common scale, w = 0.5, and the move limit 0.1.
+- **The first resumed evaluation** is checked against R1t's continuous
+  terminal, J = 0.994789572208565, with its parts, the volume and the root.
+  Only then is the next update made. The existing anchor and state gates
+  apply, with no gate looser or tighter, and no extra zero step. R1u's
+  binary design is never used as a continuous start.
+- **The terminal** is evaluated at the same point and exported by the same
+  rule. If the design is qualified and connected, it gets at most 1F + 1T on
+  D.
+  - Every fluid component is recorded.
+  - A new isolated component is reported under the rule. No cell is filled
+    automatically, no volume made up, and no chain of repairs tried.
+  - R1u stays the alternative with no isolated component. The old candidates
+    are reused by identity; none is re-solved or deleted.
+- **It stops** after at most 20 updates, or at an existing stopping
+  condition. No improvement closes it normally.
+- **Not done:** β raised, q or w swept, a new reference, a new mesh, 3D, a
+  restarted control, or volume made up.
+- **What it would test.** It is the first real test of carrying MMA's
+  history across budgets. It does not presume that the binary design will
+  improve, or that the optimisation will converge.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
