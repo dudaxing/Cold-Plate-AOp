@@ -71,6 +71,13 @@ resume from one (`resume`) or stop after a number of updates without a
 terminal evaluation (`stop_after`). A resumed run makes the next update as an
 uninterrupted run would; before R1t, every warm start reinitialised MMA and
 kept only the design.
+
+**More budget for a finished run (from R1v).** A checkpoint's binding includes
+its budget, so a run that has used its budget cannot be resumed under a larger
+one. `MMACheckpoint.append_budget` re-signs it for a larger budget and a longer
+schedule, and for nothing else: the steps already scheduled, the entry and
+every other MMA parameter are kept, and so is MMA's state, bar the flag the old
+budget set.
 """
 
 from __future__ import annotations
@@ -79,6 +86,7 @@ import dataclasses
 import hashlib
 import json
 import time
+from types import SimpleNamespace
 from typing import Callable
 
 import numpy as np
@@ -261,7 +269,10 @@ class MMACheckpoint:
     parameters, the schedule and the budget. A checkpoint is restored only
     under the same binding, and a resumed run makes MMA's next update exactly
     as an uninterrupted run would -- epoch, the asymptotes and the design
-    history included -- rather than reinitialising it.
+    history included -- rather than reinitialising it. Two operations re-sign
+    a checkpoint, each for one purpose: `append_budget` adds budget and
+    schedule, and `zhao2d_fineflow.migrate_legacy_checkpoint` adds the
+    optimisation problem to a binding signed before c31b3c2.
     """
 
     state_array: np.ndarray
@@ -292,7 +303,9 @@ class MMACheckpoint:
             raise ValueError(
                 "this MMA checkpoint belongs to another run (a different model, scale, "
                 "thermal path, MMA parameter, schedule or budget); it is refused rather "
-                "than restored into this one")
+                "than restored into this one. More updates for a finished run are "
+                "appended with `append_budget`, which changes the budget and adds "
+                "schedule, and nothing else")
         state = _mma.MMAState.from_array(self.state_array.copy(), self.num_design_var)
         if state.epoch != self.updates_done:
             raise ValueError(f"the checkpoint's epoch {state.epoch} is not its "
@@ -300,6 +313,81 @@ class MMACheckpoint:
         if np.isfinite(self.kktnorm):
             state.kktnorm = self.kktnorm  # the attribute update_mma writes; see above
         return state
+
+    def append_budget(self, phases: list[Phase], budget: int) -> "MMACheckpoint":
+        """This checkpoint under a larger budget, its schedule continued; nothing else changes.
+
+        The one way to give a run more updates than its binding allows (R1v).
+        It adds future budget and schedule only:
+
+        * the binding keeps its entry -- the model, the objective's scale and
+          the optimisation problem -- and every MMA parameter but `max_iter`,
+          which is the budget. `phases` must place every step of the old
+          schedule, run or not, exactly as it was, and may add steps after it;
+        * MMA's state keeps x, x_old_1, x_old_2, low, upp, epoch, the KKT
+          residual `update_mma` wrote, change_design_var and the declared
+          kkt_norm. The asymptotes are not reinitialised.
+
+        One number may change, for one stated reason. `update_mma` sets
+        `is_converged` when the epoch reaches max_iter, and for its two
+        stopping proxies as well, and never reads it back; nor does this
+        driver (see `_mma_proxy_criterion`). A flag the old budget alone set is
+        cleared: under the new budget that epoch is not the last, and an
+        uninterrupted run with the new budget would not have set it. A run a
+        proxy stopped (step_tol or kkt_tol, as the driver reads them) is
+        refused, since more budget does not undo a stop the run itself made;
+        so is a flag that neither the budget nor a proxy explains.
+
+        Returns a new checkpoint; this one, and whatever file it came from, is
+        left as it was. A run resumed from it is checked against the new
+        binding like any other, before anything is solved.
+        """
+        old = json.loads(self.binding)
+        mma, budget = old["mma"], int(budget)
+        if mma["max_iter"] != old["budget"]:
+            raise ValueError(f"this checkpoint's max_iter {mma['max_iter']} is not its "
+                             f"budget {old['budget']}")
+        if budget <= old["budget"]:
+            raise ValueError(f"a budget of {budget} adds nothing to this checkpoint's "
+                             f"{old['budget']}")
+        schedule, kept = _schedule(phases), old["schedule"]
+        if schedule[: len(kept)] != kept:
+            differs = [i for i, (a, b) in enumerate(zip(schedule, kept)) if a != b]
+            raise ValueError(
+                "the new schedule does not keep the old one: "
+                + (f"step {differs[0]} is {schedule[differs[0]]}, was {kept[differs[0]]}"
+                   if differs else f"it has {len(schedule)} steps, the old one {len(kept)}")
+                + "; appending adds steps after the old schedule and changes none of it")
+
+        n = self.num_design_var
+        state = _mma.MMAState.from_array(self.state_array.copy(), n)
+        if state.epoch != self.updates_done or self.updates_done > old["budget"]:
+            raise ValueError(f"the checkpoint's epoch {state.epoch} and its {self.updates_done} "
+                             f"updates do not fit its budget {old['budget']}")
+        if np.isfinite(self.kktnorm):
+            state.kktnorm = self.kktnorm
+        fired = _mma_proxy_criterion(
+            state, SimpleNamespace(step_tol=mma["step_tol"], kkt_tol=mma["kkt_tol"]))
+        if fired is not None:
+            raise ValueError(
+                f"this run stopped because upstream's {fired} proxy fired at update "
+                f"{self.updates_done}, not because its budget ran out; more budget does not "
+                "undo a stop the run itself made")
+        at_budget = state.epoch == mma["max_iter"]
+        if bool(state.is_converged) != at_budget:
+            raise ValueError(
+                f"is_converged is {bool(state.is_converged)} at epoch {state.epoch} of "
+                f"max_iter {mma['max_iter']} with no proxy fired: neither the budget nor a "
+                "proxy explains it")
+        state.is_converged = False
+        state_array = state.to_array()
+        changed = np.flatnonzero(state_array != self.state_array)
+        assert changed.size == int(at_budget), changed  # the budget's flag, and nothing else
+        return MMACheckpoint(
+            state_array=state_array.copy(), kktnorm=self.kktnorm, updates_done=self.updates_done,
+            num_design_var=n,
+            binding=json.dumps(dict(old, budget=budget, mma=dict(mma, max_iter=budget),
+                                    schedule=schedule), sort_keys=True))
 
 
 def _checkpoint(state, updates_done: int, binding: str) -> MMACheckpoint:
@@ -310,10 +398,16 @@ def _checkpoint(state, updates_done: int, binding: str) -> MMACheckpoint:
                          binding=binding)
 
 
-def _run_binding(entry: str | None, params, phases: list[Phase], budget: int) -> str:
-    """What an MMA state belongs to, as canonical JSON (see `MMACheckpoint`)."""
+def _schedule(phases: list[Phase]) -> list[dict]:
+    """The model each update is made under, step by step, as a binding records it."""
     steps = [(p.name, p.beta, p.alpha_at(g))
              for g, p in enumerate(p_ for p_ in phases for _ in range(p_.iterations))]
+    return [{"phase": name, "beta": float(beta), "alpha_max": float(alpha)}
+            for name, beta, alpha in steps]
+
+
+def _run_binding(entry: str | None, params, phases: list[Phase], budget: int) -> str:
+    """What an MMA state belongs to, as canonical JSON (see `MMACheckpoint`)."""
     return json.dumps({
         "entry": None if entry is None else json.loads(entry),
         "mma": {"max_iter": params.max_iter, "kkt_tol": params.kkt_tol,
@@ -323,8 +417,7 @@ def _run_binding(entry: str | None, params, phases: list[Phase], budget: int) ->
                 "d": params.d.ravel().tolist(),
                 "lower_bound_sha256": _digest(params.lower_bound),
                 "upper_bound_sha256": _digest(params.upper_bound)},
-        "schedule": [{"phase": name, "beta": float(beta), "alpha_max": float(alpha)}
-                     for name, beta, alpha in steps],
+        "schedule": _schedule(phases),
         "budget": int(budget),
     }, sort_keys=True)
 
@@ -545,7 +638,9 @@ def run_loop(
     under the same binding, checked before anything is solved, and not
     together with `initial_design` -- with the updates numbered on from it.
     `stop_after` pauses after that many updates of this call: stop reason
-    "paused", no terminal evaluation, the state in `RunResult.mma`.
+    "paused", no terminal evaluation, the state in `RunResult.mma`. A run
+    that has used its budget continues only from
+    `checkpoint.append_budget(phases, budget)`, with those phases and budget.
     """
     spec = problem.spec
     validate_schedule(phases, spec)

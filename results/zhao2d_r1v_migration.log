@@ -1,0 +1,9 @@
+checkpoint passed: the inputs
+checkpoint passed: the locked source
+checkpoint passed: the configuration and the spec
+checkpoint passed: the design side
+checkpoint passed: the migration
+checkpoint passed: dry, for part 2
+checkpoint passed: R1t's files
+migrated: state f8a467a5c5b4.. unchanged, binding ea12846c25dd.. -> 3716f3fbeeba..; dry append to 40 accepted, first evaluation at R1t's raw terminal
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1v_migration.json and D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1v_mma_migrated.npz; total 8 s

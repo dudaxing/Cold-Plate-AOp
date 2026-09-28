@@ -1,0 +1,713 @@
+{
+  "note": "R1v, part 1: R1t's MMA checkpoint re-signed with today's binding, which also names the optimisation problem; the state is carried over untouched. The optimisation block is rebuilt from R1t's record and the source R1t was run with. Nothing is solved, no MMA update is made, no fine mesh is built, and nothing is appended to a file.",
+  "provenance": {
+    "git_head": "bf5c9229f15eb3bfea818a0c18f41bed2f665154",
+    "git_status_porcelain": [
+      "M README.md",
+      " M docs/zhao_reproduction.md",
+      " M tfopus/zhao2d_driver.py",
+      " M tfopus/zhao2d_fineflow.py",
+      " M validation/test_zhao2d_mma_checkpoint.py",
+      "?? scripts/zhao2d_r1v_migrate.py"
+    ],
+    "source_sha256": {
+      "tfopus/__init__.py": "4f8f07278ef09f9943b1a75b5c6651abc0a774ba8f9bcefd873f3410766500f6",
+      "tfopus/_callback_solve.py": "3893ee73af4b3d288a390967291729b168c216b5d2f5c56cb949fe3d29bee7be",
+      "tfopus/_threads.py": "46202a99056e2e7bd334a28fc7cd07c307f9a25293aa5c5d0a30e5a9315f4104",
+      "tfopus/advection_benchmark.py": "0164cd07368eacccb9f2145d5cac3f1db3c15a708ff4a63f906f100dbd69a40f",
+      "tfopus/affine_solve.py": "f2ffd494e12a597e1ffafe345d9d4922d5bbe1828a19161839898d4266ea5d64",
+      "tfopus/bc3d.py": "425269329418f787a1bc8617fedea48cb83ec4269a03bd0cb8d00f1580af76fb",
+      "tfopus/design.py": "8541421386305329195472d8aa0fd6a42da90b38c95dd61f69fba441a5120138",
+      "tfopus/elements.py": "db2c62c44de30ec17dfce5b9d2af1e415fdec8f070c3c3e41690b7d9093a2a80",
+      "tfopus/fe_flow.py": "8faf45037fdb760c9d778474333720c84e3474dbe0dc7e880ddc12696a9265df",
+      "tfopus/fe_thermal.py": "6a13b8b82e84fc67e87078bde9bb5146b99f981979832be087bce80f47e5bcc0",
+      "tfopus/geometry.py": "6b2586d988667e7ee317fb6e864a43f5fb60b1a472ff68963cf813654f188505",
+      "tfopus/materials.py": "117b4a36676c9f2272ddd153e9e69fb08d3ef27b0e0c51b7097a80fc5f9daa11",
+      "tfopus/mesh.py": "a1aa2881c06ce45be42730a2c21bea1c48a9abd7cc3885e438f7b79bf948fe42",
+      "tfopus/projection.py": "2522292de520bf17ee9bc2e8aa87b4e6f532346a8a2f51ddb9c0c6102861a65a",
+      "tfopus/sparse_bc.py": "22d37784a86fd5e62e320df7f99e14d531892b638839e733310213c0d7b2583b",
+      "tfopus/zhao2d.py": "60f1205b533d4dcb0d49dd9d2d36a4364d1c0da9f02a457a57d25ed18724ebe6",
+      "tfopus/zhao2d_analysis.py": "543a42633426fdd885ed8c7881d8d616c868a04aee472455b35484490752d2df",
+      "tfopus/zhao2d_binary.py": "cd375d1361cdc2419f68dd362062c4d9257807db7ab56d4268223cea70cf7680",
+      "tfopus/zhao2d_driver.py": "e73519c3beb4da88bd3b1bd47b12a1a62c046b635be860287068aee884f2cfd9",
+      "tfopus/zhao2d_dual.py": "a2fc719f033058365dba159b1af8d0ee04286ee90f7366d7a6277cb3d4cef047",
+      "tfopus/zhao2d_fineflow.py": "3450b6963891c9c5331b27ff4c3cbe96fe60350b161fc37b25bd3af1982f2513",
+      "tfopus/zhao2d_flow_study.py": "2a451ecfc5a2d4053fbc177248592c8596f91b556fe95b55c9ccc7f575e8e33f",
+      "tfopus/zhao2d_r1.py": "7e4df67caa094e48ad934b15e9ae06ad7da4245c7eb01aa05c8492970c5a879e",
+      "tfopus/zhao2d_refine.py": "5070a9ad93645aaba55bea2936946f82cc948fafda9a0996463311a535e93d0f",
+      "tfopus/zhao2d_thermal_study.py": "b57e419c4e9ba546e3cd2447638b2cf64e469e4c1fc760e26446c41accd21941",
+      "scripts/zhao2d_flow_mesh_check.py": "51ccb9afe1eec6f964cb2fb6714520df056375b8e07cd044b9fcce455ea9539e",
+      "scripts/zhao2d_dual_check.py": "57afde862ffb0283284f7c23dc5a4a7391feb4b71ad4826ce59046c5d3c921b5",
+      "scripts/zhao2d_r1v_migrate.py": "cd34f9f03a71519d217493802124b44196b3d2ea14e7a3690f2f9d7252b96a14",
+      "scripts/zhao2d_r1m_flow_check.py": "1484f46a99468e756ddc9f54a4b3b199c3399f4d38a9d2faa41139dc0ef9c698",
+      "scripts/zhao2d_r1t_d_continue.py": "4019fc06831d2654cfc2d73899ca04479f26295f67adf8f17374d2cff2bd3ca8"
+    },
+    "toflux_src_sha256": {
+      "__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bc.py": "a3fc663f26d1d8ad4813ba02d4cb344d3b34b855b0647d99077f7160e1babecd",
+      "constrained_loss.py": "846b464db6ad182eefddfa30995831606698f6a71a989c33cca4be390c1d75e2",
+      "element.py": "ae8f5367dbfdb21f615682e525c6ff7cd7063b1632794870d659638fcafee3a4",
+      "fe_fluid.py": "8b012b6f1a1e644f809d10e946db3d52d496f8569ae1817a46d9272dc9407ade",
+      "fe_struct.py": "8c8224edc0c36fcb5796aa1d39f57769bdc6cb92556a2c38993daf38c31e7c8b",
+      "fe_thermal.py": "ffef199d9a2608f66077c19f369a6d1851125ba11b55faf9011385d2758e8461",
+      "geometry.py": "4bf21900872eb6c3733a124746acf6744d30ebc89a43d03683b78e62d4656a7f",
+      "material.py": "504a9e02d75a3978d2ce624139c62002a20e7dbb8db32fcff10083a84d002351",
+      "mesher.py": "e60c691a8f1680ed30988ac48fc32263a53a2cfd2026d5735e167221a3f5b458",
+      "mma.py": "619952b8585a29b39930d12291da5338c585210d79030c8cbf3130d592ae829f",
+      "solver.py": "df36a4e0d62304c8329dcb782f839451f2bc381002225c1f745865a754aa8b4b",
+      "utils.py": "9c788175c2ec1987daebc7f429b2681a20f344f6e772b602557d191393da970c",
+      "viz.py": "eb40ea7f4661d667a76133032bc41da4ae0802b0ae265c016d9c7223dc6afbbb"
+    },
+    "environment": {
+      "python": "3.13.6",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "jax": "0.11.0",
+      "numpy": "2.4.6",
+      "scipy": "1.17.1",
+      "x64": true,
+      "threads": {
+        "OPENBLAS_NUM_THREADS": "8",
+        "OMP_NUM_THREADS": "8",
+        "MKL_NUM_THREADS": "8",
+        "NUMEXPR_NUM_THREADS": "8"
+      },
+      "cpu_count": 32
+    }
+  },
+  "inputs_sha256": {
+    "zhao2d_r1t.json": "23d307ba9cadf2a6f3744d306f8bf9d8af07f30fe8a49e17bc094facf5c7ca7e",
+    "zhao2d_r1t_fields.npz": "fcc9c31d237d864774e18d3202f2e0262ab4ab32364c5793a533b766b14d58f6"
+  },
+  "contract": {
+    "part": 1,
+    "migrates": "results/zhao2d_r1t_fields.npz, mma_*",
+    "solves": 0,
+    "mma_updates": 0,
+    "fine_meshes_built": false,
+    "part_2": "not authorised; its append is checked dry, nothing saved",
+    "authorised": "by the user, part 1 only, on the local CPU, as the review of 7786ce7 states it"
+  },
+  "legacy": {
+    "file": "results/zhao2d_r1t_fields.npz",
+    "keys": "mma_*",
+    "sha256": "fcc9c31d237d864774e18d3202f2e0262ab4ab32364c5793a533b766b14d58f6",
+    "binding_sha256": "ea12846c25dd0a0046d1458410992d9a896969e91f6069de683bdd44bb44e993",
+    "entry_keys": [
+      "model",
+      "scale",
+      "thermal_path"
+    ],
+    "state_array_sha256": "f8a467a5c5b4f334fa967980a9fcc4c20945ca7350dc4e37f1360968dc1cddfa",
+    "updates_done": 20,
+    "is_converged": true,
+    "epoch": 20,
+    "change_design_var": 0.07189798662462055,
+    "kkt_norm_declared": 1000.0,
+    "kktnorm": 0.006680745532137441,
+    "budget": 20,
+    "schedule_steps": 20
+  },
+  "locked_source": {
+    "files": {
+      "tfopus/zhao2d.py": {
+        "recorded_sha256": "60f1205b533d4dcb0d49dd9d2d36a4364d1c0da9f02a457a57d25ed18724ebe6",
+        "sha256_now": "60f1205b533d4dcb0d49dd9d2d36a4364d1c0da9f02a457a57d25ed18724ebe6",
+        "matches": "bytes"
+      },
+      "tfopus/zhao2d_r1.py": {
+        "recorded_sha256": "7e4df67caa094e48ad934b15e9ae06ad7da4245c7eb01aa05c8492970c5a879e",
+        "sha256_now": "7e4df67caa094e48ad934b15e9ae06ad7da4245c7eb01aa05c8492970c5a879e",
+        "matches": "bytes"
+      },
+      "tfopus/fe_flow.py": {
+        "recorded_sha256": "8faf45037fdb760c9d778474333720c84e3474dbe0dc7e880ddc12696a9265df",
+        "sha256_now": "8faf45037fdb760c9d778474333720c84e3474dbe0dc7e880ddc12696a9265df",
+        "matches": "bytes"
+      },
+      "tfopus/fe_thermal.py": {
+        "recorded_sha256": "6a13b8b82e84fc67e87078bde9bb5146b99f981979832be087bce80f47e5bcc0",
+        "sha256_now": "6a13b8b82e84fc67e87078bde9bb5146b99f981979832be087bce80f47e5bcc0",
+        "matches": "bytes"
+      },
+      "tfopus/mesh.py": {
+        "recorded_sha256": "a1aa2881c06ce45be42730a2c21bea1c48a9abd7cc3885e438f7b79bf948fe42",
+        "sha256_now": "a1aa2881c06ce45be42730a2c21bea1c48a9abd7cc3885e438f7b79bf948fe42",
+        "matches": "bytes"
+      },
+      "tfopus/geometry.py": {
+        "recorded_sha256": "6b2586d988667e7ee317fb6e864a43f5fb60b1a472ff68963cf813654f188505",
+        "sha256_now": "6b2586d988667e7ee317fb6e864a43f5fb60b1a472ff68963cf813654f188505",
+        "matches": "bytes"
+      },
+      "tfopus/design.py": {
+        "recorded_sha256": "8541421386305329195472d8aa0fd6a42da90b38c95dd61f69fba441a5120138",
+        "sha256_now": "8541421386305329195472d8aa0fd6a42da90b38c95dd61f69fba441a5120138",
+        "matches": "bytes"
+      },
+      "tfopus/projection.py": {
+        "recorded_sha256": "2522292de520bf17ee9bc2e8aa87b4e6f532346a8a2f51ddb9c0c6102861a65a",
+        "sha256_now": "2522292de520bf17ee9bc2e8aa87b4e6f532346a8a2f51ddb9c0c6102861a65a",
+        "matches": "bytes"
+      },
+      "scripts/zhao2d_r1t_d_continue.py": {
+        "recorded_sha256": "4019fc06831d2654cfc2d73899ca04479f26295f67adf8f17374d2cff2bd3ca8",
+        "sha256_now": "4019fc06831d2654cfc2d73899ca04479f26295f67adf8f17374d2cff2bd3ca8",
+        "matches": "bytes"
+      }
+    },
+    "r1t_script_builds": [
+      "spec = z.Zhao2DSpec()",
+      "config = r1.R1Config(projection=r1.Projection.VOLUME_PRESERVING)"
+    ],
+    "git_head_at_r1t": "9ede41a4e744156b2af0686dd59a4fdabc5ab8b3",
+    "rule": "bytes, or for these named text files the same text up to line endings; nothing looser"
+  },
+  "rebuilt": {
+    "config": {
+      "from": "results/zhao2d_r1t.json: contract.fingerprint, field by field",
+      "gives_the_fingerprint_back": true,
+      "equals_what_r1t_script_builds": "config = r1.R1Config(projection=r1.Projection.VOLUME_PRESERVING)"
+    },
+    "spec": {
+      "from": "spec = z.Zhao2DSpec(), as R1t's script built it, from the locked tfopus/zhao2d.py",
+      "fields_checked_against_r1t_model_identity": [
+        "design_half_width",
+        "design_height",
+        "element_size",
+        "fluid_conductivity",
+        "fluid_density",
+        "fluid_heat_capacity",
+        "fluid_viscosity",
+        "heat_source",
+        "inlet_half_width",
+        "inlet_speed",
+        "inlet_temperature",
+        "q_alpha",
+        "q_kappa",
+        "reference_gamma",
+        "solid_conductivity",
+        "tab_length"
+      ],
+      "fields_from_the_locked_source": {
+        "alpha_max_initial": 1000000.0,
+        "alpha_max_final": 10000000.0,
+        "alpha_max_growth": 1.03,
+        "max_fluid_fraction": 0.4,
+        "weight": 0.5,
+        "reported_psi_0": 20816.0,
+        "reported_c_0": 0.0456,
+        "reported_reynolds": 200.0,
+        "reported_num_elements": 5200
+      }
+    }
+  },
+  "design_side": {
+    "built": "tfopus.zhao2d_r1.Zhao2DProblem(spec, config), on h",
+    "design_mesh": {
+      "elements": 5200,
+      "nodes": 5371,
+      "node_coords_sha256": "621fec585ebf976472811c8bf1d2a7a6491be1ec981b9c1f7a8bc0c3a3ef4cf7",
+      "geometry_sha256": "ac96dae96ea53e6bc26ee3eaa0ba73bf551cd2f02c2d9dc544ac38ee134bddc6",
+      "region_sha256": "6f4bc48ab954ffa4745f1f366fb93ac5f637e13bfc6cd14dae3763c13f90155d"
+    },
+    "num_design": 5000,
+    "optimisation_block": {
+      "weight": 0.5,
+      "volume_domain": "design",
+      "max_fluid_fraction": 0.4,
+      "projection": "volume_preserving",
+      "filter": {
+        "kind": "linear",
+        "radius_elements": 2.0,
+        "radius_m": 0.0002
+      },
+      "design_map": {
+        "num_design": 5000,
+        "design_elements_sha256": "33a95b787a43228746e3b0e8fe6134f7f778813aeb24992a03ec6c6f954c7e5d"
+      },
+      "config": {
+        "alpha_max_reference": 1000000.0,
+        "element_length_mode": "min_edge",
+        "filter_radius_elements": 2.0,
+        "flow_form": {
+          "brinkman_in_supg_residual": true,
+          "brinkman_in_tau": true,
+          "viscous_form": "symmetric"
+        },
+        "max_fluid_fraction": 0.4,
+        "outlet": "traction",
+        "projection": "volume_preserving",
+        "projection_beta": 0.0,
+        "reference": "tabs_fluid",
+        "source": "whole_domain",
+        "thermal_form": {
+          "stabilise_source": true,
+          "supg_heat_capacity": true,
+          "tau": "two_limit",
+          "tau_velocity_floor": 1e-12
+        },
+        "volume_domain": "design",
+        "weight": 0.5
+      },
+      "spec": {
+        "inlet_half_width": 0.001,
+        "tab_length": 0.001,
+        "design_half_width": 0.005,
+        "design_height": 0.01,
+        "element_size": 0.0001,
+        "inlet_speed": 0.2,
+        "heat_source": 100000000.0,
+        "inlet_temperature": 0.0,
+        "fluid_density": 1000.0,
+        "fluid_viscosity": 0.001,
+        "fluid_heat_capacity": 4180.0,
+        "fluid_conductivity": 0.61,
+        "solid_conductivity": 237.0,
+        "q_alpha": 0.2,
+        "q_kappa": 0.2,
+        "alpha_max_initial": 1000000.0,
+        "alpha_max_final": 10000000.0,
+        "alpha_max_growth": 1.03,
+        "max_fluid_fraction": 0.4,
+        "weight": 0.5,
+        "reference_gamma": 0.4,
+        "reported_psi_0": 20816.0,
+        "reported_c_0": 0.0456,
+        "reported_reynolds": 200.0,
+        "reported_num_elements": 5200
+      }
+    }
+  },
+  "migration": {
+    "version": "r1v-1",
+    "function": "tfopus.zhao2d_fineflow.migrate_legacy_checkpoint",
+    "from": {
+      "file": "results/zhao2d_r1t_fields.npz",
+      "keys": "mma_*",
+      "sha256": "fcc9c31d237d864774e18d3202f2e0262ab4ab32364c5793a533b766b14d58f6",
+      "binding_sha256": "ea12846c25dd0a0046d1458410992d9a896969e91f6069de683bdd44bb44e993"
+    },
+    "to": {
+      "file": "zhao2d_r1v_mma_migrated.npz",
+      "keys": "mma_*",
+      "binding_sha256": "3716f3fbeeba8fc8417a12a51f79e8537b40f22005c3da8b6c033f8763b4690f"
+    },
+    "changed": [
+      "the binding's entry gains `optimisation`"
+    ],
+    "unchanged": {
+      "state_array_sha256": "f8a467a5c5b4f334fa967980a9fcc4c20945ca7350dc4e37f1360968dc1cddfa",
+      "kktnorm": 0.006680745532137441,
+      "updates_done": 20,
+      "num_design_var": 5000,
+      "binding": [
+        "entry.model",
+        "entry.scale",
+        "entry.thermal_path",
+        "mma",
+        "schedule",
+        "budget"
+      ]
+    },
+    "binding": {
+      "budget": 20,
+      "entry": {
+        "model": {
+          "config": {
+            "alpha_max_reference": 1000000.0,
+            "element_length_mode": "min_edge",
+            "flow_form": {
+              "brinkman_in_supg_residual": true,
+              "brinkman_in_tau": true,
+              "viscous_form": "symmetric"
+            },
+            "outlet": "traction",
+            "reference": "tabs_fluid",
+            "source": "whole_domain",
+            "thermal_form": {
+              "stabilise_source": true,
+              "supg_heat_capacity": true,
+              "tau": "two_limit",
+              "tau_velocity_floor": 1e-12
+            }
+          },
+          "flow_mesh": {
+            "refinement": 2
+          },
+          "spec": {
+            "design_half_width": 0.005,
+            "design_height": 0.01,
+            "element_size": 0.0001,
+            "fluid_conductivity": 0.61,
+            "fluid_density": 1000.0,
+            "fluid_heat_capacity": 4180.0,
+            "fluid_viscosity": 0.001,
+            "heat_source": 100000000.0,
+            "inlet_half_width": 0.001,
+            "inlet_speed": 0.2,
+            "inlet_temperature": 0.0,
+            "q_alpha": 0.2,
+            "q_kappa": 0.2,
+            "reference_gamma": 0.4,
+            "solid_conductivity": 237.0,
+            "tab_length": 0.001
+          },
+          "thermal_mesh": {
+            "element_length_mode": "min_edge",
+            "quadrature": 3,
+            "refinement": 4
+          }
+        },
+        "optimisation": {
+          "config": {
+            "alpha_max_reference": 1000000.0,
+            "element_length_mode": "min_edge",
+            "filter_radius_elements": 2.0,
+            "flow_form": {
+              "brinkman_in_supg_residual": true,
+              "brinkman_in_tau": true,
+              "viscous_form": "symmetric"
+            },
+            "max_fluid_fraction": 0.4,
+            "outlet": "traction",
+            "projection": "volume_preserving",
+            "projection_beta": 0.0,
+            "reference": "tabs_fluid",
+            "source": "whole_domain",
+            "thermal_form": {
+              "stabilise_source": true,
+              "supg_heat_capacity": true,
+              "tau": "two_limit",
+              "tau_velocity_floor": 1e-12
+            },
+            "volume_domain": "design",
+            "weight": 0.5
+          },
+          "design_map": {
+            "design_elements_sha256": "33a95b787a43228746e3b0e8fe6134f7f778813aeb24992a03ec6c6f954c7e5d",
+            "num_design": 5000
+          },
+          "filter": {
+            "kind": "linear",
+            "radius_elements": 2.0,
+            "radius_m": 0.0002
+          },
+          "max_fluid_fraction": 0.4,
+          "projection": "volume_preserving",
+          "spec": {
+            "alpha_max_final": 10000000.0,
+            "alpha_max_growth": 1.03,
+            "alpha_max_initial": 1000000.0,
+            "design_half_width": 0.005,
+            "design_height": 0.01,
+            "element_size": 0.0001,
+            "fluid_conductivity": 0.61,
+            "fluid_density": 1000.0,
+            "fluid_heat_capacity": 4180.0,
+            "fluid_viscosity": 0.001,
+            "heat_source": 100000000.0,
+            "inlet_half_width": 0.001,
+            "inlet_speed": 0.2,
+            "inlet_temperature": 0.0,
+            "max_fluid_fraction": 0.4,
+            "q_alpha": 0.2,
+            "q_kappa": 0.2,
+            "reference_gamma": 0.4,
+            "reported_c_0": 0.0456,
+            "reported_num_elements": 5200,
+            "reported_psi_0": 20816.0,
+            "reported_reynolds": 200.0,
+            "solid_conductivity": 237.0,
+            "tab_length": 0.001,
+            "weight": 0.5
+          },
+          "volume_domain": "design",
+          "weight": 0.5
+        },
+        "scale": {
+          "c_0": 20343.13770002236,
+          "psi_0": 0.03157912835073678,
+          "source_identity": {
+            "config": {
+              "alpha_max_reference": 1000000.0,
+              "element_length_mode": "min_edge",
+              "flow_form": {
+                "brinkman_in_supg_residual": true,
+                "brinkman_in_tau": true,
+                "viscous_form": "symmetric"
+              },
+              "outlet": "traction",
+              "reference": "tabs_fluid",
+              "source": "whole_domain",
+              "thermal_form": {
+                "stabilise_source": true,
+                "supg_heat_capacity": true,
+                "tau": "two_limit",
+                "tau_velocity_floor": 1e-12
+              }
+            },
+            "spec": {
+              "design_half_width": 0.005,
+              "design_height": 0.01,
+              "element_size": 0.0001,
+              "fluid_conductivity": 0.61,
+              "fluid_density": 1000.0,
+              "fluid_heat_capacity": 4180.0,
+              "fluid_viscosity": 0.001,
+              "heat_source": 100000000.0,
+              "inlet_half_width": 0.001,
+              "inlet_speed": 0.2,
+              "inlet_temperature": 0.0,
+              "q_alpha": 0.2,
+              "q_kappa": 0.2,
+              "reference_gamma": 0.4,
+              "solid_conductivity": 237.0,
+              "tab_length": 0.001
+            },
+            "thermal_mesh": {
+              "element_length_mode": "min_edge",
+              "quadrature": 3,
+              "refinement": 4
+            }
+          },
+          "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+        },
+        "thermal_path": "linear"
+      },
+      "mma": {
+        "a": [
+          0.0
+        ],
+        "a0": 1.0,
+        "c": [
+          1000.0
+        ],
+        "d": [
+          1.0
+        ],
+        "kkt_tol": 1e-06,
+        "lower_bound_sha256": "695e6a4610a3284bfa1efc6e99523c46fda1bed2e8499671272b190ea5b458bf",
+        "max_iter": 20,
+        "move_limit": 0.1,
+        "num_cons": 1,
+        "num_design_var": 5000,
+        "step_tol": 1e-06,
+        "upper_bound_sha256": "19ed76cc8c426648e4558d34838c6c135c74616b0afc39455c75fa6b4bcba167"
+      },
+      "schedule": [
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        }
+      ]
+    }
+  },
+  "dry_part_2": {
+    "note": "part 2 is not authorised: this checks that its start would be accepted, and saves nothing. Part 2's script appends again at its start, and its run checks the binding on the real D before anything is solved.",
+    "phases": [
+      {
+        "name": "r1t-d-vp32-linear",
+        "iterations": 20,
+        "beta": 32.0,
+        "alpha_max": 10000000.0
+      },
+      {
+        "name": "r1v-d-vp32-linear",
+        "iterations": 20,
+        "beta": 32.0,
+        "alpha_max": 10000000.0
+      }
+    ],
+    "budget": 40,
+    "append": {
+      "binding_sha256": "55059b4a255b3edfea26794114bc6a9b263e3d459153d4c69115fa3b3d76b969",
+      "state_entries_changed": [
+        25000
+      ],
+      "is_converged": [
+        true,
+        false
+      ],
+      "kept": [
+        "x",
+        "x_old_1",
+        "x_old_2",
+        "low",
+        "upp",
+        "epoch",
+        "kktnorm",
+        "change_design_var",
+        "kkt_norm"
+      ]
+    },
+    "resume": {
+      "stand_in": "D's model identity through fine_flow_identity, its design side from Zhao2DProblem on h, the scale from the reference file; D's fine meshes are not built",
+      "reference_file": "tfopus/zhao2d_reference_dual_r4q3_v1.json",
+      "accepted_by_run_loop": true,
+      "first_evaluation": {
+        "iteration": 20,
+        "phase": "r1v-d-vp32-linear",
+        "alpha_max": 10000000.0,
+        "beta": 32.0,
+        "design_is_r1t_raw_terminal": true,
+        "solved": false
+      }
+    }
+  },
+  "inputs_unchanged": {
+    "before": {
+      "zhao2d_r1t.json": "23d307ba9cadf2a6f3744d306f8bf9d8af07f30fe8a49e17bc094facf5c7ca7e",
+      "zhao2d_r1t_fields.npz": "fcc9c31d237d864774e18d3202f2e0262ab4ab32364c5793a533b766b14d58f6"
+    },
+    "after": {
+      "zhao2d_r1t.json": "23d307ba9cadf2a6f3744d306f8bf9d8af07f30fe8a49e17bc094facf5c7ca7e",
+      "zhao2d_r1t_fields.npz": "fcc9c31d237d864774e18d3202f2e0262ab4ab32364c5793a533b766b14d58f6"
+    }
+  },
+  "checkpoints": [
+    {
+      "stage": "the inputs",
+      "failures": []
+    },
+    {
+      "stage": "the locked source",
+      "failures": []
+    },
+    {
+      "stage": "the configuration and the spec",
+      "failures": []
+    },
+    {
+      "stage": "the design side",
+      "failures": []
+    },
+    {
+      "stage": "the migration",
+      "failures": []
+    },
+    {
+      "stage": "dry, for part 2",
+      "failures": []
+    },
+    {
+      "stage": "R1t's files",
+      "failures": []
+    }
+  ],
+  "fields": {
+    "file": "zhao2d_r1v_mma_migrated.npz",
+    "arrays": [
+      "legacy_binding",
+      "migrated_from",
+      "migrated_from_sha256",
+      "migration_version",
+      "mma_binding",
+      "mma_kktnorm",
+      "mma_num_design_var",
+      "mma_state_array",
+      "mma_updates_done"
+    ]
+  },
+  "cost": {
+    "design_side_build_s": 7.730909799982328,
+    "peak_working_set_mb": 389.62890625,
+    "peak_working_set_note": "the whole process's, cumulative",
+    "wall_clock_total_s": 7.983760299975984
+  }
+}

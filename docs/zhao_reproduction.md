@@ -35,7 +35,7 @@ governing equations, objective, constraint — is kept.
 | R1s | the thermal solve as one linear solve for a given flow and density, as an optional path beside upstream's Newton loop: equivalence on a small mesh (state, objectives, transpose solve, full design gradient), then on the main mesh two fixed-flow temperatures and at most one full D value and gradient; at most 1F + 3T, no MMA | **done** — `tfopus/affine_solve.py` and `thermal_path="linear"`, the Newton path still the default; 10 tests. On the main mesh, within criteria fixed beforehand: the temperatures agree with the Newton path's to 2–5×10⁻¹² and C to 1.4–3.8×10⁻¹²; at R1q's main point Ψ, g and their gradients are bit for bit R1q's, J's and C's gradients within 9.2×10⁻¹² and 1.8×10⁻¹². Each fixed-flow temperature took 16–20 s. The value and gradient took 122.8 s. Not paired with the Newton path's timings, so no factor is claimed. Closed in the review of e664d79, which allows the next authorised run to choose the linear path explicitly; the default stays Newton |
 | R1t | from R1r's raw terminal design, on D with the linear thermal path chosen explicitly: at most 20 MMA updates, then at most 1F + 1T for its qualified binary design; first a thin save and restore of MMA's real state (including `kktnorm`), tested as 4 updates against 2 + save + load + 2 | **done** — `MMACheckpoint` with `resume` and `stop_after`; 4 updates equal 2 + save + load + 2 bit for bit; 5 tests. The zero step matches R1r's terminal across the thermal paths (C 1.7×10⁻¹², J 1.2×10⁻¹²). Budget used, not converged: the continuous J on D fell 0.085%, and MMA's state after the 20 updates is saved. The new qualified binary design differs from R1r's in 16 cells and has J 0.156% below it on D (Ψ −1.00%, C +0.02%, T_max −1.77%). It has one fluid cell isolated by shared edges (it touches the main channel at a corner), which the rule allows and none of the other candidates has. Lowest of the five for 0.0888 < w < 0.7579. Evaluations averaged 118 s, not paired with R1r's. Closed in the review of 0650e7b, which accepted the numbers, made R1t the numerical first under the rule with R1r kept as the choice without an isolated cell, and found two gaps in the checkpoint: its binding missed the optimisation problem (fixed since), and a spent 20/20 budget cannot be extended yet |
 | R1u | a diagnostic geometry: R1t's qualified binary design with its isolated fluid cell 3750 filled, nothing else changed (1999 fluid cells); on D with the linear path, at most 1F + 1T, no MMA, no AD | **done** — the isolated cell found by shared edges and filled, nothing else: 1999 fluid cells, one component. On D, J is 0.026% above R1t's (Ψ +0.048%, C +0.022%), and still 0.130% below R1r's (Ψ −0.95%, C +0.04%, T_max −1.77%). Among the designs with no isolated cell it is lowest for 0.1747 < w < 0.7566. 1F + 1T, 312 s. Closed in the review of 7786ce7 with the binding fix. The filled design keeps 83.19% of R1t's absolute advantage in J over R1r's; the cell is not without effect. R1t stays the numerical first and the optimisation trajectory. The filled design ("R1t, filled") becomes the representative with no isolated component |
-| R1v | a real continuation of R1t's run. Part 1: migrate R1t's checkpoint to the new binding from its own record, and an append-only budget operation, tested on a small mesh (2 of 2, then 2 appended, equals 4 at once). Part 2, with separate confirmation: at most 20 appended updates (20 → at most 40) from R1t's raw design and MMA history on D, then at most 1F + 1T | proposed in the review of 7786ce7; not authorised |
+| R1v | a real continuation of R1t's run. Part 1: migrate R1t's checkpoint to the new binding from its own record, and an append-only budget operation, tested on a small mesh (2 of 2, then 2 appended, equals 4 at once). Part 2, with separate confirmation: at most 20 appended updates (20 → at most 40) from R1t's raw design and MMA history on D, then at most 1F + 1T | part 1 **done** — `MMACheckpoint.append_budget` and `migrate_legacy_checkpoint`; 8 new tests. On a small mesh, 2 of 2 with 2 appended makes the updates of 4 at once, bit for bit, and a pause inside the appended budget is the uninterrupted run's pause, flag included. R1t's checkpoint is migrated with its state untouched: only the binding's entry gains the optimisation block, rebuilt from R1t's record and the source it ran with, byte for byte. Dry: appending 20 is accepted, and the driver's resume would start at R1t's raw terminal design. Nothing solved on the main mesh. Part 2 not authorised |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -4375,7 +4375,7 @@ conflict:
   and compare its sha256 with `scale.source_sha256` in the record.
 - The hash gate is not relaxed.
 
-## R1v: the contract (as proposed in the review of 7786ce7; not yet authorised)
+## R1v: the contract (as proposed in the review of 7786ce7; part 1 authorised and run, part 2 not yet authorised)
 
 To continue R1t's run for real for the first time: from its raw design and
 its MMA history, not from the same x with MMA reinitialised again.
@@ -4438,6 +4438,227 @@ confirmation, after Part 1 passes.**
 - **What it would test.** It is the first real test of carrying MMA's
   history across budgets. It does not presume that the binary design will
   improve, or that the optimisation will converge.
+
+## R1v, part 1: what it found
+
+Authorised on the local CPU, part 1 only; part 2 is not authorised. Nothing
+was solved on the main mesh, no MMA update was made there, and no fine mesh
+was built.
+
+- **Code.**
+  - `MMACheckpoint.append_budget` in `tfopus/zhao2d_driver.py`.
+  - `migrate_legacy_checkpoint` in `tfopus/zhao2d_fineflow.py`.
+  - `fine_flow_identity` and `optimisation_identity`, factored out of
+    `model_identity` and `run_binding`, which now call them. The code moved;
+    no field changed. The migration below rebuilds R1t's recorded model
+    identity through `fine_flow_identity`, exactly.
+- **Tests:** `validation/test_zhao2d_mma_checkpoint.py`, 8 new (14 in the
+  file).
+- **Script:** `scripts/zhao2d_r1v_migrate.py`.
+- **Record:** `results/zhao2d_r1v_migration.json` (and `.log`).
+- **The migrated checkpoint:** `results/zhao2d_r1v_mma_migrated.npz`, under
+  `mma_*` as before, with the legacy binding beside it. R1t's files are not
+  written.
+
+### Appending budget
+
+`checkpoint.append_budget(phases, budget)` returns a new checkpoint for a
+larger budget. The old one is left as it was.
+
+- **What changes in the binding:** the budget, MMA's `max_iter` (which is the
+  budget), and steps added after the old schedule. Nothing else.
+- **What is kept:**
+  - the entry: the model, the objective's scale and the optimisation problem;
+  - every other MMA parameter;
+  - every step of the old schedule, run or not. The new schedule must begin
+    with it exactly: the phase's name, β and α_max, step by step.
+- **MMA's state:** x, x_old_1, x_old_2, low, upp, epoch, the KKT residual
+  update_mma wrote (`kktnorm`), change_design_var and the declared kkt_norm
+  are kept. The asymptotes are not reinitialised.
+- **The one number that can change is the budget's flag.** Upstream's update
+  sets `is_converged` when the epoch reaches max_iter, and also when a proxy
+  fires. Nothing reads it back, the driver included.
+  - A flag the old budget alone set is cleared. Under the new budget that
+    epoch is not the last, so an uninterrupted run would not have set it.
+    Clearing it is what makes a later pause equal to the uninterrupted run's,
+    flag included.
+  - A run a proxy stopped (step_tol or kkt_tol, read as the driver reads them)
+    is refused. More budget does not undo a stop the run itself made.
+  - A flag that neither the budget nor a proxy explains is refused.
+- **Refused:** a budget that adds nothing; a new schedule that changes, or
+  drops, a step of the old one.
+- **A run resumed from the new checkpoint** is checked against its binding
+  like any other, before anything is solved. A changed run is refused there:
+  another model, scale, optimisation setting, thermal path, move limit,
+  appended step or budget.
+
+### Migrating a legacy checkpoint
+
+From R1t until c31b3c2, `run_binding` named the model, the thermal path and
+the scale only. Of the checkpoints saved in `results/`, R1t's is the only one
+signed that way, and every run today refuses it.
+
+`migrate_legacy_checkpoint(checkpoint, design_problem, config_fingerprint)`
+adds the optimisation block that `run_binding` forms today, and nothing else.
+The state, the KKT residual, the updates, MMA's parameters, the schedule and
+the budget are carried over untouched.
+
+- **The block comes from `design_problem`:** the design side of the model, a
+  `Zhao2DProblem` on h. It is the constructor D runs for its own design side,
+  so no fine mesh is needed.
+- **It is refused unless:**
+  - the entry names the model, the scale and the thermal path, and nothing
+    else;
+  - the design problem's configuration has the fingerprint the run recorded,
+    exactly;
+  - its spec and configuration rebuild, through today's identity code, the
+    model identity the binding names, at the binding's own refinements, and
+    the identity of the scale's source;
+  - it has the checkpoint's number of variables.
+- **What it cannot check:** the spec's fields outside the model identity. A
+  legacy binding never named them, so the caller has to show they are the
+  run's. For R1t, see below.
+
+### Its tests, on a small mesh
+
+50 variables, flow 208 cells, thermal 832; β = 32, the linear path. All 14
+tests in the file pass, in 210 s.
+
+- **2 of 2, then 2 appended, equals 4 at once from the same start, bit for
+  bit.** That covers the designs, the records (J, g, the KKT proxy, the
+  step), the terminal, MMA's final state and the binding.
+  - Before the append, the finished run's own binding has nothing left to do
+    ("no iteration completed"), and a larger budget is another run. That was
+    R1t's position.
+  - The append changes one entry of the state array, the flag, and leaves
+    the old checkpoint as it was.
+  - The first appended iterate is the finished run's terminal, now evaluated
+    with a gradient. Its J matches the terminal's to 10⁻¹² relative.
+- **A pause inside the appended budget is the uninterrupted run's pause.**
+  After 2 of 2, appending and pausing after 1 more gives the state of a
+  4-update run paused after 3, bit for bit and flag included. Resumed, it
+  ends where the 4-update run ends.
+- **Refused by the append:** a step already scheduled at another β, at
+  another α_max, or under another name; a schedule shorter than the old one;
+  a budget that adds nothing.
+- **Refused before anything is solved, on resuming the appended checkpoint:**
+  another thermal path, scale, move limit, appended step or budget; another
+  weight, volume bound, projection or filter radius.
+- **The budget's flag is told from a proxy stop.** Made-up states, marked as
+  such in the test, reach what a few updates on a small mesh do not:
+  - a step below step_tol, and a KKT residual below kkt_tol, are refused as
+    proxy stops;
+  - a flag missing at the budget, or set before it, is refused as
+    unexplained;
+  - a paused checkpoint has no flag to clear, and appending changes none of
+    its numbers.
+- **A legacy checkpoint migrates to exactly today's binding.**
+  - The test signs a finished run's checkpoint as R1t's code did: today's
+    entry without the optimisation block. c31b3c2 added that block and
+    changed nothing else.
+  - Today's run refuses it.
+  - Migrated with the design side on h and the recorded fingerprint, its
+    binding is the string today's run signs, and its state is untouched.
+  - With 2 appended, it makes the 4-update run's updates.
+- **A migration is refused unless rebuilt from the run's own record:**
+  - a binding that is not a legacy one;
+  - a design problem whose configuration is not the recorded fingerprint;
+  - a spec that does not rebuild the model identity.
+
+  A record that misstated a setting the model identity leaves out (a weight
+  of 0.6) would sign another optimisation problem. The run it came from then
+  refuses the checkpoint, before a solve.
+- **The locked-source rule** accepts a file's bytes, or its text up to line
+  endings, and nothing looser: one changed character is refused.
+- **R1t's migration itself** (below) runs as a test, into a temporary
+  directory. Its stages all pass, R1t's two files hash the same before and
+  after, and a second run refuses to overwrite its own outputs.
+
+The whole suite, run after part 1: 355 passed (347 before, 8 new), 2270 s.
+One docstring in `zhao2d_fineflow.py` was narrowed after that run. The 14
+checkpoint tests (200 s) and the migration were then run again on the code as
+committed.
+
+### R1t's checkpoint, migrated
+
+`scripts/zhao2d_r1v_migrate.py`: 8 s, nothing solved, peak working set
+390 MB. Seven stages, all passed.
+
+- **The inputs.** The checkpoint in `results/zhao2d_r1t_fields.npz` is the
+  one R1t's record describes:
+  - the state's hash (`f8a467a5…`), the KKT residual 0.006680745532137441,
+    20 updates, 5000 variables, and the binding (`ea12846c…`);
+  - its design is R1t's saved terminal design;
+  - its entry names the model, the scale and the thermal path only.
+
+  Its flag is set at epoch 20 of a budget of 20. change_design_var (0.0719)
+  and the KKT residual are far above their tolerances of 10⁻⁶, so no proxy
+  fired: the flag is the budget's.
+- **The locked source.** Nine files hash byte for byte as R1t's record has
+  them:
+  - `tfopus/zhao2d.py`, `zhao2d_r1.py`, `fe_flow.py`, `fe_thermal.py`,
+    `mesh.py`, `geometry.py`, `design.py` and `projection.py`;
+  - R1t's script, which builds the spec and the configuration.
+
+  So the spec's defaults, the configuration's class, the design mesh, the
+  filter and the projection are the ones R1t ran with.
+  `tfopus/zhao2d_fineflow.py`, whose binding changed in c31b3c2, is not among
+  them.
+- **The configuration**, rebuilt field by field from R1t's recorded
+  fingerprint, gives that fingerprint back exactly. It is also what R1t's
+  script builds: `R1Config(projection=VOLUME_PRESERVING)`.
+- **The spec** is `Zhao2DSpec()`, as R1t's script built it.
+  - Its 16 fields in the model identity match R1t's record, and the model
+    identity rebuilt from the spec and the configuration is R1t's.
+  - The 9 others come from the locked source: α_max from 10⁶ to 10⁷ at 1.03
+    per step, the spec's own volume bound 0.4 and weight 0.5, and the paper's
+    reported Ψ₀, C₀, Re and element count.
+- **The design side,** `Zhao2DProblem` on h, has R1t's design mesh (5200
+  elements, 5371 nodes, and its three hashes) and 5000 variables.
+- **The migration.**
+  - The state array, the KKT residual, the updates and the variables are
+    unchanged, bit for bit.
+  - The binding changes only in its entry, which gains the optimisation
+    block: w = 0.5, the design domain with bound 0.4, the volume-preserving
+    projection, the linear filter at 2 elements (2×10⁻⁴ m), 5000 variables,
+    the configuration and the spec.
+  - The binding's hash goes from `ea12846c…` to `3716f3fb…`.
+- **Dry, for part 2.** Nothing was run or saved for it.
+  - Appending twenty updates, 20 → 40, is accepted. It changes one entry of
+    the state array, 25000, which is the flag, from set to clear.
+  - The driver's own resume accepts the appended checkpoint. `run_loop` ran
+    on a stand-in with D's model identity (through `fine_flow_identity`), its
+    design side, and the scale read from the reference file; D's fine meshes
+    were not built.
+  - It stopped before the first evaluation: iteration 20, β = 32,
+    α_max = 10⁷, at R1t's raw terminal design, bit for bit.
+- **R1t's files** hash the same before and after.
+
+### What part 1 says, and what it does not
+
+- **It says:**
+  - a finished run can be given more budget without reinitialising MMA. On
+    a small mesh, 2 of 2 with 2 appended makes the updates of 4 at once, bit
+    for bit;
+  - R1t's checkpoint is re-signed with today's binding, its state untouched,
+    from its own record and the source it ran with;
+  - part 2's start would be accepted by the driver today, on this checkout.
+- **It does not say:**
+  - whether more updates improve the design, or converge. Nothing was solved
+    on the main mesh;
+  - that part 2 will pass its anchor. The first resumed evaluation has not
+    been made. The stand-in is not D, and part 2's run checks the binding
+    again, on the real D, before anything is solved;
+  - that R1t's `is_converged` was a convergence test. It was the budget's.
+- **Replay on an LF checkout.**
+  - The locked-source stage accepts the nine named files' text up to line
+    endings, and records which way each matched. On this checkout all nine
+    matched byte for byte.
+  - The dry stage needs the reference file's recorded CRLF bytes, as R1u's
+    test does, because the scale's binding names them. Restore them as
+    described under R1u.
+
+Part 2 needs the user's separate confirmation.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -4706,6 +4927,7 @@ python scripts/zhao2d_r1r_d_optimise.py --out DIR        # R1r: 20 updates on th
 python scripts/zhao2d_r1s_linear_thermal.py --out DIR    # R1s: the one-solve thermal path against the Newton path, no MMA (~9 min)
 python scripts/zhao2d_r1t_d_continue.py --out DIR        # R1t: 20 more updates on the check model, linear path, MMA's state saved (~50 min)
 python scripts/zhao2d_r1u_fill_check.py --out DIR        # R1u: R1t's binary design with its isolated cell filled, 1F + 1T on D (~5 min)
+python scripts/zhao2d_r1v_migrate.py --out DIR           # R1v part 1: R1t's MMA checkpoint re-signed, a dry append; no solves (~10 s)
 python scripts/zhao2d_figures.py                         # docs/figures/ from the saved results, no solves
 ```
 

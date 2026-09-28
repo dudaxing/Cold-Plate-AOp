@@ -15,9 +15,23 @@ test targets one way keeping MMA's state could be silently wrong:
     not yet been given back;
   - R1t's script going past a zero step that does not reproduce R1r's
     terminal.
+
+And R1v's two operations, on the same small mesh:
+
+  - budget appended to a finished run that does not make the longer run's
+    updates -- or that changes a step already scheduled, the run it names, or
+    any number of MMA's state but the budget's flag; a proxy stop mistaken
+    for the budget's;
+  - a legacy checkpoint migrated into anything but today's binding for the
+    run it came from, or with its state touched; and R1t's own migration
+    writing over R1t's files.
 """
 
 import dataclasses
+import hashlib
+import json
+import pathlib
+import sys
 
 import numpy as np
 import jax
@@ -189,16 +203,299 @@ def test_a_pause_solves_nothing_past_its_last_update(linear, scale, monkeypatch)
     assert np.array_equal(done.mma.state_array[:done.mma.num_design_var], done.design)
 
 
-# -- the main-mesh script ------------------------------------------------------------
+# -- R1v: budget appended to a finished run ------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def start(linear):
+    return _grey(linear.num_design, 8)
+
+
+@pytest.fixture(scope="module")
+def whole(linear, scale, start):
+    """Four updates at once: what a finished two with two appended must be."""
+    return ff.run(linear, scale, _fixed(4), move_limit=0.1, initial_design=start)
+
+
+@pytest.fixture(scope="module")
+def finished(linear, scale, start):
+    """Two updates of a budget of two, from the same start, terminal evaluated."""
+    return ff.run(linear, scale, _fixed(2), move_limit=0.1, initial_design=start)
+
+
+def _state(checkpoint):
+    return tf_mma.MMAState.from_array(checkpoint.state_array.copy(), checkpoint.num_design_var)
+
+
+def _same_updates(first, second, whole):
+    """first + second made whole's updates, bit for bit, and ended in its state."""
+    assert np.array_equal(np.vstack([first.designs, second.designs]), whole.designs)
+    joined = first.history + second.history
+    assert [r["iteration"] for r in joined] == [r["iteration"] for r in whole.history]
+    for a, b in zip(joined, whole.history):
+        for key in ("J_common_scale", "constraint_g", "kkt_proxy", "design_step_norm"):
+            assert a[key] == b[key], key
+    assert np.array_equal(second.design, whole.design)
+    assert second.terminal["J_common_scale"] == whole.terminal["J_common_scale"]
+    assert np.array_equal(second.mma.state_array, whole.mma.state_array)
+    assert second.mma.kktnorm == whole.mma.kktnorm
+    assert second.mma.binding == whole.mma.binding
+
+
+def test_a_finished_run_with_two_appended_makes_the_four_updates_of_one_run(
+        linear, scale, finished, whole):
+    assert finished.stop_reason == "phase_end" and finished.terminal is not None
+    done = finished.mma
+    assert done.updates_done == 2 and _state(done).is_converged  # the budget's flag, epoch 2
+    before = (done.state_array.copy(), done.kktnorm, done.binding)
+
+    # R1t's position before R1v: its own binding has nothing left, a larger one is another run
+    with pytest.raises(RuntimeError, match="no iteration completed"):
+        ff.run(linear, scale, _fixed(2), move_limit=0.1, resume=done)
+    with pytest.raises(ValueError, match="another run"):
+        ff.run(linear, scale, _fixed(4), move_limit=0.1, resume=done)
+
+    more = done.append_budget(_fixed(4), 4)
+    assert np.array_equal(done.state_array, before[0])  # the old checkpoint is left as it was
+    assert (done.kktnorm, done.binding) == before[1:]
+    changed = np.flatnonzero(more.state_array != done.state_array)
+    assert changed.size == 1 and not _state(more).is_converged  # the flag, and nothing else
+    assert (more.kktnorm, more.updates_done) == (done.kktnorm, 2) and _state(more).epoch == 2
+    grown, old = json.loads(more.binding), json.loads(done.binding)
+    assert (grown["budget"], grown["mma"]["max_iter"], len(grown["schedule"])) == (4, 4, 4)
+    assert grown["schedule"][:2] == old["schedule"] and grown["entry"] == old["entry"]
+
+    cont = ff.run(linear, scale, _fixed(4), move_limit=0.1, resume=more)
+    assert np.array_equal(cont.initial_design, finished.design)
+    # its first iterate is the finished run's terminal, now with a gradient
+    assert cont.history[0]["J_common_scale"] == pytest.approx(
+        finished.terminal["J_common_scale"], rel=1e-12, abs=0.0)
+    assert cont.terminal["iteration"] == 4 and cont.mma.updates_done == 4
+    _same_updates(finished, cont, whole)
+
+
+def test_a_pause_inside_the_appended_budget_is_the_uninterrupted_runs_pause(
+        linear, scale, start, finished, whole):
+    more = finished.mma.append_budget(_fixed(4), 4)
+    paused = ff.run(linear, scale, _fixed(4), move_limit=0.1, resume=more, stop_after=1)
+    straight = ff.run(linear, scale, _fixed(4), move_limit=0.1, initial_design=start, stop_after=3)
+    assert paused.stop_reason == straight.stop_reason == "paused"
+    assert paused.mma.updates_done == straight.mma.updates_done == 3
+    # the flag included: the appended run did not carry the old budget's flag along
+    assert np.array_equal(paused.mma.state_array, straight.mma.state_array)
+    assert paused.mma.kktnorm == straight.mma.kktnorm and paused.mma.binding == straight.mma.binding
+    rest = ff.run(linear, scale, _fixed(4), move_limit=0.1, resume=paused.mma)
+    assert np.array_equal(rest.design, whole.design)
+    assert np.array_equal(rest.mma.state_array, whole.mma.state_array)
+
+
+def test_appending_keeps_what_is_scheduled_and_the_run_is_refused_if_changed_before_a_solve(
+        linear, newton, scale, finished, monkeypatch):
+    done = finished.mma
+    step = dict(beta=BETA, alpha_max=ALPHA_MAX)
+    kept = "does not keep the old one"
+    refused = {
+        "a step already scheduled at another beta":
+            ([drv.Phase("fixed", 4, beta=16.0, alpha_max=ALPHA_MAX)], 4, kept),
+        "a step already scheduled at another alpha_max":
+            ([drv.Phase("fixed", 4, beta=BETA, alpha_max=1e6)], 4, kept),
+        "a step already scheduled under another name": ([drv.Phase("other", 4, **step)], 4, kept),
+        "a schedule shorter than the old one": (_fixed(1), 4, kept),
+        "a budget that adds nothing": (_fixed(4), 2, "adds nothing"),
+    }
+    for what, (phases, budget, match) in refused.items():
+        with pytest.raises(ValueError, match=match):
+            done.append_budget(phases, budget)
+    more = done.append_budget([drv.Phase("fixed", 2, **step), drv.Phase("appended", 2, **step)], 4)
+
+    for problem in (linear, newton):
+        monkeypatch.setattr(problem, "solve_states",
+                            lambda *a, **k: pytest.fail("solved before refusing"))
+    appended = [drv.Phase("fixed", 2, **step), drv.Phase("appended", 2, **step)]
+    runs = {
+        "another thermal path": (newton, scale, appended, 0.1, None),
+        "another scale": (linear, dataclasses.replace(scale, c_0=2.0 * scale.c_0), appended, 0.1, None),
+        "another move limit": (linear, scale, appended, 0.2, None),
+        "another appended step": (linear, scale, [drv.Phase("fixed", 2, **step),
+                                                  drv.Phase("appended", 2, beta=16.0,
+                                                            alpha_max=ALPHA_MAX)], 0.1, None),
+        "another budget": (linear, scale, appended, 0.1, 5),
+    }
+    for what, (problem, sc, phases, move, budget) in runs.items():
+        with pytest.raises(ValueError, match="another run"):
+            ff.run(problem, sc, phases, move_limit=move, budget=budget, resume=more)
+    for what, config in {
+        "weight": dataclasses.replace(CONFIG, weight=0.6),
+        "volume bound": dataclasses.replace(CONFIG, max_fluid_fraction=0.35),
+        "projection": dataclasses.replace(CONFIG, projection=r1.Projection.TANH),
+        "filter radius": dataclasses.replace(CONFIG, filter_radius_elements=3.0),
+    }.items():
+        variant = ff.Zhao2DFineFlowProblem(SPEC, config, 2, 2, 3, thermal_path="linear")
+        monkeypatch.setattr(variant, "solve_states",
+                            lambda *a, _what=what, **k: pytest.fail(f"{_what}: solved before refusing"))
+        with pytest.raises(ValueError, match="another run"):
+            ff.run(variant, scale, appended, move_limit=0.1, resume=more)
+
+
+def test_appending_tells_the_budgets_flag_from_a_proxy_stop(linear, scale, start, finished):
+    """The states here are made up (marked), to reach what twenty updates on a
+    small mesh do not: upstream's proxies firing."""
+    done, state = finished.mma, _state(finished.mma)
+    made_up = {
+        "step_tol": dataclasses.replace(done, state_array=dataclasses.replace(
+            state, change_design_var=1e-9).to_array()),
+        "kkt_tol": dataclasses.replace(done, kktnorm=1e-9),
+    }
+    for proxy, checkpoint in made_up.items():
+        with pytest.raises(ValueError, match=f"{proxy} proxy fired"):
+            checkpoint.append_budget(_fixed(4), 4)
+    unset = dataclasses.replace(done, state_array=dataclasses.replace(
+        state, is_converged=False).to_array())  # made up: at the budget, no flag
+    with pytest.raises(ValueError, match="neither the budget nor a proxy"):
+        unset.append_budget(_fixed(4), 4)
+
+    paused = ff.run(linear, scale, _fixed(3), move_limit=0.1, initial_design=start,
+                    stop_after=1).mma
+    early = dataclasses.replace(paused, state_array=dataclasses.replace(
+        _state(paused), is_converged=True).to_array())  # made up: a flag before the budget
+    with pytest.raises(ValueError, match="neither the budget nor a proxy"):
+        early.append_budget(_fixed(4), 4)
+    # a paused run has no flag to clear: appending changes no number of its state
+    more = paused.append_budget(_fixed(4), 4)
+    assert np.array_equal(more.state_array, paused.state_array)
+
+
+# -- R1v: a legacy checkpoint migrated -------------------------------------------------
+
+
+def _legacy(checkpoint):
+    """The same checkpoint as it would have been signed from R1t until c31b3c2.
+
+    `run_binding` then named the model, the thermal path and the scale; c31b3c2
+    added the optimisation block and changed nothing else, so the legacy entry
+    is today's without that block."""
+    old = json.loads(checkpoint.binding)
+    entry = {k: v for k, v in old["entry"].items() if k != "optimisation"}
+    assert sorted(entry) == sorted(ff.LEGACY_ENTRY_KEYS)
+    return dataclasses.replace(checkpoint, binding=json.dumps(dict(old, entry=entry), sort_keys=True))
+
+
+def test_a_legacy_checkpoint_migrates_with_its_state_untouched_and_then_resumes(
+        linear, scale, finished, whole):
+    legacy = _legacy(finished.mma)
+    with pytest.raises(ValueError, match="another run"):  # today's runs refuse it, as R1t's
+        ff.run(linear, scale, _fixed(4), move_limit=0.1, resume=legacy.append_budget(_fixed(4), 4))
+
+    design = r1.Zhao2DProblem(SPEC, CONFIG)  # the design side, as D builds its own
+    migrated = ff.migrate_legacy_checkpoint(legacy, design, CONFIG.fingerprint())
+    assert migrated.binding == finished.mma.binding  # exactly what today's run signs
+    assert np.array_equal(migrated.state_array, legacy.state_array)
+    assert (migrated.kktnorm, migrated.updates_done, migrated.num_design_var) == (
+        legacy.kktnorm, legacy.updates_done, legacy.num_design_var)
+
+    cont = ff.run(linear, scale, _fixed(4), move_limit=0.1,
+                  resume=migrated.append_budget(_fixed(4), 4))
+    _same_updates(finished, cont, whole)
+
+
+def test_a_migration_is_refused_unless_rebuilt_from_the_runs_own_record(
+        linear, scale, finished, monkeypatch):
+    legacy = _legacy(finished.mma)
+    design = r1.Zhao2DProblem(SPEC, CONFIG)
+    with pytest.raises(ValueError, match="not a legacy binding"):
+        ff.migrate_legacy_checkpoint(finished.mma, design, CONFIG.fingerprint())
+    heavier = dataclasses.replace(CONFIG, weight=0.6)
+    with pytest.raises(ValueError, match="not the one the run recorded"):
+        ff.migrate_legacy_checkpoint(legacy, r1.Zhao2DProblem(SPEC, heavier), CONFIG.fingerprint())
+    other_spec = dataclasses.replace(SPEC, q_alpha=0.25)
+    with pytest.raises(ValueError, match="model identity"):
+        ff.migrate_legacy_checkpoint(legacy, r1.Zhao2DProblem(other_spec, CONFIG),
+                                     CONFIG.fingerprint())
+
+    # A record that misstates a setting the model identity leaves out signs another
+    # optimisation problem -- and the run it came from then refuses it, before a solve.
+    wrong = ff.migrate_legacy_checkpoint(legacy, r1.Zhao2DProblem(SPEC, heavier),
+                                         heavier.fingerprint())
+    assert wrong.binding != finished.mma.binding
+    monkeypatch.setattr(linear, "solve_states", lambda *a, **k: pytest.fail("solved before refusing"))
+    with pytest.raises(ValueError, match="another run"):
+        ff.run(linear, scale, _fixed(4), move_limit=0.1, resume=wrong.append_budget(_fixed(4), 4))
+
+
+# -- the main-mesh scripts -----------------------------------------------------------
+
+
+def _scripts():
+    path = str(pathlib.Path(__file__).resolve().parent.parent / "scripts")
+    if path not in sys.path:
+        sys.path.insert(0, path)
+
+
+def test_the_locked_source_matches_its_bytes_or_its_text_up_to_line_endings(tmp_path):
+    _scripts()
+    import zhao2d_r1v_migrate as mv
+
+    crlf = b"a = 1\r\nb = 2\r\n"
+    lf = crlf.replace(b"\r\n", b"\n")
+    recorded = hashlib.sha256(crlf).hexdigest()
+    path = tmp_path / "source.py"
+    path.write_bytes(crlf)
+    assert mv.locked_match(path, recorded) == "bytes"
+    path.write_bytes(lf)
+    assert mv.locked_match(path, recorded) == "up to line endings: recorded with CRLF"
+    assert mv.locked_match(path, hashlib.sha256(lf).hexdigest()) == "bytes"
+    path.write_bytes(crlf)
+    assert mv.locked_match(path, hashlib.sha256(lf).hexdigest()) == "up to line endings: recorded with LF"
+    path.write_bytes(b"a = 1\r\nb = 3\r\n")
+    assert mv.locked_match(path, recorded) is None  # a changed character is a changed file
+
+
+def test_r1v_migrates_r1ts_checkpoint_and_leaves_r1ts_files_alone(tmp_path, monkeypatch):
+    """The real migration: R1t's record and fields, the design side on h, no solve.
+
+    Its last stage also needs the reference file's recorded bytes, which on an
+    LF checkout have to be restored first (as for R1u's test)."""
+    _scripts()
+    import zhao2d_r1v_migrate as mv
+
+    root = pathlib.Path(__file__).resolve().parent.parent / "results"
+    before = {n: hashlib.sha256((root / n).read_bytes()).hexdigest() for n in mv.INPUTS}
+    monkeypatch.setattr(mv.sys, "argv", ["r1v", "--out", str(tmp_path)])
+    mv.main()
+    assert {n: hashlib.sha256((root / n).read_bytes()).hexdigest() for n in mv.INPUTS} == before
+
+    record = json.loads((tmp_path / mv.RECORD).read_text(encoding="utf-8"))
+    assert [c["stage"] for c in record["checkpoints"]] == list(mv.STAGES)
+    assert not any(c["failures"] for c in record["checkpoints"])
+    assert all(f["matches"] for f in record["locked_source"]["files"].values())
+    with np.load(root / "zhao2d_r1t_fields.npz") as data:
+        legacy = drv.MMACheckpoint.from_npz(data)
+    with np.load(tmp_path / mv.FIELDS) as data:
+        migrated = drv.MMACheckpoint.from_npz(data)
+        assert str(data["legacy_binding"]) == legacy.binding
+    assert np.array_equal(migrated.state_array, legacy.state_array)
+    assert (migrated.kktnorm, migrated.updates_done, migrated.num_design_var) == (
+        legacy.kktnorm, 20, 5000)
+    old, new = json.loads(legacy.binding), json.loads(migrated.binding)
+    assert {k: v for k, v in new["entry"].items() if k != "optimisation"} == old["entry"]
+    assert {k: v for k, v in new.items() if k != "entry"} == {k: v for k, v in old.items() if k != "entry"}
+    block = new["entry"]["optimisation"]
+    assert (block["weight"], block["max_fluid_fraction"], block["volume_domain"], block["projection"]) == (
+        0.5, 0.4, "design", "volume_preserving")
+    assert block["filter"]["radius_m"] == pytest.approx(2e-4, rel=1e-15)
+    assert block["design_map"]["num_design"] == 5000
+    dry = record["dry_part_2"]
+    assert dry["resume"]["accepted_by_run_loop"] and dry["append"]["is_converged"] == [True, False]
+    assert dry["resume"]["first_evaluation"]["design_is_r1t_raw_terminal"]
+
+    with pytest.raises(SystemExit, match="already holds"):  # its own outputs are not overwritten
+        mv.main()
 
 
 def test_r1t_stops_at_a_failed_zero_step_before_any_update(tmp_path, monkeypatch):
     """A zero step whose C is off R1r's terminal by 1e-7 -- inside a looser
     criterion, outside R1s's 1e-8 across the thermal paths -- stops the run,
     with its record written, before MMA's first update."""
-    import json
-    import pathlib
-    import sys
     from types import SimpleNamespace
 
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))

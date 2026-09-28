@@ -38,6 +38,10 @@ Nothing is relabelled for it, and the old driver entry is unchanged.
 `thermal_path="linear"` (from R1s) solves the temperature, for a given flow
 and density, in one linear solve (`tfopus.affine_solve`) instead of upstream's
 Newton loop. The residual, the gate and the implicit derivative are the same.
+
+`migrate_legacy_checkpoint` (from R1v) re-signs a checkpoint made before
+c31b3c2, whose binding did not yet name the optimisation problem, with today's
+binding; its state is carried over untouched.
 """
 
 from __future__ import annotations
@@ -263,14 +267,8 @@ class Zhao2DFineFlowProblem(_r1.Zhao2DProblem):
 
     def model_identity(self) -> str:
         """The single-mesh identity plus the flow and the thermal discretisation."""
-        payload = json.loads(_r1.reference_identity(self.spec, self.config))
-        payload["flow_mesh"] = {"refinement": self.flow_refinement}
-        payload["thermal_mesh"] = {
-            "refinement": self.thermal_refinement,
-            "quadrature": self.thermal_quadrature,
-            "element_length_mode": self.config.element_length_mode,
-        }
-        return json.dumps(payload, sort_keys=True)
+        return fine_flow_identity(self.spec, self.config, self.flow_refinement,
+                                  self.thermal_refinement, self.thermal_quadrature)
 
     def reference_identity(self) -> str:
         """What a reference frozen for THIS model would carry."""
@@ -303,6 +301,19 @@ class Zhao2DFineFlowProblem(_r1.Zhao2DProblem):
 # --------------------------------------------------------------------------
 # The common scale
 # --------------------------------------------------------------------------
+
+
+def fine_flow_identity(spec: _z.Zhao2DSpec, config: _r1.R1Config, flow_refinement: int,
+                       thermal_refinement: int, thermal_quadrature: int) -> str:
+    """`Zhao2DFineFlowProblem.model_identity()` of that model, without building it."""
+    payload = json.loads(_r1.reference_identity(spec, config))
+    payload["flow_mesh"] = {"refinement": int(flow_refinement)}
+    payload["thermal_mesh"] = {
+        "refinement": int(thermal_refinement),
+        "quadrature": int(thermal_quadrature),
+        "element_length_mode": config.element_length_mode,
+    }
+    return json.dumps(payload, sort_keys=True)
 
 
 def development_identity(spec: _z.Zhao2DSpec, config: _r1.R1Config,
@@ -502,24 +513,104 @@ def run_binding(problem: Zhao2DFineFlowProblem, scale: CommonScale) -> str:
     the projection, the physical filter radius and the design elements -- and
     leaves `model_identity`, and every reference and scale made with it, alone.
     """
-    config, spec = problem.config, problem.spec
-    design_elements = np.ascontiguousarray(np.asarray(problem.design_elements, dtype=np.int64))
     return json.dumps({
         "model": json.loads(problem.model_identity()),
         "thermal_path": problem.thermal_path,
         "scale": {"psi_0": scale.psi_0, "c_0": scale.c_0, "source_sha256": scale.source_sha256,
                   "source_identity": json.loads(scale.source_identity)},
-        "optimisation": {
-            "weight": config.weight,
-            "volume_domain": config.volume_domain,
-            "max_fluid_fraction": config.max_fluid_fraction,
-            "projection": config.projection,
-            "filter": {"kind": "linear", "radius_elements": config.filter_radius_elements,
-                       "radius_m": config.filter_radius_elements * spec.element_size},
-            "design_map": {"num_design": problem.num_design,
-                           "design_elements_sha256": hashlib.sha256(
-                               design_elements.tobytes()).hexdigest()},
-            "config": json.loads(config.fingerprint()),
-            "spec": dataclasses.asdict(spec),
-        },
+        "optimisation": optimisation_identity(problem),
     }, sort_keys=True)
+
+
+def optimisation_identity(problem: _r1.Zhao2DProblem) -> dict:
+    """The optimisation problem a run's MMA state belongs to, as `run_binding` names it.
+
+    Read from the design side only: the configuration, the spec and the design
+    elements. A `Zhao2DFineFlowProblem` builds its design side exactly as a
+    `_r1.Zhao2DProblem` on h does, so the block can be formed from one of those
+    without building the fine meshes (R1v's migration does).
+    """
+    config, spec = problem.config, problem.spec
+    design_elements = np.ascontiguousarray(np.asarray(problem.design_elements, dtype=np.int64))
+    return {
+        "weight": config.weight,
+        "volume_domain": config.volume_domain,
+        "max_fluid_fraction": config.max_fluid_fraction,
+        "projection": config.projection,
+        "filter": {"kind": "linear", "radius_elements": config.filter_radius_elements,
+                   "radius_m": config.filter_radius_elements * spec.element_size},
+        "design_map": {"num_design": problem.num_design,
+                       "design_elements_sha256": hashlib.sha256(
+                           design_elements.tobytes()).hexdigest()},
+        "config": json.loads(config.fingerprint()),
+        "spec": dataclasses.asdict(spec),
+    }
+
+
+# The entry `run_binding` signed with from R1t until c31b3c2: no optimisation block.
+LEGACY_ENTRY_KEYS = ("model", "scale", "thermal_path")
+
+
+def migrate_legacy_checkpoint(checkpoint: "_driver.MMACheckpoint",
+                              design_problem: _r1.Zhao2DProblem,
+                              config_fingerprint: str) -> "_driver.MMACheckpoint":
+    """A checkpoint signed before its binding named the optimisation problem, signed with today's.
+
+    From R1t until c31b3c2, `run_binding` named the model, the thermal path and
+    the scale only, so a checkpoint signed then -- of those saved in results/,
+    R1t's is the only one -- is refused by every run today. This re-signs such
+    a checkpoint, and nothing else: the state, the KKT residual, the updates,
+    MMA's parameters, the schedule and the budget are carried over untouched,
+    and the entry only gains the optimisation block `run_binding` forms today.
+
+    The block is formed from `design_problem`: the design side of the model the
+    checkpoint was made on, a `_r1.Zhao2DProblem` on h -- the constructor a
+    `Zhao2DFineFlowProblem` runs for its own design side -- which the caller
+    builds from the run's own record and the source it was run with, not from
+    today's defaults. Refused unless:
+
+    * the binding is a legacy one: its entry names the model, the scale and the
+      thermal path, and nothing else;
+    * `design_problem`'s configuration has the fingerprint the run recorded,
+      `config_fingerprint`, exactly;
+    * its spec and configuration give, through today's identity code, the
+      model identity the binding names -- at the binding's own refinements --
+      and the identity of the scale's source;
+    * it has the checkpoint's number of design variables.
+
+    The spec fields outside the model identity (the paper's reported values,
+    the alpha_max schedule's constants, the spec's own weight and volume
+    bound) cannot be checked against a legacy binding, which never named
+    them; the caller shows they are the run's.
+    """
+    old = json.loads(checkpoint.binding)
+    entry = old.get("entry")
+    if not isinstance(entry, dict) or sorted(entry) != sorted(LEGACY_ENTRY_KEYS):
+        raise ValueError(
+            "not a legacy binding: its entry names "
+            f"{sorted(entry) if isinstance(entry, dict) else entry}, not exactly "
+            f"{sorted(LEGACY_ENTRY_KEYS)}; only a checkpoint signed without the optimisation "
+            "problem is migrated")
+    config, spec = design_problem.config, design_problem.spec
+    if config.fingerprint() != config_fingerprint:
+        raise ValueError("the design problem's configuration is not the one the run recorded")
+    model, source = entry["model"], entry["scale"]["source_identity"]
+    rebuilt = fine_flow_identity(spec, config, model["flow_mesh"]["refinement"],
+                                 model["thermal_mesh"]["refinement"],
+                                 model["thermal_mesh"]["quadrature"])
+    if json.loads(rebuilt) != model:
+        raise ValueError("the spec and configuration given do not rebuild the model identity "
+                         "the checkpoint's binding names")
+    if json.loads(development_identity(spec, config, source["thermal_mesh"]["refinement"],
+                                       source["thermal_mesh"]["quadrature"])) != source:
+        raise ValueError("the spec and configuration given do not rebuild the identity of the "
+                         "scale's source that the checkpoint's binding names")
+    if design_problem.num_design != checkpoint.num_design_var:
+        raise ValueError(f"the design problem has {design_problem.num_design} design variables; "
+                         f"the checkpoint {checkpoint.num_design_var}")
+    entry = dict(entry, optimisation=optimisation_identity(design_problem))
+    return _driver.MMACheckpoint(
+        state_array=np.array(checkpoint.state_array, dtype=np.float64, copy=True),
+        kktnorm=checkpoint.kktnorm, updates_done=checkpoint.updates_done,
+        num_design_var=checkpoint.num_design_var,
+        binding=json.dumps(dict(old, entry=entry), sort_keys=True))
