@@ -31,7 +31,8 @@ governing equations, objective, constraint — is kept.
 | R1o | from R1n's raw terminal design, β = 32 fixed on the development model, at most 30 MMA updates; its qualified binary design evaluated on both layers, at most 2 flow and 2 thermal solves | **done** — budget used, not converged; the zero step reproduces R1n's terminal. The continuous J fell 0.13%, but the new qualified binary design does not improve on R1n's on both layers: +0.58% in J on the development layer (Ψ and C both higher), −0.48% on the check layer (lower C, higher Ψ). Closed in the review of 6bd8cb9, which made the check layer the ranking layer: R1o's design now leads it at w = 0.5, R1n's leads the development layer and is kept as a control |
 | R1p | R1n's and R1o's qualified binary designs on the bridge model flow h / thermal h/8, reusing their saved h flows: at most 2 thermal solves, no flow solve, no MMA | **done** — along development → bridge → check, the order of the two designs flips in the flow replacement: refining the temperature narrows R1n's lead (ΔJ +0.0078 → +0.0048) without flipping it; replacing the flow moves it to −0.0064. One path only, not the full interaction. Closed in the review of b230f58 |
 | R1q | the check layer D = (flow h/2, thermal h/8) wired to the same 5000 coarse design variables as a differentiable model; its states and total gradient verified on a small mesh and at one main working point (1 value-and-gradient, at most 8 perturbed evaluations), no MMA | **done** — `tfopus/zhao2d_fineflow.py`: the design stays on h (5000 variables, filter 2×10⁻⁴), flow h/2, thermal h/8, on the development model's Ψ₀ and C₀ as a declared common scale. It reproduces R1n's and R1o's check-layer states exactly; the total gradient passes the directional-difference check at R1o's raw terminal design (worst best-step error 4.3×10⁻⁶) and on a small mesh; the suite passes (324). Closed in the review of b57cd61, which kept the development model's Ψ₀ and C₀ as the common scale, with no reference of D's own; on D itself, R1o's export gap is 32.32% |
-| R1r | from R1o's raw terminal design, a budgeted optimisation on D at the common scale: β = 32 fixed, at most 20 MMA updates, then the terminal's qualified binary design evaluated once on D (1 flow and 1 thermal solve); first a thin common-scale driver entry and its small-mesh chain tests | **done** — `zhao2d_driver.run_loop` split out, `zhao2d_fineflow.run` added, the old entry unchanged; 6 chain tests. The zero step reproduces R1q's main point exactly; budget used, not converged. The continuous J on D fell 0.53%. The new qualified binary design differs from R1o's in 36 cells and has J 2.03% below R1o's on D (C −3.77%, Ψ +7.26%: lowest of the four for w below 0.735); the export gap on D is 30.3%. D generated and ranked it, so this is analysis on one model |
+| R1r | from R1o's raw terminal design, a budgeted optimisation on D at the common scale: β = 32 fixed, at most 20 MMA updates, then the terminal's qualified binary design evaluated once on D (1 flow and 1 thermal solve); first a thin common-scale driver entry and its small-mesh chain tests | **done** — `zhao2d_driver.run_loop` split out, `zhao2d_fineflow.run` added, the old entry unchanged; 6 chain tests. The zero step reproduces R1q's main point exactly; budget used, not converged. The continuous J on D fell 0.53%. The new qualified binary design differs from R1o's in 36 cells and has J 2.03% below R1o's on D (C −3.77%, Ψ +7.26%, T_max +3.08%: lowest of the four for w below 0.735); the export gap on D is 30.3%. D generated and ranked it, so this is analysis on one model. Closed in the review of 266ce00, which made it the first choice of the four at w = 0.5 on D, keeping R1o's, R1n's and the pilot's |
+| R1s | the thermal solve as one linear solve for a given flow and density, as an optional path beside upstream's Newton loop: equivalence on a small mesh (state, objectives, transpose solve, full design gradient), then on the main mesh two fixed-flow temperatures and at most one full D value and gradient; at most 1F + 3T, no MMA | proposed in the review of 266ce00; not authorised |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -3229,8 +3230,10 @@ The 5 entry tests with the old driver and dual driver tests: 26 passed in
     (slopes at most −2.8×10⁻⁵).
 - **Budget used, not converged.** The stop is phase_end: all 20 updates were
   used, and neither proxy fired.
-  - The largest single change reached the move limit (at least 0.0999) in
-    updates 3, 5, 8, 9, 10, 11 and 13.
+  - The largest single change entered the near-limit band defined for these
+    runs (L∞ at least 0.0999, the move limit being 0.1) in updates 3, 5, 8,
+    9, 10, 11 and 13. Being in the band does not show the limit active, and
+    no step went past 0.1.
   - The last two updates were smaller: L2 0.168 and 0.101, L∞ 0.072 and
     0.036.
   - Upstream's mixed-point KKT proxy was 1.3×10⁻² at the last update. It is a
@@ -3301,6 +3304,9 @@ three old ones are their saved values, nothing re-solved:
   continuous design gave a qualified binary design with J 2.03% below R1o's.
   At w = 0.5 it is the lowest of the four candidates, by lower C and higher
   Ψ. It stays the lowest for w below 0.735.
+- **It improves the weighted objective, not every thermal measure.** Its
+  maximum temperature is 3.08% above R1o's (19.65 against 19.06), though its
+  C is lower.
 - **This is analysis on one model.** D generated this design and D ranked it,
   so the ranking is not a check independent of the generator. As the contract
   says, no development-model run was needed to rank it, and none was made.
@@ -3318,6 +3324,201 @@ three old ones are their saved values, nothing re-solved:
 - **Not done, by the contract:** more than 20 updates, β = 64, a new
   reference, a new thermal stopping threshold, a q sweep, the interaction
   matrix, 3D, and a second binary check.
+
+### After the review of 266ce00
+
+The review closed R1q's closing edits and R1r, on the version the user
+authorised: at most 20 updates, the binary design checked once on D. The two
+budgets in the earlier replies disagreed; that is no reason to add updates
+or a development-layer evaluation. What it checked, without solving anything
+on the main mesh:
+
+- **Provenance.**
+  - Against b57cd61: 149 files unchanged, 5 modified, 6 added, none deleted.
+  - 28 sources and 8 inputs match the record: 21 byte for byte, 15 after
+    LF → CRLF. The common reference, the 14 upstream sources and 8 array
+    digests match as well.
+  - The initial x, s, u/p and T are R1q's saved main point, bit for bit, and
+    the initial x is R1o's raw terminal.
+  - There was no separate snapshot of 52664b3. The review checked the
+    current docs and the total change, not that intermediate tree.
+- **The entry.** A syntax-tree comparison found the old loop and `run_loop`
+  the same once three interface changes are set aside:
+  - the reference check moved to the wrapper;
+  - the evaluator's arguments and returned tuple;
+  - J_self passed as an explicit j.
+
+  `check_reference` is not loosened, and the fine flow mesh is not passed off
+  as the design mesh.
+- **Tests, in its environment.**
+  - The 6 new tests passed, in batches, in 193.43 s.
+  - Two old regressions passed: the single-mesh initial design (48.57 s),
+    and the dual-mesh six-step chain with its terminal pairing (71.72 s).
+  - These small-mesh tests run real MMA updates.
+  - It collected the suite's 330 tests but did not run them. The 330 passes
+    and 1430 s are this repository's report.
+- **The 21 designs, rebuilt independently.**
+  - The constraint matches the record to 5.55×10⁻¹⁶, η to 2.22×10⁻¹⁶ and
+    the terminal's s to 9.73×10⁻¹⁴.
+  - J rose only at updates 1 and 4 and has been below the start since
+    update 12. The terminal is the lowest feasible point evaluated.
+  - The last step: L2 0.10095364, L∞ 0.03636119.
+- **The export, re-derived by the project's rule** (tied densities together,
+  a cell at the threshold solid).
+  - t = 0.42663345908028655 exactly, and the mask bit for bit.
+  - 2000 fluid cells in one component.
+  - 36 cells from R1o's and from R1n's design, 18 each way; 54 from the
+    pilot's, 27 each way.
+  - The qualification comes from the volume export rule, not from the
+    projection: a cut at s = 0.5 gives 2026 fluid cells.
+- **The two new saved states, re-assembled without `tfopus` or JAX:**
+
+  | | Ψ | C | J on D |
+  |---|---|---|---|
+  | continuous terminal | 0.017062739019455334 | 29517.117068731255 | 0.9956394199347438 |
+  | qualified binary | 0.014126796908765733 | 43690.17810348044 | 1.2975038625061037 |
+
+  - The residuals are at most 7.45×10⁻¹³ (flow) and 2.42×10⁻¹¹ (thermal).
+  - C matches the record to 1.71×10⁻¹⁴, and the integral identities close
+    to 1.82×10⁻¹⁴.
+  - The continuous terminal has T_max 13.17 and D_T/Q 0.62%; the binary one
+    19.65 and 5.61%. No node lies below the inlet temperature.
+  - The intermediate states were not saved and were not re-assembled. Their
+    qualification rests on the run's gate.
+
+**Wording corrected above.** The near-limit band is a band, not the limit
+shown active. The higher maximum temperature now stands beside the main
+conclusion.
+
+**The candidates, as the review set them** (D, the common scale, w = 0.5):
+
+| candidate | J on D | its role now |
+|---|---|---|
+| R1r's design | **1.297504** | the first choice of the four |
+| R1o's design | 1.324402 | kept: the lowest T_max of the four, and the lowest J for 0.7352 < w < 0.7514 |
+| R1n's design | 1.330791 | kept as the development layer's leader and the model-sensitivity control |
+| the R1l pilot | 1.351851 | kept: the low-dissipation alternative, and the lowest J for w > 0.7514 |
+
+- **What R1r's design wins on.** Against R1o's,
+  ΔJ = +0.01514205 (dissipation) − 0.04204036 (thermal compliance)
+  = −0.02689831. It trades Ψ +7.26% for C −3.77%.
+- **What it does not win on.**
+  - Its T_max is 3.08% above R1o's.
+  - Its D_T/Q rose from 4.90% to 5.61%. That is not an error in C, and it
+    cannot offset the 2.03%.
+  - It improves the weighted objective the contract defines, not every
+    thermal measure. No T_max constraint is added after the fact.
+- **The weight intervals.** At each crossing the two designs tie. R1n's
+  design has no interval where it is strictly lowest among these four fixed
+  designs. That does not mean another design dominates it in both
+  objectives, and it is kept. This is a reweighting of fixed designs, not a
+  Pareto front.
+- **The export gap on D fell from 32.32% to 30.32%.** In absolute terms the
+  binary design's change is
+  ΔJ_binary = −0.00528393 (the continuous objective's change)
+  − 0.02161439 (the change in the absolute export gap).
+  That is algebra, not an attribution. With no development-model run from
+  the same start and budget, it does not show that generating on D beats
+  generating on A. R1r did not have to run that control: it asked whether D
+  can produce a better qualified binary candidate, and it did.
+
+**Cost.** 392.01 s per value-and-gradient evaluation on average and 8937.11 s
+in all are this run's actual cost, not a benchmark on an exclusive machine.
+The review verified nothing about the local processes. The 335 → 392 s
+difference is not put down to any of them. 7571 MiB stays the process's
+cumulative peak.
+
+**Before any continued optimisation.** A new run from R1r's design would be a
+warm start, not an exact continuation. `RunResult` and the fields file do not
+hold MMA's full history, and its state cannot be rebuilt from x and a few
+scalars. A general resume system is not required now.
+
+**The log.** Upstream prints "NR converged" whatever the stopping test says.
+The report states that every temperature ran to the 40-iteration cap and was
+accepted by the 10⁻⁸ gate; the log is kept as it is.
+
+## R1s: the contract (as proposed in the review of 266ce00; not yet authorised)
+
+To give the temperature, for a given flow and density, by one linear solve in
+place of upstream's Newton loop, and to show that path equivalent on the same
+discrete model before it is used for any optimisation.
+
+**Why.**
+
+- **The work the thermal solves did in R1r.** Its log has 22 flow forwards
+  (8 Newton iterations each) and 22 thermal forwards (all 40).
+  - Upstream's loop (`external/TOFLUX/toflux/src/solver.py`) makes one linear
+    solve per iteration. It also assembles the residual and tangent three
+    times, at the current point, a half step and a full step.
+  - So the thermal forwards alone made 880 linear-solve calls, not counting
+    the adjoints.
+- **The thermal residual is affine in T for a given flow and density.**
+
+      R_T(T; u, s) = K_T(u, s) T − f_T(u, s)
+
+  - τ depends on u, κ and h, not on T (`ThermalSolver._tau`).
+  - The Galerkin and SUPG terms are linear in ∇T, plus the source.
+  - The boundary values are fixed.
+
+  This is the review's reading, confirmed in `tfopus/fe_thermal.py`. So one
+  linear solve gives the state, mathematically.
+- **What that does not show.** It does not show all 880 calls redundant, and
+  no speed-up is predicted. The floating-point residual, the state's
+  agreement and the full design derivative all need checking. Setting
+  max_iter to 1, or loosening the threshold, would not be an equivalent
+  implementation.
+
+**The work.**
+
+1. **An optional thermal linear forward path**, beside the old one, which is
+   kept.
+   - It reuses the existing residual and matrix, the SciPy solve and its
+     transpose solve.
+   - Unchanged: the flow solve, the materials, the design variables, the
+     projection, the filter, the τ formula and its derivatives, the source,
+     the boundaries and the common scale.
+   - Solving the temperature with the flow held fixed is not freezing the
+     flow in the total gradient. Reverse mode keeps the dependence on u, s
+     and τ.
+2. **On a small mesh**, the new path must show:
+   - the residual is affine;
+   - the new and old paths agree in the state and the objectives;
+   - the non-symmetric transpose solve is right;
+   - the full design gradient agrees, with the flow's and τ's dependence
+     included, not by freezing u.
+
+   A failure on the new path is refused by the gate: no clipped
+   temperature, and no tolerance loosened quietly.
+3. **On the main mesh, two temperatures on saved flows**: R1q's continuous
+   main point and R1r's qualified binary terminal. Each is compared with the
+   saved temperature, objectives and residuals. No old flow is re-solved.
+4. **At most one full D value and gradient** at R1q's raw main design,
+   compared with the saved component and combined gradients. That call
+   solves the flow and the temperature afresh: the fixed flow is not reused
+   there.
+5. **At most 1F + 3T on the main mesh**, plus that evaluation's adjoints; the
+   small-mesh tests are separate. No MMA.
+
+**Not done:**
+
+- the main mesh's 8 directional differences again, or any old candidate
+  re-solved;
+- a changed gate, a clipped temperature, a new reference, β = 64, a q sweep,
+  the interaction matrix or 3D;
+- routine use of the new path, which would first need a corresponding full
+  regression.
+
+**Recorded:** the exact forward, adjoint, compile and peak costs. A historical
+timing is not a paired benchmark, so no speed-up factor is claimed without a
+same-condition comparison.
+
+**Where it stops.** After the equivalence and cost report. Two questions wait
+until then: whether to go on optimising on D, and whether a longer run keeps
+MMA's history rather than restarting it.
+
+**What it would not settle.** The physical error, the finite-Brinkman binary
+approximation, the 3D extrusion and the 30% export gap all stay open. A
+faster solve does not address them.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
