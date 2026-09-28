@@ -1348,7 +1348,8 @@ def r1t_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
                 i, j = np.argwhere(labels == lab).mean(axis=0)
                 xc, yc = (i + 0.5) * h, ye[0] + (j + 0.5) * h
                 ax.plot([xc], [yc], "o", ms=11, mfc="none", mec=SURFACE, mew=2.2, zorder=4)
-                ax.annotate("enclosed fluid cell", xy=(xc, yc), xytext=(xc - 0.0010, yc + 0.0023),
+                ax.annotate("fluid cell isolated by shared edges\n(it touches the channel at a corner)",
+                            xy=(xc, yc), xytext=(xc - 0.0010, yc + 0.0023),
                             fontsize=7.5, color=INK, ha="center", zorder=5,
                             bbox=dict(boxstyle="round,pad=0.2", fc=SURFACE, ec="none"),
                             arrowprops=dict(arrowstyle="-", color=INK2, lw=0.8))

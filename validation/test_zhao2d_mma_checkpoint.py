@@ -8,7 +8,9 @@ test targets one way keeping MMA's state could be silently wrong:
   - the KKT residual MMA actually writes (`kktnorm`, not the declared
     `kkt_norm` that upstream's `to_array` serialises) lost on the way;
   - a checkpoint restored into another run: another thermal path, scale,
-    move limit, schedule or budget;
+    move limit, schedule or budget -- or another optimisation problem on the
+    same reference identity: weight, volume bound or domain, projection,
+    filter;
   - a paused run evaluating, and passing off as a state, a design MMA has
     not yet been given back;
   - R1t's script going past a zero step that does not reproduce R1r's
@@ -139,6 +141,32 @@ def test_a_checkpoint_is_refused_under_any_other_binding_before_any_solve(
     with pytest.raises(ValueError, match="binding"):
         drv.run_loop(linear, lambda *a, **k: pytest.fail("evaluated"), _fixed(3), resume=cp)
 
+
+
+def test_a_checkpoint_is_refused_when_the_optimisation_problem_changes(linear, scale, monkeypatch):
+    """The weight, the volume bound and domain, the projection and the filter are
+    left out of the reference's identity on purpose; the checkpoint's binding
+    carries them (the review of 0650e7b found them missing)."""
+    cp = ff.run(linear, scale, _fixed(3), move_limit=0.1,
+                initial_design=_grey(linear.num_design, 7), stop_after=1).mma
+    variants = {
+        "weight": dataclasses.replace(CONFIG, weight=0.6),
+        "volume bound": dataclasses.replace(CONFIG, max_fluid_fraction=0.35),
+        "volume domain": dataclasses.replace(CONFIG, volume_domain=r1.VolumeDomain.WHOLE),
+        "projection": dataclasses.replace(CONFIG, projection=r1.Projection.TANH),
+        "filter radius": dataclasses.replace(CONFIG, filter_radius_elements=3.0),
+    }
+    for what, config in variants.items():
+        variant = ff.Zhao2DFineFlowProblem(SPEC, config, 2, 2, 3, thermal_path="linear")
+        # the reference's identity cannot see the change, so the scale still serves ...
+        assert variant.model_identity() == linear.model_identity(), what
+        variant.check_common_scale(scale)
+        # ... and the binding must
+        assert ff.run_binding(variant, scale) != ff.run_binding(linear, scale), what
+        monkeypatch.setattr(variant, "solve_states",
+                            lambda *a, _what=what, **k: pytest.fail(f"{_what}: solved before refusing"))
+        with pytest.raises(ValueError, match="another run"):
+            ff.run(variant, scale, _fixed(3), move_limit=0.1, resume=cp)
 
 def test_a_pause_solves_nothing_past_its_last_update(linear, scale, monkeypatch):
     solve, calls = linear.solve_states, []

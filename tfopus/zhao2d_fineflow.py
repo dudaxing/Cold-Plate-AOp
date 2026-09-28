@@ -491,10 +491,35 @@ def run(problem: Zhao2DFineFlowProblem, scale: CommonScale, phases: list, move_l
 
 
 def run_binding(problem: Zhao2DFineFlowProblem, scale: CommonScale) -> str:
-    """What this entry's MMA state belongs to: the model, the thermal path, the scale."""
-    return json.dumps({"model": json.loads(problem.model_identity()),
-                       "thermal_path": problem.thermal_path,
-                       "scale": {"psi_0": scale.psi_0, "c_0": scale.c_0,
-                                 "source_sha256": scale.source_sha256,
-                                 "source_identity": json.loads(scale.source_identity)}},
-                      sort_keys=True)
+    """What this entry's MMA state belongs to: the model, the optimisation problem, the scale.
+
+    `model_identity` is the reference's identity, which deliberately leaves out
+    the objective's weight, the volume constraint, the projection and the
+    filter: a reference is a density given directly. An MMA state is not: its
+    history and asymptotes belong to one objective, one constraint and one map
+    from x to s. So the binding adds the optimisation problem's own identity --
+    the whole configuration and spec, the weight, the volume domain and bound,
+    the projection, the physical filter radius and the design elements -- and
+    leaves `model_identity`, and every reference and scale made with it, alone.
+    """
+    config, spec = problem.config, problem.spec
+    design_elements = np.ascontiguousarray(np.asarray(problem.design_elements, dtype=np.int64))
+    return json.dumps({
+        "model": json.loads(problem.model_identity()),
+        "thermal_path": problem.thermal_path,
+        "scale": {"psi_0": scale.psi_0, "c_0": scale.c_0, "source_sha256": scale.source_sha256,
+                  "source_identity": json.loads(scale.source_identity)},
+        "optimisation": {
+            "weight": config.weight,
+            "volume_domain": config.volume_domain,
+            "max_fluid_fraction": config.max_fluid_fraction,
+            "projection": config.projection,
+            "filter": {"kind": "linear", "radius_elements": config.filter_radius_elements,
+                       "radius_m": config.filter_radius_elements * spec.element_size},
+            "design_map": {"num_design": problem.num_design,
+                           "design_elements_sha256": hashlib.sha256(
+                               design_elements.tobytes()).hexdigest()},
+            "config": json.loads(config.fingerprint()),
+            "spec": dataclasses.asdict(spec),
+        },
+    }, sort_keys=True)
