@@ -458,7 +458,8 @@ def evaluate(problem: Zhao2DFineFlowProblem, scale: CommonScale, x, alpha_max: f
 
 
 def run(problem: Zhao2DFineFlowProblem, scale: CommonScale, phases: list, move_limit: float = 0.1,
-        budget: int | None = None, on_iteration=None, initial_design=None):
+        budget: int | None = None, on_iteration=None, initial_design=None, resume=None,
+        stop_after: int | None = None):
     """The driver's MMA loop on this model, J on the declared common scale.
 
     The scale is checked against this model before anything is solved, and so
@@ -467,6 +468,11 @@ def run(problem: Zhao2DFineFlowProblem, scale: CommonScale, phases: list, move_l
     its two reverse passes, the gate on that solve's states -- and MMA is given
     J_common_scale with its gradient, and g with its own. The loop, its
     terminal pairing and its stop reasons are `zhao2d_driver.run_loop`'s.
+
+    MMA's state after the last update comes back as `RunResult.mma`, bound to
+    `run_binding(problem, scale)` and the run's MMA parameters, schedule and
+    budget. `resume` continues from such a checkpoint, and `stop_after` pauses
+    a run without a terminal evaluation; see `zhao2d_driver.run_loop`.
 
     Returns a `zhao2d_driver.RunResult`; its records carry J_common_scale, and
     no J_self.
@@ -480,4 +486,15 @@ def run(problem: Zhao2DFineFlowProblem, scale: CommonScale, phases: list, move_l
         return record, state, record["J_common_scale"], grads["J"], grads["g"]
 
     return _driver.run_loop(problem, evaluator, phases, move_limit, budget, on_iteration,
-                            initial_design)
+                            initial_design, binding=run_binding(problem, scale),
+                            resume=resume, stop_after=stop_after)
+
+
+def run_binding(problem: Zhao2DFineFlowProblem, scale: CommonScale) -> str:
+    """What this entry's MMA state belongs to: the model, the thermal path, the scale."""
+    return json.dumps({"model": json.loads(problem.model_identity()),
+                       "thermal_path": problem.thermal_path,
+                       "scale": {"psi_0": scale.psi_0, "c_0": scale.c_0,
+                                 "source_sha256": scale.source_sha256,
+                                 "source_identity": json.loads(scale.source_identity)}},
+                      sort_keys=True)

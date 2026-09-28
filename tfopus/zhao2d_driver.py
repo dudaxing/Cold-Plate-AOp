@@ -64,11 +64,20 @@ states, the value MMA minimises and the two gradients. `run` gives it
 `evaluate` on a frozen reference; `zhao2d_fineflow.run` gives it that module's
 `evaluate` on a declared common scale. So the terminal pairing and the stop
 reasons still exist once.
+
+**MMA's own state (from R1t).** Every run returns MMA's state after its last
+update as an `MMACheckpoint`, bound to what it belongs to, and `run_loop` can
+resume from one (`resume`) or stop after a number of updates without a
+terminal evaluation (`stop_after`). A resumed run makes the next update as an
+uninterrupted run would; before R1t, every warm start reinitialised MMA and
+kept only the design.
 """
 
 from __future__ import annotations
 
 import dataclasses
+import hashlib
+import json
 import time
 from typing import Callable
 
@@ -230,6 +239,99 @@ class RunResult:
     final_alpha_max: float
     final_beta: float
     final_phase: str
+    # MMA's own state after this call's last update, to resume from. A paused
+    # run ("paused") has no terminal evaluation: its last design is evaluated
+    # as the first iterate of the run that resumes it.
+    mma: "MMACheckpoint | None" = None
+
+
+@dataclasses.dataclass(frozen=True)
+class MMACheckpoint:
+    """MMA's own state after some updates, and what that state belongs to.
+
+    Upstream's `MMAState.to_array` keeps the declared fields: x, the two
+    previous designs, low and upp, is_converged, epoch, kkt_norm and
+    change_design_var. `update_mma` writes its KKT residual to `kktnorm`, an
+    attribute it creates, and never to the declared `kkt_norm`, so `to_array`
+    does not carry the residual MMA actually computed. It is kept here beside
+    the array (NaN before the first update, when there is none).
+
+    `binding` is the canonical JSON of what the state belongs to: what the
+    entry names (the model, the objective's scale, the thermal path), MMA's
+    parameters, the schedule and the budget. A checkpoint is restored only
+    under the same binding, and a resumed run makes MMA's next update exactly
+    as an uninterrupted run would -- epoch, the asymptotes and the design
+    history included -- rather than reinitialising it.
+    """
+
+    state_array: np.ndarray
+    kktnorm: float
+    updates_done: int
+    num_design_var: int
+    binding: str
+
+    def to_npz(self, prefix: str = "mma_") -> dict:
+        """Arrays to save with `np.savez`; `from_npz` reads them back."""
+        return {f"{prefix}state_array": np.asarray(self.state_array),
+                f"{prefix}kktnorm": np.float64(self.kktnorm),
+                f"{prefix}updates_done": np.int64(self.updates_done),
+                f"{prefix}num_design_var": np.int64(self.num_design_var),
+                f"{prefix}binding": np.str_(self.binding)}
+
+    @classmethod
+    def from_npz(cls, data, prefix: str = "mma_") -> "MMACheckpoint":
+        return cls(state_array=np.asarray(data[f"{prefix}state_array"], dtype=np.float64).copy(),
+                   kktnorm=float(data[f"{prefix}kktnorm"]),
+                   updates_done=int(data[f"{prefix}updates_done"]),
+                   num_design_var=int(data[f"{prefix}num_design_var"]),
+                   binding=str(data[f"{prefix}binding"]))
+
+    def restore(self, binding: str) -> "_mma.MMAState":
+        """The MMA state, under `binding` only; refused, before anything runs, otherwise."""
+        if binding != self.binding:
+            raise ValueError(
+                "this MMA checkpoint belongs to another run (a different model, scale, "
+                "thermal path, MMA parameter, schedule or budget); it is refused rather "
+                "than restored into this one")
+        state = _mma.MMAState.from_array(self.state_array.copy(), self.num_design_var)
+        if state.epoch != self.updates_done:
+            raise ValueError(f"the checkpoint's epoch {state.epoch} is not its "
+                             f"{self.updates_done} updates")
+        if np.isfinite(self.kktnorm):
+            state.kktnorm = self.kktnorm  # the attribute update_mma writes; see above
+        return state
+
+
+def _checkpoint(state, updates_done: int, binding: str) -> MMACheckpoint:
+    return MMACheckpoint(state_array=state.to_array().copy(),
+                         kktnorm=float(getattr(state, "kktnorm", np.nan)),
+                         updates_done=int(updates_done),
+                         num_design_var=int(np.asarray(state.x).size),
+                         binding=binding)
+
+
+def _run_binding(entry: str | None, params, phases: list[Phase], budget: int) -> str:
+    """What an MMA state belongs to, as canonical JSON (see `MMACheckpoint`)."""
+    steps = [(p.name, p.beta, p.alpha_at(g))
+             for g, p in enumerate(p_ for p_ in phases for _ in range(p_.iterations))]
+    return json.dumps({
+        "entry": None if entry is None else json.loads(entry),
+        "mma": {"max_iter": params.max_iter, "kkt_tol": params.kkt_tol,
+                "step_tol": params.step_tol, "move_limit": params.move_limit,
+                "num_design_var": params.num_design_var, "num_cons": params.num_cons,
+                "a0": params.a0, "a": params.a.ravel().tolist(), "c": params.c.ravel().tolist(),
+                "d": params.d.ravel().tolist(),
+                "lower_bound_sha256": _digest(params.lower_bound),
+                "upper_bound_sha256": _digest(params.upper_bound)},
+        "schedule": [{"phase": name, "beta": float(beta), "alpha_max": float(alpha)}
+                     for name, beta, alpha in steps],
+        "budget": int(budget),
+    }, sort_keys=True)
+
+
+def _digest(a) -> str:
+    a = np.ascontiguousarray(np.asarray(a, dtype=np.float64))
+    return hashlib.sha256(a.tobytes() + str(a.shape).encode()).hexdigest()
 
 
 def evaluate(problem, reference, x, alpha_max, beta, gradient: bool = True,
@@ -423,6 +525,9 @@ def run_loop(
     budget: int | None = None,
     on_iteration: Callable[[dict], None] | None = None,
     initial_design: np.ndarray | None = None,
+    binding: str | None = None,
+    resume: MMACheckpoint | None = None,
+    stop_after: int | None = None,
 ) -> RunResult:
     """The phased MMA loop, for an evaluator the caller has already checked.
 
@@ -433,12 +538,32 @@ def run_loop(
     None without `gradient`. `run` is this loop with `evaluate` on a frozen
     reference; `zhao2d_fineflow.run` is it with a declared common scale. The
     design vector is `problem.num_design` long, whatever mesh the states are on.
+
+    MMA's state after the last update is returned as `RunResult.mma`, bound to
+    `binding` (canonical JSON of what the entry names), MMA's parameters, the
+    schedule and the budget. `resume` continues from such a checkpoint -- only
+    under the same binding, checked before anything is solved, and not
+    together with `initial_design` -- with the updates numbered on from it.
+    `stop_after` pauses after that many updates of this call: stop reason
+    "paused", no terminal evaluation, the state in `RunResult.mma`.
     """
     spec = problem.spec
     validate_schedule(phases, spec)
     budget = budget or sum(p.iterations for p in phases)
+    if stop_after is not None and stop_after < 1:
+        raise ValueError(f"stop_after must be at least 1, got {stop_after}")
 
     n = problem.num_design
+    if resume is not None:
+        if initial_design is not None:
+            raise ValueError("a resumed run starts from its checkpoint's design; "
+                             "initial_design is refused beside it")
+        if binding is None:
+            raise ValueError("a checkpoint is restored only under a binding that names "
+                             "the model and the objective's scale")
+        if resume.num_design_var != n:
+            raise ValueError(f"the checkpoint has {resume.num_design_var} design variables; "
+                             f"this problem has {n}")
     x0 = (
         np.full((n, 1), 1.0 - spec.reference_gamma)
         if initial_design is None
@@ -454,14 +579,21 @@ def run_loop(
         lower_bound=np.zeros((n, 1)),
         upper_bound=np.ones((n, 1)),
     )
-    state = _mma.init_mma(x0, params)
+    run_binding = _run_binding(binding, params, phases, budget)
+    if resume is not None:
+        state = resume.restore(run_binding)  # refused here, before any solve, if not ours
+        x0 = np.asarray(state.x).reshape((n, 1)).copy()
+        start = resume.updates_done
+    else:
+        state = _mma.init_mma(x0, params)
+        start = 0
 
     history: list[dict] = []
     designs: list[np.ndarray] = []
     initial_state = None
     stop_reason = "phase_end"
     proxy_criterion: str | None = None
-    step = 0
+    step = start
 
     def gated(x, alpha_max, beta, **kwargs):
         try:
@@ -472,13 +604,21 @@ def run_loop(
                 "designs": np.asarray(designs).reshape((len(designs), n)),
                 "failed_iteration": step,
                 "failed_design": np.array(x),
+                "mma": _checkpoint(state, step, run_binding),
             }
             raise
 
+    position = 0  # updates the schedule has placed so far, this call's and earlier ones
     for phase in phases:
         for _ in range(phase.iterations):
+            position += 1
+            if position <= start:  # made before the checkpoint this call resumes from
+                continue
             if step >= budget:
                 stop_reason = "budget_exhausted"
+                break
+            if stop_after is not None and step - start >= stop_after:
+                stop_reason = "paused"
                 break
             alpha_max = phase.alpha_at(step)
             x = jnp.asarray(state.x.reshape(-1))
@@ -524,7 +664,7 @@ def run_loop(
                 stop_reason = "proxy_criterion"
                 proxy_criterion = fired
                 break
-        if stop_reason in ("budget_exhausted", "proxy_criterion"):
+        if stop_reason in ("budget_exhausted", "proxy_criterion", "paused"):
             break
 
     # The design MMA last produced has never been solved. Evaluate it so that
@@ -535,6 +675,19 @@ def run_loop(
     final_alpha_max = history[-1]["alpha_max"]
     final_beta = history[-1]["beta"]
     final_phase = history[-1]["phase"]
+
+    if stop_reason == "paused":
+        # Not finished: the last design is the resumed run's first iterate, so
+        # it is not evaluated here, and nothing unsolved is passed off as a state.
+        return RunResult(
+            history=history, terminal=None, stop_reason=stop_reason, proxy_criterion=None,
+            proxy_fired_at_final_stage=False, initial_design=x0.reshape(-1),
+            initial_solid_fraction=initial_state[0], initial_press_vel=initial_state[1],
+            initial_temperature=initial_state[2], designs=np.asarray(designs),
+            design=np.asarray(state.x).reshape(-1).copy(), solid_fraction=None,
+            press_vel=None, temperature=None, final_alpha_max=final_alpha_max,
+            final_beta=final_beta, final_phase=final_phase,
+            mma=_checkpoint(state, step, run_binding))
 
     x_final = jnp.asarray(state.x.reshape(-1))
     terminal, (s, press_vel, temperature), _, _, _ = gated(
@@ -562,4 +715,5 @@ def run_loop(
         final_alpha_max=final_alpha_max,
         final_beta=final_beta,
         final_phase=final_phase,
+        mma=_checkpoint(state, step, run_binding),
     )

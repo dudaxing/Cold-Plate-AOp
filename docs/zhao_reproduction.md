@@ -33,7 +33,7 @@ governing equations, objective, constraint — is kept.
 | R1q | the check layer D = (flow h/2, thermal h/8) wired to the same 5000 coarse design variables as a differentiable model; its states and total gradient verified on a small mesh and at one main working point (1 value-and-gradient, at most 8 perturbed evaluations), no MMA | **done** — `tfopus/zhao2d_fineflow.py`: the design stays on h (5000 variables, filter 2×10⁻⁴), flow h/2, thermal h/8, on the development model's Ψ₀ and C₀ as a declared common scale. It reproduces R1n's and R1o's check-layer states exactly; the total gradient passes the directional-difference check at R1o's raw terminal design (worst best-step error 4.3×10⁻⁶) and on a small mesh; the suite passes (324). Closed in the review of b57cd61, which kept the development model's Ψ₀ and C₀ as the common scale, with no reference of D's own; on D itself, R1o's export gap is 32.32% |
 | R1r | from R1o's raw terminal design, a budgeted optimisation on D at the common scale: β = 32 fixed, at most 20 MMA updates, then the terminal's qualified binary design evaluated once on D (1 flow and 1 thermal solve); first a thin common-scale driver entry and its small-mesh chain tests | **done** — `zhao2d_driver.run_loop` split out, `zhao2d_fineflow.run` added, the old entry unchanged; 6 chain tests. The zero step reproduces R1q's main point exactly; budget used, not converged. The continuous J on D fell 0.53%. The new qualified binary design differs from R1o's in 36 cells and has J 2.03% below R1o's on D (C −3.77%, Ψ +7.26%, T_max +3.08%: lowest of the four for w below 0.735); the export gap on D is 30.3%. D generated and ranked it, so this is analysis on one model. Closed in the review of 266ce00, which made it the first choice of the four at w = 0.5 on D, keeping R1o's, R1n's and the pilot's |
 | R1s | the thermal solve as one linear solve for a given flow and density, as an optional path beside upstream's Newton loop: equivalence on a small mesh (state, objectives, transpose solve, full design gradient), then on the main mesh two fixed-flow temperatures and at most one full D value and gradient; at most 1F + 3T, no MMA | **done** — `tfopus/affine_solve.py` and `thermal_path="linear"`, the Newton path still the default; 10 tests. On the main mesh, within criteria fixed beforehand: the temperatures agree with the Newton path's to 2–5×10⁻¹² and C to 1.4–3.8×10⁻¹²; at R1q's main point Ψ, g and their gradients are bit for bit R1q's, J's and C's gradients within 9.2×10⁻¹² and 1.8×10⁻¹². Each fixed-flow temperature took 16–20 s. The value and gradient took 122.8 s. Not paired with the Newton path's timings, so no factor is claimed. Closed in the review of e664d79, which allows the next authorised run to choose the linear path explicitly; the default stays Newton |
-| R1t | from R1r's raw terminal design, on D with the linear thermal path chosen explicitly: at most 20 MMA updates, then at most 1F + 1T for its qualified binary design; first a thin save and restore of MMA's real state (including `kktnorm`), tested as 4 updates against 2 + save + load + 2 | proposed in the review of e664d79; not authorised |
+| R1t | from R1r's raw terminal design, on D with the linear thermal path chosen explicitly: at most 20 MMA updates, then at most 1F + 1T for its qualified binary design; first a thin save and restore of MMA's real state (including `kktnorm`), tested as 4 updates against 2 + save + load + 2 | **done** — `MMACheckpoint` with `resume` and `stop_after`; 4 updates equal 2 + save + load + 2 bit for bit; 5 tests. The zero step matches R1r's terminal across the thermal paths (C 1.7×10⁻¹², J 1.2×10⁻¹²). Budget used, not converged: the continuous J on D fell 0.085%, and MMA's state after the 20 updates is saved. The new qualified binary design differs from R1r's in 16 cells and has J 0.156% below it on D (Ψ −1.00%, C +0.02%, T_max −1.77%). It has one enclosed fluid cell, which the rule allows and none of the other candidates has. Lowest of the five for 0.0888 < w < 0.7579. Evaluations averaged 118 s, not paired with R1r's |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -137,6 +137,21 @@ continuous J on D and the volume constraint over the updates: the first update
 raises J 12.1%, and J is back below the start from update 12. (e) The four
 qualified binary designs on D, Ψ against C, with the lines of equal J through
 R1o's design and the new one.
+
+![R1t: twenty more updates on D from R1r's design, on the linear thermal path](figures/zhao2d_r1t.png)
+
+R1t. In the density panels, dark is fluid and light is solid.
+
+- (a) R1r's qualified binary design, the first choice on D. R1t starts from
+  R1r's raw continuous design.
+- (b) The continuous design after 20 more updates on D.
+- (c) Its qualified binary design, 16 cells from (a). The ring marks its one
+  enclosed fluid cell.
+- (d) The continuous J on D and the volume constraint: R1r's 20 updates, then
+  R1t's 20. MMA was reinitialised between the runs, and the first updates
+  after it raise J again.
+- (e) The five qualified binary designs on D, Ψ against C, with the lines of
+  equal J through R1r's design and the new one.
 
 ## R1d: the 300-update run
 
@@ -3740,7 +3755,7 @@ tested for that change, and regressed where it reaches.
 dependent properties or any other thermal nonlinearity. None is in the
 model now, so no costly affine check runs on every call.
 
-## R1t: the contract (as proposed in the review of e664d79; not yet authorised)
+## R1t: the contract (as proposed in the review of e664d79; authorised and run)
 
 To go on optimising on D where R1r stopped, on the linear thermal path, and
 from now on to keep MMA's real state, so that a paused run can resume
@@ -3822,6 +3837,189 @@ session has released.
   stands.
 - Physical accuracy, convergence, the finite-Brinkman binary approximation
   and the export gap stay open.
+
+## R1t: what it found
+
+Authorised on the local CPU. Code: `MMACheckpoint`, and `resume` and
+`stop_after` for `zhao2d_driver.run_loop`; `zhao2d_fineflow.run` passes them
+on, with its binding. Tests: `validation/test_zhao2d_mma_checkpoint.py` (5).
+Script: `scripts/zhao2d_r1t_d_continue.py`. Record: `results/zhao2d_r1t.json`
+(and `.log`). Fields: `results/zhao2d_r1t_fields.npz`, which also holds MMA's
+state under `mma_*`. Figure: `docs/figures/zhao2d_r1t.png`.
+
+### MMA's state, first
+
+- **What a checkpoint holds** (`zhao2d_driver.MMACheckpoint`):
+  - upstream's `to_array` of the declared fields: x, the two previous
+    designs, low and upp, is_converged, epoch, kkt_norm and
+    change_design_var;
+  - beside them, the KKT residual MMA actually writes (`kktnorm`);
+  - the number of updates made;
+  - a binding: canonical JSON of the model, the thermal path and the scale
+    (from `zhao2d_fineflow.run`), MMA's parameters, the schedule step by
+    step, and the budget.
+- **How it is used.**
+  - Every run returns its state after the last update.
+  - `resume` restores a checkpoint only under the same binding, and numbers
+    the updates on from it.
+  - `stop_after` pauses a run after that many updates. A paused run has no
+    terminal evaluation: its last design is the resumed run's first iterate.
+  - With neither argument the loop is the old one.
+
+**Its tests, on a small mesh** (50 variables, flow 208 cells, thermal 832;
+β = 32, the linear path). All 5 pass, with the 6 entry tests beside them, in
+250 s:
+
+- **4 updates equal 2, a save, a load and 2 more, bit for bit.** That covers
+  the designs, the records (J, g, the KKT proxy, the step), the terminal and
+  MMA's final state. The checkpoint went through an `.npz` file.
+- **The test can tell a pause from a restart.** MMA reinitialised at the
+  same design goes elsewhere.
+- **The KKT residual survives the save.** Upstream's array alone gives back
+  the declared `kkt_norm`, 1000.0, not the residual MMA wrote. The checkpoint
+  restores the one it wrote.
+- **Refused before anything is solved:** a checkpoint under another thermal
+  path, scale, move limit, budget or β; `initial_design` beside `resume`; a
+  loop called without a binding.
+- **A pause solves nothing past its last update.** Two updates then a pause
+  make two solves; a finished two-update run makes three.
+- **The script** stops at a zero step whose C is off R1r's terminal by 10⁻⁷,
+  with its record written, before MMA's first update. That offset is inside a
+  looser criterion and outside R1s's 10⁻⁸.
+
+The whole suite, run after R1t: 345 passed (340 before, 5 new), 2063 s.
+
+### The run
+
+3014 s in all. Every gate passed, and every state passed the 10⁻⁸ gate. The
+flows converged in 8 Newton iterations; each temperature was one linear
+solve, with thermal residuals of 6.7–8.4×10⁻¹¹.
+
+**Before the first update.**
+
+- **Inputs:** the start is R1r's last saved design row. The five candidates'
+  D values and binary designs are the recorded ones.
+- **The model:** R1m's check layer, 5000 variables, the linear thermal path,
+  R1q's scale.
+- **The zero step's map:** the root is non-degenerate, and η and g are R1r's
+  terminal's.
+- **The zero step, against R1r's continuous terminal**, which was solved on
+  the Newton path, within the criteria fixed before the run:
+  - Ψ −4.4×10⁻¹⁶ and g +1.1×10⁻¹⁶, against 10⁻¹²; η exactly;
+  - C +1.7×10⁻¹² and J +1.2×10⁻¹², against 10⁻⁸ across the paths.
+
+  That evaluation was the first update's basis.
+
+**The updates.**
+
+| | J on D | Ψ | C | g | grey |
+|---|---|---|---|---|---|
+| zero step (R1r's raw terminal) | 0.995639 | 0.0170627 | 29517.12 | −1.4×10⁻⁴ | 5.65% |
+| after the 2nd update | 1.149716 | 0.0178215 | 35297.16 | −1.8×10⁻² | 4.96% |
+| terminal (20 updates) | **0.994790** | 0.0170800 | 29471.41 | −5.3×10⁻⁵ | 5.77% |
+
+- **MMA was reinitialised once more,** and again the first updates raised J:
+  10.4% after the first, 15.5% after the second. The same happened at the
+  start of R1l, R1n, R1o and R1r. Nothing isolates the cause.
+- **Every iterate was feasible;** g reached −2.1×10⁻² at update 3. J has been
+  below the start since update 16.
+- **The terminal** is 0.085% below the start: C −0.155%, Ψ +0.10%. It is the
+  best feasible point evaluated.
+- **Budget used, not converged.** The stop is phase_end: all 20 updates were
+  used, and neither proxy fired.
+  - The largest single change was in the near-limit band (L∞ ≥ 0.0999) in
+    updates 3, 4, 5 and 8.
+  - The last step: L2 0.072, L∞ 0.016.
+  - Upstream's mixed-point KKT proxy after the last update: 6.7×10⁻³.
+- **How far the design moved.** The raw x moved 3.28 in L2, at most 0.50 in
+  one variable. The density moved 0.018 RMS, at most 0.40 in one cell.
+- **MMA's state after the 20 updates is saved,** with its binding: the model,
+  the linear thermal path, the scale, MMA's parameters, this schedule and a
+  budget of 20. A later run can resume it. Resuming was tested on the small
+  mesh, not on this one.
+
+**The export.** R1l's rule, unchanged:
+
+- t = 0.4227027070 gives 2000 fluid cells; a cut at s = 0.5 would give 2028.
+- Inlet and outlet are connected, so the design qualifies by the rule.
+- **The fluid has two components, where the other four candidates have
+  one.**
+  - The main one holds 2199 cells, the tabs included.
+  - The other is one design cell, 3750, at (3.55, 5.05) mm. Its continuous s
+    is 0.350, below t, and its four neighbours are solid.
+  - The rule asks for inlet and outlet to connect, not for one component, so
+    the cell stays as exported, unrepaired.
+- It differs from R1r's binary design in 16 cells, 8 each way. It differs
+  from R1o's in 36 cells, from R1n's in 40 and from the pilot's in 58.
+
+**The binary design on D, once.** On R1m's check-layer route (a dual model
+built on h/2, the design copied down):
+
+- The flow was solved on the Newton path (27.0 s). The temperature was one
+  linear solve (13.6 s).
+- Both passed the gate: residuals 1.6×10⁻¹⁴ (flow) and 1.2×10⁻¹⁰
+  (thermal).
+- The copy to h/2 is the optimised model's own E_DF copy, bit for bit, and
+  the h/8 material is the parents' material.
+
+The five qualified binary designs on D, at w = 0.5 on the common scale. The
+four older ones are their saved values, nothing re-solved:
+
+| design | J on D | Ψ | C | D_T/Q | T_max |
+|---|---|---|---|---|---|
+| the R1l pilot | 1.351851 | 0.0123136 | 47069.38 | 4.89% | 20.32 |
+| R1n's | 1.330791 | 0.0129952 | 45773.50 | 5.27% | 19.59 |
+| R1o's | 1.324402 | 0.0131705 | 45400.64 | 4.90% | 19.06 |
+| R1r's | 1.297504 | 0.0141268 | 43690.18 | 5.61% | 19.65 |
+| after R1t | **1.295482** | 0.0139853 | 43699.06 | 5.65% | 19.30 |
+
+- **Against R1r's design: J −0.156%.**
+  - Ψ is 1.00% lower, C 0.020% higher and T_max 1.77% lower.
+  - In the common-scale terms, 0.5 ΔΨ/Ψ₀ = −0.00224025 and
+    0.5 ΔC/C₀ = +0.00021819. The gain is the dissipation term.
+- **Against R1o's: J −2.18%** (Ψ +6.19%, C −3.75%, T_max +1.26%). Against
+  R1n's, −2.65%; against the pilot's, −4.17%.
+- **Reweighting the five fixed designs** on the same denominators:
+  - R1r's design has the lowest J for w below 0.0888, by its slightly lower
+    C;
+  - the new design from there to 0.7579;
+  - the pilot's above that.
+
+  R1o's and R1n's designs have no interval now. This is not a front.
+- **The export gap on D:** J +30.23% from the terminal to its binary design
+  (R1r's: 30.32%).
+
+**Cost:**
+
+- Build: 228 s.
+- The 20 value-and-gradient evaluations took 134.3 s for the first and 99–139
+  s for the others, 118.1 s on average. One of them split as 74.8 s forward
+  and 13.5 + 11.9 s reverse.
+- The updates with the terminal: 2449 s.
+- The check-layer route: build 228 s, flow 27.0 s, temperature 13.6 s.
+- Peak working set: 7327 MiB, the whole process's cumulative peak.
+- R1r's evaluations on the Newton path averaged 392 s. That was another run,
+  and the two are not paired, so no speed-up factor is claimed.
+
+### What R1t says, and what it does not
+
+- **What it found on D.** At the common scale, 20 more updates from R1r's
+  continuous design, on the linear thermal path, gave a qualified binary
+  design with J 0.156% below R1r's. The gain comes from lower Ψ at nearly the
+  same C, with a lower T_max. The margin is small.
+- **The enclosed fluid cell.** The design qualifies by the rule, but it is the
+  only one of the five with an enclosed fluid cell. Whether that bears on the
+  ranking is for the review.
+- **This is analysis on one model,** and D both generated and ranked the
+  design. It is budget-limited and not converged, and it says nothing about
+  the continuous physical problem.
+- **The reinitialised MMA again sent J up first.** From here on, MMA's state
+  is saved, so a later run can resume instead of restarting. That was tested
+  on the small mesh only.
+- **Not done, by the contract:** more than 20 updates, β = 64, a change of q,
+  the objective, the reference or the thermal form, a development-layer run,
+  a new mesh, or 3D.
+- **For the review:** which design to carry forward.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -4088,6 +4286,7 @@ python scripts/zhao2d_r1p_bridge.py --out DIR            # R1p: R1n's and R1o's 
 python scripts/zhao2d_r1q_fineflow_check.py --out DIR    # R1q: the check model's value and gradient at R1o's x (~45 min)
 python scripts/zhao2d_r1r_d_optimise.py --out DIR        # R1r: 20 updates on the check model from R1o's x, its binary on D (~2.5 h)
 python scripts/zhao2d_r1s_linear_thermal.py --out DIR    # R1s: the one-solve thermal path against the Newton path, no MMA (~9 min)
+python scripts/zhao2d_r1t_d_continue.py --out DIR        # R1t: 20 more updates on the check model, linear path, MMA's state saved (~50 min)
 python scripts/zhao2d_figures.py                         # docs/figures/ from the saved results, no solves
 ```
 

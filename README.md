@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done here; the work continues in its own repository, Cooling-conformal-AOp |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8, 1.95% with the flow also refined to h/2); one β = 32 stage from it gives a second qualified binary design, 1.86% better again on the development model and 1.56% on the finer check model (lower C, higher Ψ), then the preferred candidate at w = 0.5; 30 more updates at the same β give a third design, 0.58% worse on the development model and 0.48% better on the check model, which now ranks: it is the current lead candidate. The two models' order of those designs flips with the flow mesh, so the check model has been made differentiable in the same design variables, its gradient verified; 20 updates on it from the lead candidate's continuous design give a qualified binary design 2.03% below that candidate's on the check model (lower C, higher Ψ and maximum temperature), generated and ranked on the same model, budget used, not converged; it is now the first choice of the four candidates at w = 0.5 on the check model. A thermal solve by one linear solve, beside upstream's Newton loop, gives the same states, objectives and gradients on the check model at the points tested, to differences of round-off size (R1s); the Newton path stays the default, and the next run may choose the new one explicitly. Next proposed, not authorised: 20 more updates on the check model with MMA's state saved |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8, 1.95% with the flow also refined to h/2); one β = 32 stage from it gives a second qualified binary design, 1.86% better again on the development model and 1.56% on the finer check model (lower C, higher Ψ), then the preferred candidate at w = 0.5; 30 more updates at the same β give a third design, 0.58% worse on the development model and 0.48% better on the check model, which now ranks: it is the current lead candidate. The two models' order of those designs flips with the flow mesh, so the check model has been made differentiable in the same design variables, its gradient verified; 20 updates on it from the lead candidate's continuous design give a qualified binary design 2.03% below that candidate's on the check model (lower C, higher Ψ and maximum temperature), generated and ranked on the same model, budget used, not converged; it is now the first choice of the four candidates at w = 0.5 on the check model. A thermal solve by one linear solve, beside upstream's Newton loop, gives the same states, objectives and gradients on the check model at the points tested, to differences of round-off size (R1s); the Newton path stays the default, and the next run may choose the new one explicitly. 20 more updates on the check model on that path, with MMA's state now saved, give a qualified binary design 0.16% below the first choice's (lower Ψ and maximum temperature, C nearly unchanged), with one enclosed fluid cell; budget used, not converged |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -272,6 +272,24 @@ explicitly. It proposes R1t (not yet authorised): at most 20 more updates on
 the check model from R1r's continuous design. Before that run, MMA's real
 state is to be saved, so that a paused run resumes instead of restarting.
 R1r's design stays the first choice until a run shows otherwise.
+
+**Twenty more updates on the linear path give a slightly lower J on the check
+model.** R1t continues from R1r's continuous design, and from this run on
+MMA's own state is saved. On a small mesh, 4 updates equal 2, a save, a load
+and 2 more, bit for bit.
+- The zero step reproduces R1r's terminal across the two thermal paths: C and
+  J to about 10⁻¹².
+- After 20 updates the continuous J is 0.085% lower. The budget is used, and
+  the run is not converged.
+- Its qualified binary design differs from R1r's in 16 cells. On the check
+  model its J is 0.156% below R1r's: Ψ is 1.0% lower, C 0.02% higher and the
+  maximum temperature 1.8% lower. The margin is small.
+- It is the only candidate with an enclosed fluid cell (one cell). The export
+  rule asks only for inlet and outlet to connect, so the cell stays.
+- Each value and gradient took 118 s on average. That is not paired with R1r's
+  timings on the Newton path, so no speed-up factor is claimed.
+
+Which design to carry forward is for the review.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
