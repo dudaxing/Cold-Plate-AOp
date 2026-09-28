@@ -1,0 +1,18 @@
+D:\Coding\thermalFluid\thermal-fluid-opus\external\TOFLUX\toflux\src\solver.py:21: UserWarning: petsc4py not found; the PETSC linear solver is unavailable.
+  warnings.warn("petsc4py not found; the PETSC linear solver is unavailable.")
+checkpoint passed: inputs
+built D, thermal path linear: design 5200 el (5000 variables), flow 20800 el, thermal 332800 el (237.2 s)
+checkpoint passed: the model and the common scale
+A_r1q_main_point: C 29828.8276557205 (Newton 29828.8276556793, rel +1.38e-12)  max|dT|/max|T| 2.16e-12  |R_T| linear 7.01e-11, Newton 1.16e-11  (19.9 s)
+checkpoint passed: A: R1q's main point on its saved flow (1T)
+checkpoint passed: B: before its solve
+B_r1r_binary: C 43690.1781036475 (Newton 43690.1781034797, rel +3.84e-12)  max|dT|/max|T| 4.98e-12  |R_T| linear 1.16e-10, Newton 2.04e-11  (16.3 s)
+checkpoint passed: B: R1r's qualified binary design on its saved flow (1T)
+checkpoint passed: C: the main point's root
+NR converged in 8 iters, res_norm/res_norm_0: 2.1736990962867178e-14
+C: J 1.000923345144 (R1q 1.000923345143, rel +1.01e-12)  Psi rel +0.0e+00  C rel +1.38e-12  |R| 1.8e-14/7.0e-11; gradients relative L2 J 9.2e-12  psi 0.0e+00  c 1.8e-12  g 0.0e+00; forward 76.8 s, reverse 15.0 + 9.0 s
+  seed 11: against R1q's recorded differences psi 8.6e-07  c 4.3e-06  g 1.2e-12  J 7.1e-08
+  seed 12: against R1q's recorded differences psi 3.4e-08  c 7.6e-07  g 1.2e-08  J 4.0e-07
+checkpoint passed: C: the full value and gradient (1F + 1T)
+
+verdict: equivalent within the fixed criteria; wrote D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1s.json and D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1s_fields.npz; total 510 s

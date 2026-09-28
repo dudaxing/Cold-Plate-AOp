@@ -32,7 +32,7 @@ governing equations, objective, constraint — is kept.
 | R1p | R1n's and R1o's qualified binary designs on the bridge model flow h / thermal h/8, reusing their saved h flows: at most 2 thermal solves, no flow solve, no MMA | **done** — along development → bridge → check, the order of the two designs flips in the flow replacement: refining the temperature narrows R1n's lead (ΔJ +0.0078 → +0.0048) without flipping it; replacing the flow moves it to −0.0064. One path only, not the full interaction. Closed in the review of b230f58 |
 | R1q | the check layer D = (flow h/2, thermal h/8) wired to the same 5000 coarse design variables as a differentiable model; its states and total gradient verified on a small mesh and at one main working point (1 value-and-gradient, at most 8 perturbed evaluations), no MMA | **done** — `tfopus/zhao2d_fineflow.py`: the design stays on h (5000 variables, filter 2×10⁻⁴), flow h/2, thermal h/8, on the development model's Ψ₀ and C₀ as a declared common scale. It reproduces R1n's and R1o's check-layer states exactly; the total gradient passes the directional-difference check at R1o's raw terminal design (worst best-step error 4.3×10⁻⁶) and on a small mesh; the suite passes (324). Closed in the review of b57cd61, which kept the development model's Ψ₀ and C₀ as the common scale, with no reference of D's own; on D itself, R1o's export gap is 32.32% |
 | R1r | from R1o's raw terminal design, a budgeted optimisation on D at the common scale: β = 32 fixed, at most 20 MMA updates, then the terminal's qualified binary design evaluated once on D (1 flow and 1 thermal solve); first a thin common-scale driver entry and its small-mesh chain tests | **done** — `zhao2d_driver.run_loop` split out, `zhao2d_fineflow.run` added, the old entry unchanged; 6 chain tests. The zero step reproduces R1q's main point exactly; budget used, not converged. The continuous J on D fell 0.53%. The new qualified binary design differs from R1o's in 36 cells and has J 2.03% below R1o's on D (C −3.77%, Ψ +7.26%, T_max +3.08%: lowest of the four for w below 0.735); the export gap on D is 30.3%. D generated and ranked it, so this is analysis on one model. Closed in the review of 266ce00, which made it the first choice of the four at w = 0.5 on D, keeping R1o's, R1n's and the pilot's |
-| R1s | the thermal solve as one linear solve for a given flow and density, as an optional path beside upstream's Newton loop: equivalence on a small mesh (state, objectives, transpose solve, full design gradient), then on the main mesh two fixed-flow temperatures and at most one full D value and gradient; at most 1F + 3T, no MMA | proposed in the review of 266ce00; not authorised |
+| R1s | the thermal solve as one linear solve for a given flow and density, as an optional path beside upstream's Newton loop: equivalence on a small mesh (state, objectives, transpose solve, full design gradient), then on the main mesh two fixed-flow temperatures and at most one full D value and gradient; at most 1F + 3T, no MMA | **done** — `tfopus/affine_solve.py` and `thermal_path="linear"`, the Newton path still the default; 10 tests. On the main mesh, within criteria fixed beforehand: the temperatures agree with the Newton path's to 2–5×10⁻¹² and C to 1.4–3.8×10⁻¹²; at R1q's main point Ψ, g and their gradients are bit for bit R1q's, J's and C's gradients within 9.2×10⁻¹² and 1.8×10⁻¹². Each fixed-flow temperature took 16–20 s. The value and gradient took 122.8 s. Not paired with the Newton path's timings, so no factor is claimed |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -3437,7 +3437,7 @@ scalars. A general resume system is not required now.
 The report states that every temperature ran to the 40-iteration cap and was
 accepted by the 10⁻⁸ gate; the log is kept as it is.
 
-## R1s: the contract (as proposed in the review of 266ce00; not yet authorised)
+## R1s: the contract (as proposed in the review of 266ce00; authorised and run)
 
 To give the temperature, for a given flow and density, by one linear solve in
 place of upstream's Newton loop, and to show that path equivalent on the same
@@ -3519,6 +3519,129 @@ MMA's history rather than restarting it.
 **What it would not settle.** The physical error, the finite-Brinkman binary
 approximation, the 3D extrusion and the 30% export gap all stay open. A
 faster solve does not address them.
+
+## R1s: what it found
+
+Authorised on the local CPU. New module `tfopus/affine_solve.py`; tests
+`validation/test_zhao2d_thermal_linear.py` (10); script
+`scripts/zhao2d_r1s_linear_thermal.py`, with record `results/zhao2d_r1s.json`
+(and `.log`) and fields `results/zhao2d_r1s_fields.npz` (the three new
+temperatures and the four gradients).
+
+### The path
+
+- **`affine_solve(problem, x0, *params)`** takes the state in one step,
+  x = x0 − K⁻¹ R(x0), with one assembly and one solve.
+  - Its derivative is upstream's implicit-function rule for its Newton
+    solvers, unchanged and taken at the state it returns. It uses the same
+    `solve`, with the same transpose solve.
+  - It uses the solve whose host callback never calls JAX
+    (`tfopus/_callback_solve.py`).
+- **`Zhao2DFineFlowProblem(..., thermal_path="linear")` uses it** for the
+  temperature, in `solve_thermal` and `solve_states`.
+  - The default, "newton", calls upstream's loop exactly as before.
+  - The path is a solver choice, not a model change, so it is not part of the
+    model's identity. The same common scale serves both paths.
+  - `zhao2d_fineflow.evaluate` now records the path, and times its forward
+    pass and each reverse pass (`timing_s`).
+  - The flow solve, the materials, the design side, τ, the source, the
+    boundaries, the gate and the scale are untouched.
+
+### On a small mesh
+
+208 design-mesh cells, 200 of them variables; flow 832 cells, thermal 3328.
+All 10 tests pass (the 9 on the path in 141 s, the script test in 3 s):
+
+- **The model is the same.** The default is the Newton path, and an unknown
+  path is refused. Both paths have one identity, and one common scale serves
+  both.
+- **The residual is affine in T:** a mix of two random temperatures gives the
+  same mix of residuals, to 2×10⁻¹⁶ of the residual (test bound 10⁻¹³). The
+  tangent does not depend on T, bit for bit.
+- **The state and the objectives, at β = 8 and 32.** The flow and Ψ are the
+  Newton path's bit for bit. The temperature agrees to 7×10⁻¹⁵, and C to
+  8×10⁻¹⁵ (test bound 10⁻¹²). Both states pass the gate.
+- **The transpose solve.**
+  - Through the velocity and the conductivity together, ⟨w, Jv⟩ equals
+    ⟨Jᵀw, v⟩ to 10⁻¹⁰, and Jv is the Newton path's rule's.
+  - The thermal matrix is far from symmetric (‖K − Kᵀ‖/‖K‖ = 0.13), so a
+    symmetric shortcut would have failed this.
+- **The design gradient** of each of Ψ, C, g and J is the Newton path's, to
+  10⁻⁹ relative. Along two random-sign directions it matches central
+  differences to 10⁻⁵ (best of three steps).
+- **The flow's dependence.** Freezing the flow moves dC by more than 100 times
+  that tolerance, and finite differences side with the full chain.
+- **The gate.** A linear state spoiled by 0.1% is refused, after one solve and
+  no second in its place.
+- **The script** stops at inputs that fail to reconcile, with its record
+  written, before it builds the model.
+
+The whole suite, run after R1s: 340 passed (330 before, 10 new), 1831 s.
+
+### On the main mesh
+
+510 s in all, at most 1F + 3T as the contract allows, no MMA.
+
+**Before any solve:**
+
+- R1q's saved x and its four gradients are the recorded ones, by hash.
+- R1q's saved main-point states are R1r's saved initial states, bit for bit.
+- R1r's binary design and its D states are the recorded ones.
+- The model is R1m's check layer, with 5000 variables and R1q's scale.
+
+**The criteria were fixed before anything was solved on the main mesh.**
+
+| | A: R1q's main point, its saved flow | B: R1r's binary design, its saved flow | C: full value and gradient at R1q's x |
+|---|---|---|---|
+| max\|ΔT\| / max\|T\| against the Newton state | 2.16×10⁻¹² | 4.98×10⁻¹² | 2.16×10⁻¹² |
+| ΔC / C | +1.38×10⁻¹² | +3.84×10⁻¹² | +1.38×10⁻¹² |
+| thermal residual, one solve | 7.0×10⁻¹¹ | 1.16×10⁻¹⁰ | 7.0×10⁻¹¹ |
+| thermal residual, the Newton path's saved state | 1.16×10⁻¹¹ | 2.04×10⁻¹¹ | 1.16×10⁻¹¹ |
+| time | 19.9 s | 16.3 s | 122.8 s (forward 76.8, reverse 15.0 + 9.0) |
+
+- **Every state passed the 10⁻⁸ gate.** Each saved Newton state reproduces its
+  record's C: A exactly, B to 2×10⁻¹⁶. The copy of R1r's binary design to h/2
+  is its saved flow-mesh density, bit for bit.
+- **The one solve leaves a larger residual than Newton's 40 iterations**, by 5
+  to 6 times. Both are far below the gate, and the states differ by
+  2–5×10⁻¹² relative.
+- **C, at R1q's main point:**
+  - The flow is R1q's saved flow bit for bit, so Ψ and g are R1q's exactly.
+  - J differs from R1q's by 1.0×10⁻¹² and C by 1.4×10⁻¹².
+  - The gradients of Ψ and g are R1q's bit for bit. Those of J and C differ by
+    9.2×10⁻¹² and 1.8×10⁻¹² in relative L2.
+  - Along R1q's two directions, the projections differ from R1q's own by at
+    most 1.5×10⁻¹¹. So their errors against R1q's recorded central
+    differences are R1q's: at worst 4.3×10⁻⁶, for C along seed 11.
+- **Cost:**
+  - Build 237 s.
+  - Each fixed-flow temperature: 16–20 s.
+  - The full value and gradient: 122.8 s.
+  - Solves: one flow (8 Newton iterations) and three thermal (one linear
+    solve each), with two reverse passes.
+  - Peak working set: 6581 MiB, the whole process's cumulative peak.
+- **Not paired.** On the Newton path, R1q's value and gradient at this point
+  took 335.3 s, and R1r's thermal solve for this binary design 221.3 s. Those
+  were other runs, other processes and other compile states. So no speed-up
+  factor is claimed.
+
+### What R1s says, and what it does not
+
+- **The equivalence.** On the same discrete model, the one-solve path gives
+  the Newton path's states, objectives and gradients, to round-off. That
+  holds at two fixed-flow points and one full evaluation on the main mesh,
+  and on the small mesh, within the criteria fixed beforehand.
+- **How far that goes.**
+  - It is not a proof for every design, though the gate checks every state
+    either path returns.
+  - It changes nothing in the model, the objective or the physics.
+- **The default is unchanged.** The Newton path stays the default. Routine
+  use of the linear path in an optimisation needs, by the contract, a
+  corresponding full regression first.
+- **Still to be decided:** whether to go on optimising on D, and whether a
+  longer run keeps MMA's history.
+- **Still open:** the physical error, the finite-Brinkman binary
+  approximation, the 3D extrusion and the 30% export gap.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -3784,6 +3907,7 @@ python scripts/zhao2d_r1o_beta32_continue.py --out DIR   # R1o: thirty more upda
 python scripts/zhao2d_r1p_bridge.py --out DIR            # R1p: R1n's and R1o's designs on flow h / thermal h/8 (~10 min)
 python scripts/zhao2d_r1q_fineflow_check.py --out DIR    # R1q: the check model's value and gradient at R1o's x (~45 min)
 python scripts/zhao2d_r1r_d_optimise.py --out DIR        # R1r: 20 updates on the check model from R1o's x, its binary on D (~2.5 h)
+python scripts/zhao2d_r1s_linear_thermal.py --out DIR    # R1s: the one-solve thermal path against the Newton path, no MMA (~9 min)
 python scripts/zhao2d_figures.py                         # docs/figures/ from the saved results, no solves
 ```
 

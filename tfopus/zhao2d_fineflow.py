@@ -34,6 +34,10 @@ ordinary reference is accepted only if it was frozen for THIS model.
 `run` (from R1r) optimises on this model: `zhao2d_driver.run_loop` with
 `evaluate` on the declared common scale, over the same coarse design vector.
 Nothing is relabelled for it, and the old driver entry is unchanged.
+
+`thermal_path="linear"` (from R1s) solves the temperature, for a given flow
+and density, in one linear solve (`tfopus.affine_solve`) instead of upstream's
+Newton loop. The residual, the gate and the implicit derivative are the same.
 """
 
 from __future__ import annotations
@@ -42,6 +46,7 @@ import dataclasses
 import hashlib
 import json
 import pathlib
+import time
 
 import numpy as np
 import jax
@@ -49,6 +54,7 @@ import jax.numpy as jnp
 
 import toflux.src.solver as _solver
 
+from tfopus import affine_solve as _affine
 from tfopus import elements as _elements
 from tfopus import fe_flow as _fe_flow
 from tfopus import fe_thermal as _fe_thermal
@@ -61,6 +67,9 @@ from tfopus import zhao2d_r1 as _r1
 from tfopus import zhao2d_refine as _refine
 
 
+THERMAL_PATHS = ("newton", "linear")
+
+
 class Zhao2DFineFlowProblem(_r1.Zhao2DProblem):
     """The design on h; the flow on h / r_F; the temperature nested in the flow mesh.
 
@@ -68,6 +77,12 @@ class Zhao2DFineFlowProblem(_r1.Zhao2DProblem):
     `design_mesh` is the mesh the design variables, the filter and the volume
     constraint live on. With `flow_refinement` 1 the two coincide and the model
     is `Zhao2DDualProblem` with the same thermal refinement.
+
+    `thermal_path` is how the temperature is solved for a given flow and
+    density. The default, "newton", is upstream's modified Newton loop, which
+    every run up to R1r used. "linear" is `affine_solve`: one linear solve, the
+    same residual, the same implicit derivative (R1s). It is a solver choice,
+    not a model change, so it is not part of the identity; records name it.
     """
 
     def __init__(
@@ -78,10 +93,14 @@ class Zhao2DFineFlowProblem(_r1.Zhao2DProblem):
         thermal_refinement: int = 4,
         thermal_quadrature: int = 3,
         solver_settings: dict | None = None,
+        thermal_path: str = "newton",
     ):
+        if thermal_path not in THERMAL_PATHS:
+            raise ValueError(f"thermal_path must be one of {THERMAL_PATHS}, got {thermal_path!r}")
         # The design side: everything a Zhao2DProblem on h builds for it.
         super().__init__(spec, config, solver_settings)
         self.design_mesh = self.flow_mesh
+        self.thermal_path = thermal_path
         self.flow_refinement = int(flow_refinement)
         self.thermal_refinement = int(thermal_refinement)
         self.thermal_quadrature = int(thermal_quadrature)
@@ -217,11 +236,16 @@ class Zhao2DFineFlowProblem(_r1.Zhao2DProblem):
 
     # -- states ------------------------------------------------------------------
 
+    def _thermal_state(self, elem_velocity, kappa_t):
+        """T for the thermal mesh's velocity and conductivity, by `thermal_path`."""
+        solve = (_solver.modified_newton_raphson_solve if self.thermal_path == "newton"
+                 else _affine.affine_solve)
+        return solve(self.thermal, self.thermal_x0, elem_velocity, kappa_t, self.q_source)
+
     def solve_thermal(self, press_vel, s, alpha_max: float):
         """T on the thermal mesh for a GIVEN flow state and design-mesh density."""
-        return _solver.modified_newton_raphson_solve(
-            self.thermal, self.thermal_x0, self.thermal_velocity(press_vel),
-            self.thermal_conductivity(s, alpha_max), self.q_source)
+        return self._thermal_state(self.thermal_velocity(press_vel),
+                                   self.thermal_conductivity(s, alpha_max))
 
     def solve_states(self, s, alpha_max: float):
         """(press_vel, temperature, alpha_F, kappa_T) for the design-mesh density s.
@@ -232,9 +256,7 @@ class Zhao2DFineFlowProblem(_r1.Zhao2DProblem):
         alpha = self.flow_material(s, alpha_max)
         press_vel = _solver.modified_newton_raphson_solve(self.flow, self.flow_x0, alpha)
         kappa_t = self.thermal_conductivity(s, alpha_max)
-        temperature = _solver.modified_newton_raphson_solve(
-            self.thermal, self.thermal_x0, self.thermal_velocity(press_vel), kappa_t,
-            self.q_source)
+        temperature = self._thermal_state(self.thermal_velocity(press_vel), kappa_t)
         return press_vel, temperature, alpha, kappa_t
 
     # -- identity -------------------------------------------------------------------
@@ -380,16 +402,23 @@ def evaluate(problem: Zhao2DFineFlowProblem, scale: CommonScale, x, alpha_max: f
         return problem.fluid_fraction(v, beta) / config.max_fluid_fraction - 1.0
 
     x = jnp.asarray(x)
+    timing, t0 = {}, time.perf_counter()
     if gradient:
         (psi, c), vjp, aux = jax.vjp(metrics, x, has_aux=True)
-        d_psi = vjp((jnp.ones_like(psi), jnp.zeros_like(c)))[0]
-        d_c = vjp((jnp.zeros_like(psi), jnp.ones_like(c)))[0]
+        jax.block_until_ready((psi, c, aux))
+        timing["forward"], t0 = time.perf_counter() - t0, time.perf_counter()
+        d_psi = jax.block_until_ready(vjp((jnp.ones_like(psi), jnp.zeros_like(c)))[0])
+        timing["reverse_psi"], t0 = time.perf_counter() - t0, time.perf_counter()
+        d_c = jax.block_until_ready(vjp((jnp.zeros_like(psi), jnp.ones_like(c)))[0])
+        timing["reverse_c"] = time.perf_counter() - t0
         g, d_g = jax.value_and_grad(constraint)(x)
         d_j = w * d_psi / scale.psi_0 + (1.0 - w) * d_c / scale.c_0
         grads = {"J": np.asarray(d_j), "psi": np.asarray(d_psi), "c": np.asarray(d_c),
                  "g": np.asarray(d_g)}
     else:
         (psi, c), aux = metrics(x)
+        jax.block_until_ready((psi, c, aux))
+        timing["forward"] = time.perf_counter() - t0
         g, grads = constraint(x), None
     s, press_vel, temperature, alpha, kappa = aux
 
@@ -416,6 +445,8 @@ def evaluate(problem: Zhao2DFineFlowProblem, scale: CommonScale, x, alpha_max: f
         "projection_root_slope": root["slope"],
         "scale": {"psi_0": scale.psi_0, "c_0": scale.c_0, "source_file": scale.source_file,
                   "source_sha256": scale.source_sha256},
+        "thermal_path": problem.thermal_path,
+        "timing_s": timing,
     }
     state = (np.asarray(s), np.asarray(press_vel), np.asarray(temperature))
     return record, state, grads
