@@ -36,7 +36,7 @@ governing equations, objective, constraint — is kept.
 | R1t | from R1r's raw terminal design, on D with the linear thermal path chosen explicitly: at most 20 MMA updates, then at most 1F + 1T for its qualified binary design; first a thin save and restore of MMA's real state (including `kktnorm`), tested as 4 updates against 2 + save + load + 2 | **done** — `MMACheckpoint` with `resume` and `stop_after`; 4 updates equal 2 + save + load + 2 bit for bit; 5 tests. The zero step matches R1r's terminal across the thermal paths (C 1.7×10⁻¹², J 1.2×10⁻¹²). Budget used, not converged: the continuous J on D fell 0.085%, and MMA's state after the 20 updates is saved. The new qualified binary design differs from R1r's in 16 cells and has J 0.156% below it on D (Ψ −1.00%, C +0.02%, T_max −1.77%). It has one fluid cell isolated by shared edges (it touches the main channel at a corner), which the rule allows and none of the other candidates has. Lowest of the five for 0.0888 < w < 0.7579. Evaluations averaged 118 s, not paired with R1r's. Closed in the review of 0650e7b, which accepted the numbers, made R1t the numerical first under the rule with R1r kept as the choice without an isolated cell, and found two gaps in the checkpoint: its binding missed the optimisation problem (fixed since), and a spent 20/20 budget could not be extended (built in R1v part 1; closed in the review of 03ccf6c) |
 | R1u | a diagnostic geometry: R1t's qualified binary design with its isolated fluid cell 3750 filled, nothing else changed (1999 fluid cells); on D with the linear path, at most 1F + 1T, no MMA, no AD | **done** — the isolated cell found by shared edges and filled, nothing else: 1999 fluid cells, one component. On D, J is 0.026% above R1t's (Ψ +0.048%, C +0.022%), and still 0.130% below R1r's (Ψ −0.95%, C +0.04%, T_max −1.77%). Among the designs with no isolated cell it is lowest for 0.1747 < w < 0.7566. 1F + 1T, 312 s. Closed in the review of 7786ce7 with the binding fix. The filled design keeps 83.19% of R1t's absolute advantage in J over R1r's; the cell is not without effect. R1t stays the numerical first and the optimisation trajectory. The filled design ("R1t, filled") becomes the representative with no isolated component |
 | R1v | a real continuation of R1t's run. Part 1: migrate R1t's checkpoint to the new binding from its own record, and an append-only budget operation, tested on a small mesh (2 of 2, then 2 appended, equals 4 at once). Part 2, with separate confirmation: at most 20 appended updates (20 → at most 40) from R1t's raw design and MMA history on D, then at most 1F + 1T | part 1 **done** — `MMACheckpoint.append_budget` and `migrate_legacy_checkpoint`; 8 new tests. On a small mesh, 2 of 2 with 2 appended makes the updates of 4 at once, bit for bit, and a pause inside the appended budget is the uninterrupted run's pause, flag included. R1t's checkpoint is migrated with its state untouched: only the binding's entry gains the optimisation block, rebuilt from R1t's record and the source it ran with, byte for byte. Dry: appending 20 is accepted, and the driver's resume would start at R1t's raw terminal design. Nothing solved on the main mesh. Part 2 **done** — the first resumed evaluation reproduces R1t's terminal (J to 8×10⁻¹⁵, g and η exactly), and the first appended step is the size of R1t's last ones, with no jump in J. Budget used, not converged: the continuous J on D fell 0.131% more (0.216% over R1t and R1v). The qualified binary design exported from the terminal is 1.11% above R1t's on D (Ψ −2.28%, C +1.81%, T_max +3.26%), and 0.95% above R1r's. It has the same isolated cell, 3750, and is the lowest of the seven at no weight. Two evaluations took 5456 s and 25 454 s; they coincide with the machine's overnight standby in the Windows event log, and both states passed their gates like the rest. Closed, both parts, in the review of 03ccf6c. It found that the 21 saved designs export to 18 distinct binary designs, 16 of them not evaluated, so the terminal's result does not show that none beats R1t's. R1t's design stays the numerical first among the evaluated designs, R1u's the representative with no isolated component, and R1v's is kept as a trade-off. Automatic appends at β = 32 are paused |
-| R1w | binary candidate selection along R1v's saved trajectory: the 21 raw designs exported by the frozen rule, deduplicated to 18 geometries, R1t's and R1v's reused, each of the other at most 16 solved on D (at most 16F + 16T; 0 MMA, 0 main-mesh AD), ranked once, then stop | proposed in the review of 03ccf6c; not authorised |
+| R1w | binary candidate selection along R1v's saved trajectory: the 21 raw designs exported by the frozen rule, deduplicated to 18 geometries, R1t's and R1v's reused, each of the other at most 16 solved on D (at most 16F + 16T; 0 MMA, 0 main-mesh AD), ranked once, then stop | proposed in the review of 03ccf6c; plan accepted in the review of 45fa8b0, which recommends the local CPU; not authorised |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -4974,7 +4974,7 @@ is not among R1w's terms.
     and 128. The binary designs are bit-identical at all four, while the
     grey fraction falls to 2.08% and 2.06% at 128. The re-check here gave
     the same. At 64 and 128 up to 2718 cells tie at s = 1 from saturation.
-    That is far from the cut, which stays at t ≈ 0.42–0.44 with exactly 2000
+    That is far from the cut, which stays at t ≈ 0.42–0.45 with exactly 2000
     fluid cells in every export.
 
   So making a density "blacker" and exporting it again creates no new
@@ -5068,7 +5068,93 @@ review of 7786ce7 left them):
 - Not yet: a higher β, other interpolation, or another objective, physical
   model, projection or optimiser.
 
-## R1w: the contract (as proposed in the review of 03ccf6c; not yet authorised)
+### After the review of 45fa8b0
+
+The review closed R1v's close-out and accepted R1w's plan. R1v's numerical
+acceptance is not reopened. What it checked, with no JAX, no solve, no
+residual re-assembly, no AD, no MMA and no pytest:
+
+- **The snapshot.** Against 03ccf6c, 181 files are unchanged byte for byte,
+  4 modified and 1 added, none deleted.
+  - The four are the README, this document, the figure script and the R1v
+    figure. The added file is the power-event excerpt.
+  - With its string constants set aside, the figure script's syntax tree is
+    unchanged, so the curves' data and arithmetic are the same. The review
+    looked at the new figure.
+- **The narrowed wording holds.**
+  - No jump at the append agrees with the kept history. R1t's earlier rise
+    co-occurred with its reinitialisation, and no cause is shown. The
+    negative result is the terminal's.
+  - The small-mesh equivalence is not a main-mesh control.
+  - 5456 s and 25 454 s are evaluations, and 103 s is not net awake time.
+  - R1t's first two L∞ (0.067, 0.086), R1v's last five (0.0983–0.09986) and
+    the 27 cells (fluid at s = 0.5, solid in the export) are corrected.
+- **The pool, rebuilt independently** (NumPy and SciPy, no project code).
+  - It has the same 18 digests, iterate groups, volumes and components as
+    before. All 18 have 2000 fluid cells and the isolated cell 3750.
+  - R1t's and R1v's raw designs at β = 16, 32, 64 and 128 export to their
+    own saved binary designs. Where cells saturate at s = 1 (β = 64 and
+    128), the cut is at about 0.42–0.44.
+- **The power excerpt is internally consistent.**
+  - It holds 113 events: 56 entries and 57 exits, all Kernel-Power, in time
+    order with the +09:00 offset.
+  - The exits, their re-entries 1, 4, 1, 1 and 3 ms later, and the last exit
+    at 10:07:31.829 are as the text says.
+  - The timer start, 01:22:02.742, follows from the file time the excerpt
+    supplies.
+  - The 37.38 s the record leaves untimed (24.16 s inside the loop, 13.23 s
+    outside) supports giving ranges.
+
+  It did not connect to this machine, or check the original log's
+  authenticity or completeness, and the file time is supplied, not kept by
+  git. The events do not show when the process could
+  run: evaluations 20 and 22–24 took their usual time.
+- **The cost.** 41.4 minutes by R1v's timings and 34.6 by R1u's, as the
+  contract has them.
+- **Not checked:** the live remote, the user's account usage, the machine's
+  current state, the messages between sessions, and this project's memory.
+
+Its one script error was a numpy integer that JSON could not write. It
+converted the indices and re-ran the whole script.
+
+One number in the section above was corrected after this review. Across all
+eight exports the cut runs from 0.4222 to 0.4459 (R1t's at β = 16), so
+0.42–0.45, not 0.42–0.44; at β = 64 and 128 it is 0.42–0.44.
+
+**What it adds to R1w,** now in the contract below:
+- **A manifest before any solve:** each iterate, its digest, and whether it
+  is reused or solved. No duplicate is paid for twice.
+- **Failure.** A design whose solve fails (an error, or a state that misses
+  the gate) has no valid performance. It is not shown worse, or infeasible.
+  If any fails, the result is the best of those that passed, and it does not
+  rule out a better one among the 18. No automatic retry and no retry budget
+  are added; the gate is neither loosened nor raised.
+- **The report.**
+  - It gives the lowest in the fixed pool and its difference from R1t's.
+    Each design's difference is reported too, as for the candidates.
+  - The review accepts the measure, J at w = 0.5 on the common scale, as the
+    one the candidates have had, not a new preference.
+- **Tests:** small tests for the new entry's deduplication, reuse and
+  failure handling. The whole suite is not re-run for a close-out that
+  changed no numerical code.
+- **No β re-check in R1w.** The geometric result above is enough.
+- **Where and how long.** Recommended: the local CPU, in the environment
+  already checked (double precision, SciPy, the linear thermal path), rather
+  than setting up the HPC for this screen. The review does not judge whether
+  the HPC is configured or usable; where it runs is the user's choice at
+  authorisation.
+  - The resource window, the power and the machine staying awake are
+    confirmed before the run.
+  - 35–45 minutes is a planning estimate, not a limit. The limit is 16F +
+    16T.
+
+**The roles are unchanged** until R1w's results. R1t's design is the
+numerical first among the evaluated designs under the rule, on D at
+w = 0.5; R1u's is the representative with no fluid component isolated by
+shared edges. Nothing assumes that an intermediate design
+will win.
+
+## R1w: the contract (as proposed in the review of 03ccf6c, its plan accepted in the review of 45fa8b0; not yet authorised)
 
 A selection of binary candidates along R1v's saved trajectory, not more
 continuous optimisation. It answers one question: under the original rule,
@@ -5084,9 +5170,16 @@ already produced?
   - No cell filled: 3750 stays.
   - No change to what qualifies.
 - **Deduplication:** by the binary design itself (its digest, as
-  `binary_sha256`) and the model identity. The review counts 18 distinct
-  designs, and the check above reproduces that. The script derives the count
-  and records it.
+  `binary_sha256`) and the model identity. The review of 03ccf6c counts 18
+  distinct designs. The re-check under "After the review of 03ccf6c" and
+  the independent rebuild in the review of 45fa8b0 reproduce that. The
+  script derives the count and records it.
+  - The 16 not yet evaluated are labelled by their earliest iterate: 21,
+    22, 23, 24, 25, 26, 27, 28, 30, 31, 32, 33, 34, 35, 36 and 38.
+  - That is a label. The identity is the digest and the model.
+- **A manifest first.** Before any solve, the script writes, for every
+  iterate, its digest and whether it is reused or solved. A duplicate is
+  never solved twice.
 - **Reuse:** R1t's design (iterate 20) and R1v's (iterates 37, 39, 40) keep
   their D states, after their identities are checked. So does any design
   that turns out to be another candidate's.
@@ -5098,33 +5191,59 @@ already produced?
     binary design's.
 - **Gates and records.**
   - The existing state gate, 10⁻⁸, on every solve.
-  - Saved: the paired fields, the volume and every fluid component by
-    shared edges.
+  - Saved: each new valid state's s, u, p and T with its source, the volume,
+    and every fluid component by shared edges.
   - Each design reported as the candidates are.
-  - A failed solve is recorded, and it is not a candidate.
+- **A failed solve** is recorded as "no valid performance obtained". It does
+  not make the design worse, or infeasible, and it is not a candidate.
+  - No automatic retry and no retry budget added; the gate is neither
+    loosened nor raised.
+  - If any fails, the result is the best of the designs that passed. It does
+    not rule out a better one among all 18.
 - **The ranking, once the pool is complete:** J at w = 0.5 on D at the
   common scale, under the rule, the measure the candidates have been ranked
   by so far.
-  - The review does not name R1w's measure. This one is added here, as is
-    the cost estimate below.
+  - The review of 03ccf6c did not name R1w's measure; this one was added
+    here. The review of 45fa8b0 accepts it as the one the candidates have
+    had, not a new preference.
+  - Reported: the lowest in the fixed pool and its difference from R1t's.
+    Each design's difference is reported too, as for the candidates.
   - Ψ, C, T_max, D_T/Q, the components and the weight envelope over all
-    evaluated designs are reported beside it.
+    evaluated designs are reported beside it. The envelope is arithmetic on
+    a fixed set of designs, not a new optimisation or an extra weight sweep.
 - **It stops** after that one ranking. No improvement is a normal end: no
   further trajectory points, no β doubled, no updates.
 - **Not done:**
   - no MMA update, and no AD on the main mesh;
   - β, q, w, the scale, the meshes, the gates and the physics unchanged;
-  - no other stage.
+  - no other stage, and no β re-check;
+  - no cell filled and no volume made up.
+- **Tests:** small tests for the new entry's deduplication, reuse and
+  failure handling, as the review of 45fa8b0 asks of a new entry. (Its "no
+  whole-suite re-run" was said of the docs-only close-out.)
 - **What it does not do:** close the gap between the continuous and the
   binary objectives, or give a design with no isolated component. All 18
   keep cell 3750, so R1u stays that representative.
 - **Cost:** new compute, not post-processing, and no part of closing R1v.
-  The review says only "tens of minutes". This estimate is added here and is
-  not measured: about 35–45 minutes with the machine awake and plugged in.
+  The review of 03ccf6c said only "tens of minutes". This estimate was added
+  here and is not measured: about 35–45 minutes with the machine awake and
+  plugged in.
   - It is based on R1v's one binary design: flow 44.7 s, thermal 17.8 s,
     and the report and gate 77.7 s, with the check-layer build 239 s. That
     gives about 41 minutes.
   - R1u's timings give about 35 minutes.
+  - The review of 45fa8b0 recomputed both. It is a planning estimate for
+    one model build reused and the designs solved in series, not a limit.
+    The limit is 16F + 16T.
+  - It is not a measured throughput. Re-checking the inputs, reporting the
+    reused anchors, writing output, differences between designs,
+    compilation, background load and standby can all change it.
+- **Where:** local CPU, in the environment already checked (double
+  precision, the linear thermal path). The review of 45fa8b0 recommends it
+  over setting up the HPC for this; it does not judge whether the HPC is
+  configured or usable, and where it runs is the user's choice at
+  authorisation. The resource window with the other session, the power and
+  the machine staying awake are confirmed before the run.
 - **Then,** and only after R1w: whether to change the generating objective,
   or to optimise the binary geometry explicitly.
 
