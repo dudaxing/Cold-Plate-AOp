@@ -1,0 +1,808 @@
+{
+  "note": "Excerpt of the local Windows System event log around the R1v part 2 run, extracted after the review of 03ccf6c (which did not have it), on 2026-09-29, with Get-WinEvent: LogName System, 01:15 to 10:45 local time (+09:00), Kernel-Power 506 and 507, and Power-Troubleshooter 1 (none of the latter in the window). 506 is the system entering modern standby, 507 leaving it. The run record holds no clock time; the times below place it.",
+  "extracted_with": "Get-WinEvent -FilterHashtable @{LogName='System'; StartTime='2026-09-29 01:15'; EndTime='2026-09-29 10:45'}, filtered to Kernel-Power 506/507 and Power-Troubleshooter 1",
+  "run_timing": {
+    "record_file": "results/zhao2d_r1v.json",
+    "record_file_written": "2026-09-29T10:39:45.623+09:00",
+    "record_file_written_note": "a file time, which git does not keep",
+    "wall_clock_total_s": 33462.88074629998,
+    "timer_started": "2026-09-29T01:22:02.742+09:00",
+    "timer_started_note": "the record file time less the wall clock; the record leaves about 37 s of the run untimed, so times placed from it are ranges",
+    "process_start_listed": "2026-09-29T01:21:36+09:00",
+    "process_start_listed_note": "from a process listing taken at 02:59:34 during the run (process 60044), before the script timer started; that listing is not saved"
+  },
+  "count": 113,
+  "events": [
+    {
+      "time": "2026-09-29T01:15:00.881+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:15:03.738+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:15:12.398+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:15:15.524+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:15:21.094+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:15:24.600+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:15:30.649+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:15:36.074+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:15:52.989+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:15:55.171+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:16:01.524+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:16:09.451+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:16:34.712+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:16:37.924+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:16:42.378+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:16:44.589+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:16:49.877+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:16:53.450+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:16:56.828+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:16:59.439+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:17:04.766+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:17:07.454+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:17:11.293+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:17:17.360+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:17:21.150+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:17:24.641+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:17:31.882+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:17:34.741+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:17:38.600+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:17:43.262+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:18:46.322+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:18:50.476+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:18:56.247+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:18:59.503+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:19:18.917+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:19:22.774+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:19:36.791+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:19:39.179+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:19:47.414+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:19:51.597+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:19:56.527+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:19:59.003+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:20:03.184+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:20:06.934+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:20:11.801+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:20:14.975+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:20:20.826+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:20:22.593+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:20:26.638+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:20:30.070+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:20:34.649+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:20:38.425+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:20:43.617+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:20:46.647+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:20:52.465+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:20:55.526+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:21:00.066+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:21:03.143+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:21:08.227+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:23:46.937+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:23:57.371+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:03.468+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:05.656+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:07.603+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:08.350+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:09.403+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:10.956+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:12.963+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:14.921+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:16.157+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:18.351+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:19.700+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:24.027+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:25.561+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:26.449+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:28.275+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:29.888+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:31.447+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:32.858+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:34.308+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:36.188+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:38.520+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:41.707+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:45.228+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:53.125+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:24:56.259+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:25:02.964+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:25:05.902+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:25:12.057+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:25:13.917+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:25:18.830+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:25:21.564+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:25:26.496+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:25:29.642+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:25:34.396+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:25:37.400+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:25:40.969+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:25:44.898+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:25:49.685+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:25:53.397+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:26:02.086+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T01:26:02.263+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T02:58:36.749+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T02:58:36.750+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T03:02:39.022+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T03:02:39.026+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T03:08:03.313+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T03:08:03.314+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T04:09:11.188+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T04:09:11.189+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T09:22:10.684+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    },
+    {
+      "time": "2026-09-29T09:22:10.687+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 506,
+      "gloss": "Kernel-Power 506: the system is entering modern standby",
+      "message": "The system is entering Modern Standby "
+    },
+    {
+      "time": "2026-09-29T10:07:31.829+09:00",
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 507,
+      "gloss": "Kernel-Power 507: the system is exiting modern standby",
+      "message": "The system is exiting Modern Standby "
+    }
+  ]
+}

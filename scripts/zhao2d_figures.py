@@ -1489,7 +1489,7 @@ def r1v_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
 
     panels = [
         (ft["solid_fraction_binary"], ft["design_elem_centres"], "(a) R1t's qualified binary design",
-         "the numerical first before R1v; R1v resumes from\nR1t's raw continuous x and MMA's state"),
+         "the numerical first of the evaluated designs; R1v\nresumes from R1t's raw x and MMA's state"),
         (fv["solid_fraction"], fv["design_elem_centres"], "(b) After R1v, continuous (β = 32)",
          f"{len(hist)} more updates on D, MMA's history kept\ngrey {term['grey_fraction']:.1%}; "
          f"J = {term['J_common_scale']:.4f} on D"),
@@ -1539,7 +1539,7 @@ def r1v_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
         ax.text(x, 0.97, text, transform=ax.get_xaxis_transform(), ha="center", va="top",
                 fontsize=8, color=INK2)
     peak = int(np.argmax(j_t))
-    ax.annotate("MMA reinitialised:\nJ jumps", xy=(it_t[peak], j_t[peak]),
+    ax.annotate("J rose after MMA\nwas reinitialised", xy=(it_t[peak], j_t[peak]),
                 xytext=(it_t[peak] + 2.2, j_t[peak] - 0.22 * (j_t[peak] - j_v.min())), fontsize=7.5,
                 color=MUTED, ha="left", va="center",
                 arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.8))
@@ -1554,7 +1554,7 @@ def r1v_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
     zoom.yaxis.tick_right()
     zoom.tick_params(labelsize=6.5, length=2)
     zoom.grid(axis="y", color=GRID, lw=0.5)
-    zoom.set_title("MMA's history carried over: no jump", fontsize=7, color=MUTED, pad=2)
+    zoom.set_title("no jump in J after the append", fontsize=7, color=MUTED, pad=2)
     for side in ("top", "left"):
         zoom.spines[side].set_visible(False)
     ax.set_xlim(0, it_v[-1])
@@ -1621,7 +1621,7 @@ def r1v_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
     opt = rec["responses"]["optimisation"]
     if new is not None:
         vs, vu, vr = rec["against"]["r1t"], rec["against"]["r1u"], rec["against"]["r1r"]
-        head = (f"The new qualified binary design has J {vs['J']:+.2%} against R1t's on D "
+        head = (f"The terminal's qualified binary design has J {vs['J']:+.2%} against R1t's on D "
                 f"(Ψ {vs['psi']:+.2%}, C {vs['compliance']:+.2%}, T_max {vs['T_max']:+.2%}); "
                 f"against R1u's {vu['J']:+.2%}, against R1r's {vr['J']:+.2%}."
                 f"\nThe continuous J on D changed {opt['J']:+.3%} over R1v's "

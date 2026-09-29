@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done here; the work continues in its own repository, Cooling-conformal-AOp |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8, 1.95% with the flow also refined to h/2); one β = 32 stage from it gives a second qualified binary design, 1.86% better again on the development model and 1.56% on the finer check model (lower C, higher Ψ), then the preferred candidate at w = 0.5; 30 more updates at the same β give a third design, 0.58% worse on the development model and 0.48% better on the check model, which now ranks: it is the current lead candidate. The two models' order of those designs flips with the flow mesh, so the check model has been made differentiable in the same design variables, its gradient verified; 20 updates on it from the lead candidate's continuous design give a qualified binary design 2.03% below that candidate's on the check model (lower C, higher Ψ and maximum temperature), generated and ranked on the same model, budget used, not converged; it is now the first choice of the four candidates at w = 0.5 on the check model. A thermal solve by one linear solve, beside upstream's Newton loop, gives the same states, objectives and gradients on the check model at the points tested, to differences of round-off size (R1s); the Newton path stays the default, and the next run may choose the new one explicitly. 20 more updates on the check model on that path, with MMA's state now saved, give a qualified binary design 0.16% below the first choice's (lower Ψ and maximum temperature, C nearly unchanged), with one fluid cell isolated by shared edges; budget used, not converged. It is the numerical first; R1r's stays the choice with no isolated cell. With that cell filled and nothing else, the design is still 0.13% below R1r's (R1u), keeping 83% of the lead; it is now the representative with no isolated cell. A finished run can now be given more budget without reinitialising MMA (on a small mesh, 2 updates with 2 appended equal 4 at once, bit for bit), and R1t's saved MMA state has been re-signed with the current binding, untouched (R1v part 1). Continued for 20 more updates with that history (R1v part 2), the run lowered the continuous J on the check model by another 0.13%, but its qualified binary design is 1.1% above R1t's there (lower Ψ, higher C) and has the same isolated cell: the continuous gain did not survive the export, and R1t's stays the numerical first; budget used, not converged |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8, 1.95% with the flow also refined to h/2); one β = 32 stage from it gives a second qualified binary design, 1.86% better again on the development model and 1.56% on the finer check model (lower C, higher Ψ), then the preferred candidate at w = 0.5; 30 more updates at the same β give a third design, 0.58% worse on the development model and 0.48% better on the check model, which now ranks: it is the current lead candidate. The two models' order of those designs flips with the flow mesh, so the check model has been made differentiable in the same design variables, its gradient verified; 20 updates on it from the lead candidate's continuous design give a qualified binary design 2.03% below that candidate's on the check model (lower C, higher Ψ and maximum temperature), generated and ranked on the same model, budget used, not converged; it is now the first choice of the four candidates at w = 0.5 on the check model. A thermal solve by one linear solve, beside upstream's Newton loop, gives the same states, objectives and gradients on the check model at the points tested, to differences of round-off size (R1s); the Newton path stays the default, and the next run may choose the new one explicitly. 20 more updates on the check model on that path, with MMA's state now saved, give a qualified binary design 0.16% below the first choice's (lower Ψ and maximum temperature, C nearly unchanged), with one fluid cell isolated by shared edges; budget used, not converged. It is the numerical first; R1r's stays the choice with no isolated cell. With that cell filled and nothing else, the design is still 0.13% below R1r's (R1u), keeping 83% of the lead; it is now the representative with no isolated cell. A finished run can now be given more budget without reinitialising MMA (on a small mesh, 2 updates with 2 appended equal 4 at once, bit for bit), and R1t's saved MMA state has been re-signed with the current binding, untouched (R1v part 1). Continued for 20 more updates with that history (R1v part 2), the run lowered the continuous J on the check model by another 0.13%, but the qualified binary design exported from its terminal is 1.1% above R1t's there (lower Ψ, higher C) and has the same isolated cell; budget used, not converged. The review of that stage closed it and found that the run's 21 saved designs export to 18 distinct binary designs, 16 of them never evaluated, so the terminal's result does not show that none beats R1t's; R1t's stays the numerical first among the evaluated designs. Next proposed, not authorised: evaluate those 16 on the check model (at most 16 flow and 16 thermal solves, no optimisation) and rank the whole set once |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -180,7 +180,7 @@ the finer check model.
 - It is still budget-limited and not converged, and the continuous–binary gap
   is still 36%.
 - It does not show that β = 32 beats 16, because the new map, a restarted MMA
-  and 30 more updates all contributed.
+  and 30 more updates all went into it.
 
 The review of that stage made the R1n design the preferred candidate at
 w = 0.5, and kept the R1l pilot as the lower-dissipation alternative. Neither
@@ -298,8 +298,8 @@ design physically or to manufacture.
 The review found two gaps in the checkpoint:
 - Its binding missed the optimisation problem: the weight, the volume bound,
   the projection and the filter. That is now fixed and tested.
-- A spent budget cannot be extended yet. That operation will be built before
-  any resume.
+- A spent budget could not be extended. That operation was built before the
+  resume (R1v, part 1, below).
 
 **The lead survives filling the isolated cell.** R1u filled that one cell and
 changed nothing else, leaving 1999 fluid cells in one component. It then solved
@@ -320,10 +320,11 @@ The review of that stage gave the designs three uses:
 
 **A spent budget can now be extended (R1v, part 1).** Nothing was solved on
 the main mesh.
-- A new operation appends budget to a finished run and changes nothing else:
-  the steps already scheduled, the optimisation problem and MMA's history
-  are kept. On a small mesh, 2 updates with 2 appended make the updates of 4
-  at once, bit for bit.
+- A new operation appends budget to a finished run. The steps already
+  scheduled, the optimisation problem and MMA's history are kept; the one
+  number it changes in MMA's state is the stop flag the old budget set. On a
+  small mesh, 2 updates with 2 appended make the updates of 4 at once, bit
+  for bit.
 - R1t's saved MMA state was signed before the binding named the
   optimisation problem. It has been re-signed with the current binding, the
   state untouched. The new part was rebuilt from R1t's own record and from
@@ -335,19 +336,39 @@ the main mesh.
 **The continuation, run (R1v, part 2).** 20 more updates on the check model
 from R1t's raw design, with MMA's history carried over instead of restarted.
 - The first resumed evaluation reproduced R1t's final state to about 10⁻¹⁴.
-  The optimisation went on without the jump in J that a restart causes.
+  The optimisation went on without the jump in J that followed R1t's
+  restart. That is consistent with MMA's history having been kept, and it
+  does not show what caused the earlier jump.
 - The continuous J fell another 0.131%, 0.216% over R1t's and R1v's
   updates together. Budget used, not converged.
-- The qualified binary design exported from it is 1.11% worse in J than
-  R1t's on the check model: dissipation 2.3% lower, compliance 1.8% higher,
-  maximum temperature 3.3% higher. It has the same isolated cell. Among the
-  seven designs it is the lowest at no weight.
-- So the continuous gain did not survive the export. R1t's design stays the
-  numerical first under the rule, and the filled one the representative with
-  no isolated cell.
-- The machine's overnight standby suspended two of the evaluations for
-  hours. Their results are gated like the rest, and the process was paused,
-  not perturbed.
+- The qualified binary design exported from its terminal is 1.11% worse in
+  J than R1t's on the check model: dissipation 2.3% lower, compliance 1.8%
+  higher, maximum temperature 3.3% higher. It has the same isolated cell.
+  Among the seven designs it is the lowest at no weight.
+- So the terminal's continuous gain did not carry through its export.
+- Two evaluations took 1.5 h and 7.1 h, against 92–129 s for the other 18
+  timed ones. They coincide with the machine's overnight standby in the
+  Windows event log, an excerpt of which is saved beside the record. Both
+  states passed their gates like the rest.
+
+The review of that stage closed both parts. Resuming is accepted as solved.
+It re-assembled the two new final states independently, and found two
+things that change the next step:
+- Exported by the same rule, the run's 21 saved designs give 18 distinct
+  binary designs. Only R1t's and the terminal's have been evaluated, so the
+  terminal's result does not show that none of the other 16 beats R1t's.
+- With the raw design fixed, re-projecting at any finite β keeps the cells'
+  order, so the exported geometry does not change (barring a tie at the
+  cut). It checked R1t's and R1v's final designs at β = 16 to 128.
+  Re-optimising at a higher β is another question.
+
+It kept the roles: R1t's design stays the numerical first among the
+evaluated designs, the filled one the representative with no isolated cell,
+and R1v's is kept as a different trade-off.
+
+Automatic appends at β = 32 are paused. Next proposed, not yet authorised:
+evaluate those 16 binary designs on the check model (at most 16 flow and 16
+thermal solves, no optimisation), rank the whole set once, and stop.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied
