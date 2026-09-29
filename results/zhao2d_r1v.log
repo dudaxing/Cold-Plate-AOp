@@ -1,0 +1,71 @@
+checkpoint passed: inputs
+built D, thermal path linear: design 5200 el (5000 variables), flow 20800 el, thermal 332800 el (233.9 s)
+checkpoint passed: the model and the common scale
+checkpoint passed: the append
+resume map: eta 0.7594682169 (R1t's terminal 0.7594682169), root slope -4.080e-05 (non-degenerate True), g0 -5.334086e-05
+checkpoint passed: the first resumed evaluation's map
+NR converged in 8 iters, res_norm/res_norm_0: 2.193397269607066e-14
+ 20  J 0.99478957  Psi 1.708001e-02  C 29471.411  g -5.334e-05  grey 0.0577  eta 0.75947  |R| 1.9e-14/6.9e-11  129.2 s
+first resumed evaluation against R1t's terminal: Psi +1.1e-15, C -1.1e-14, J -8.0e-15, g +0.0e+00, eta +0.0e+00
+NR converged in 8 iters, res_norm/res_norm_0: 2.2038896138436077e-14
+ 21  J 0.99471746  Psi 1.715454e-02  C 29420.466  g -5.329e-05  grey 0.0577  eta 0.75932  |R| 1.9e-14/6.9e-11  5455.8 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.197177413949522e-14
+ 22  J 0.99464051  Psi 1.706260e-02  C 29476.564  g -5.693e-05  grey 0.0575  eta 0.75945  |R| 1.9e-14/6.8e-11  92.6 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.2129662475768585e-14
+ 23  J 0.99458038  Psi 1.715206e-02  C 29416.488  g -5.605e-05  grey 0.0575  eta 0.75920  |R| 1.9e-14/6.8e-11  92.0 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.1785051905104522e-14
+ 24  J 0.99456517  Psi 1.704628e-02  C 29484.010  g -6.741e-05  grey 0.0575  eta 0.75950  |R| 1.8e-14/6.9e-11  94.4 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.178488214908908e-14
+ 25  J 0.99446482  Psi 1.711657e-02  C 29434.651  g -7.682e-05  grey 0.0577  eta 0.75945  |R| 1.8e-14/6.8e-11  25453.8 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.196029434037829e-14
+ 26  J 0.99443176  Psi 1.708226e-02  C 29455.410  g -7.129e-05  grey 0.0579  eta 0.75965  |R| 1.9e-14/6.9e-11  97.4 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.1838320931883828e-14
+ 27  J 0.99437435  Psi 1.709387e-02  C 29445.594  g -8.628e-05  grey 0.0579  eta 0.75973  |R| 1.8e-14/6.8e-11  94.4 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.184572969573566e-14
+ 28  J 0.99433743  Psi 1.709033e-02  C 29446.371  g -9.102e-05  grey 0.0581  eta 0.75990  |R| 1.9e-14/6.9e-11  94.5 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.1968518350685568e-14
+ 29  J 0.99424013  Psi 1.710834e-02  C 29430.808  g -7.703e-05  grey 0.0579  eta 0.75997  |R| 1.8e-14/6.9e-11  94.4 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.205145850731044e-14
+ 30  J 0.99415465  Psi 1.707148e-02  C 29451.074  g -5.191e-05  grey 0.0581  eta 0.76013  |R| 1.8e-14/6.8e-11  102.5 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.201279189780604e-14
+ 31  J 0.99408581  Psi 1.711950e-02  C 29417.344  g -4.569e-05  grey 0.0581  eta 0.76003  |R| 1.8e-14/6.9e-11  105.3 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.1867412940630036e-14
+ 32  J 0.99401554  Psi 1.705031e-02  C 29459.053  g -5.724e-05  grey 0.0585  eta 0.76031  |R| 1.9e-14/6.8e-11  107.5 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.195754844178446e-14
+ 33  J 0.99396216  Psi 1.714506e-02  C 29395.846  g -7.119e-05  grey 0.0587  eta 0.75997  |R| 1.9e-14/6.8e-11  102.2 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.1892771402963086e-14
+ 34  J 0.99389301  Psi 1.705456e-02  C 29451.334  g -1.013e-04  grey 0.0583  eta 0.76051  |R| 1.9e-14/6.8e-11  109.8 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.2027110095799355e-14
+ 35  J 0.99395108  Psi 1.716248e-02  C 29384.172  g -1.253e-04  grey 0.0590  eta 0.75991  |R| 1.9e-14/6.8e-11  108.1 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.191847716246025e-14
+ 36  J 0.99406436  Psi 1.707150e-02  C 29447.393  g -2.118e-04  grey 0.0581  eta 0.76087  |R| 1.8e-14/6.8e-11  101.4 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.1878379875610846e-14
+ 37  J 0.99377798  Psi 1.712926e-02  C 29398.533  g -2.123e-04  grey 0.0590  eta 0.76069  |R| 1.9e-14/6.8e-11  108.8 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.1854670640331118e-14
+ 38  J 0.99362572  Psi 1.712359e-02  C 29395.984  g -7.770e-05  grey 0.0590  eta 0.76080  |R| 1.9e-14/6.8e-11  106.9 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.1897635607542725e-14
+ 39  J 0.99359851  Psi 1.711884e-02  C 29397.938  g -9.016e-05  grey 0.0594  eta 0.76098  |R| 1.9e-14/6.9e-11  108.1 s
+NR converged in 8 iters, res_norm/res_norm_0: 2.190315927001422e-14
+terminal: J 0.99348566  g -4.686e-05  grey 0.0590  stop phase_end; last step L2 0.1861, Linf 0.0992; near-limit band []; MMA state after 40 updates in all
+export: t 0.4222035678, 2000 fluid cells, 27 changed from s = 0.5, connected True, components [2199, 1], isolated [[3750]], cells differing from the candidates {'r1t': 16, 'r1u': 17, 'r1r': 16, 'r1o': 40, 'r1n': 38, 'pilot': 62}
+built the check-layer route: flow 20800 el, thermal 332800 el (239.1 s)
+checkpoint passed: check layer: before its solves
+NR converged in 8 iters, res_norm/res_norm_0: 1.814269054163348e-14
+checkpoint passed: check layer: the new design's flow solve (44.7 s)
+new/check: Psi 1.366689564e-02  C 44490.578786  J 1.309894632  D_T/Q 5.5028%  T_max 19.9285  |R| 1.6e-14/1.2e-10  flow 44.7 s, thermal 17.8 s
+checkpoint passed: check layer: the new design's thermal solve (17.8 s)
+
+optimisation J -0.131%  Psi +0.018%  C -0.187%  grey 0.0577 -> 0.0590  (over R1t and R1v: J -0.216%)
+export gap   J +31.848%  Psi -19.997%  C +51.244%
+new binary against r1t   on D: J +1.113%  Psi -2.277%  C +1.811%  T_max +3.256% [qualified_comparison]
+new binary against r1u   on D: J +1.086%  Psi -2.324%  C +1.789%  T_max +3.247% [qualified_comparison]
+new binary against r1r   on D: J +0.955%  Psi -3.256%  C +1.832%  T_max +1.424% [qualified_comparison]
+new binary against r1o   on D: J -1.095%  Psi +3.769%  C -2.005%  T_max +4.553% [qualified_comparison]
+new binary against r1n   on D: J -1.570%  Psi +5.169%  C -2.803%  T_max +1.752% [qualified_comparison]
+new binary against pilot on D: J -3.104%  Psi +10.990%  C -5.479%  T_max -1.940% [qualified_comparison]
+lowest by weight (all): r1r 0.0000-0.0888, r1t 0.0888-0.7579, pilot 0.7579-1.0000
+lowest by weight (single component): r1r 0.0000-0.1747, r1u 0.1747-0.7566, pilot 0.7566-1.0000
+stop: phase_end; convergence not verified
+
+wrote D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1v.json and D:\Coding\thermalFluid\thermal-fluid-opus\results\zhao2d_r1v_fields.npz; total 33463 s
+exit 0

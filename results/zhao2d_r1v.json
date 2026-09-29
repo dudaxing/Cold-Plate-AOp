@@ -1,0 +1,2260 @@
+{
+  "note": "R1v, part 2: up to 20 MMA updates appended to R1t's run on the check layer D (design h, flow h/2, thermal h/8), from R1t's raw terminal design with MMA's state after its 20 updates carried over (as part 1 re-signed it), the budget appended from 20 to 40; the linear thermal path, beta 32, J on the development model's Psi_0 and C_0 as a declared common scale. The terminal's qualified binary design is evaluated once on D and compared with R1t's, R1u's, R1r's, R1o's, R1n's and the R1l pilot's saved D values. Analysis on one model; a real continuation, not a restart; nothing here is a convergence claim.",
+  "provenance": {
+    "git_head": "a7cb144870ed19b61d8e67c26e187d82c467085e",
+    "git_status_porcelain": [
+      "M validation/test_zhao2d_mma_checkpoint.py",
+      "?? scripts/zhao2d_r1v_d_append.py"
+    ],
+    "source_sha256": {
+      "tfopus/__init__.py": "4f8f07278ef09f9943b1a75b5c6651abc0a774ba8f9bcefd873f3410766500f6",
+      "tfopus/_callback_solve.py": "3893ee73af4b3d288a390967291729b168c216b5d2f5c56cb949fe3d29bee7be",
+      "tfopus/_threads.py": "46202a99056e2e7bd334a28fc7cd07c307f9a25293aa5c5d0a30e5a9315f4104",
+      "tfopus/advection_benchmark.py": "0164cd07368eacccb9f2145d5cac3f1db3c15a708ff4a63f906f100dbd69a40f",
+      "tfopus/affine_solve.py": "f2ffd494e12a597e1ffafe345d9d4922d5bbe1828a19161839898d4266ea5d64",
+      "tfopus/bc3d.py": "425269329418f787a1bc8617fedea48cb83ec4269a03bd0cb8d00f1580af76fb",
+      "tfopus/design.py": "8541421386305329195472d8aa0fd6a42da90b38c95dd61f69fba441a5120138",
+      "tfopus/elements.py": "db2c62c44de30ec17dfce5b9d2af1e415fdec8f070c3c3e41690b7d9093a2a80",
+      "tfopus/fe_flow.py": "8faf45037fdb760c9d778474333720c84e3474dbe0dc7e880ddc12696a9265df",
+      "tfopus/fe_thermal.py": "6a13b8b82e84fc67e87078bde9bb5146b99f981979832be087bce80f47e5bcc0",
+      "tfopus/geometry.py": "6b2586d988667e7ee317fb6e864a43f5fb60b1a472ff68963cf813654f188505",
+      "tfopus/materials.py": "117b4a36676c9f2272ddd153e9e69fb08d3ef27b0e0c51b7097a80fc5f9daa11",
+      "tfopus/mesh.py": "a1aa2881c06ce45be42730a2c21bea1c48a9abd7cc3885e438f7b79bf948fe42",
+      "tfopus/projection.py": "2522292de520bf17ee9bc2e8aa87b4e6f532346a8a2f51ddb9c0c6102861a65a",
+      "tfopus/sparse_bc.py": "22d37784a86fd5e62e320df7f99e14d531892b638839e733310213c0d7b2583b",
+      "tfopus/zhao2d.py": "60f1205b533d4dcb0d49dd9d2d36a4364d1c0da9f02a457a57d25ed18724ebe6",
+      "tfopus/zhao2d_analysis.py": "543a42633426fdd885ed8c7881d8d616c868a04aee472455b35484490752d2df",
+      "tfopus/zhao2d_binary.py": "cd375d1361cdc2419f68dd362062c4d9257807db7ab56d4268223cea70cf7680",
+      "tfopus/zhao2d_driver.py": "e73519c3beb4da88bd3b1bd47b12a1a62c046b635be860287068aee884f2cfd9",
+      "tfopus/zhao2d_dual.py": "a2fc719f033058365dba159b1af8d0ee04286ee90f7366d7a6277cb3d4cef047",
+      "tfopus/zhao2d_fineflow.py": "3450b6963891c9c5331b27ff4c3cbe96fe60350b161fc37b25bd3af1982f2513",
+      "tfopus/zhao2d_flow_study.py": "2a451ecfc5a2d4053fbc177248592c8596f91b556fe95b55c9ccc7f575e8e33f",
+      "tfopus/zhao2d_r1.py": "7e4df67caa094e48ad934b15e9ae06ad7da4245c7eb01aa05c8492970c5a879e",
+      "tfopus/zhao2d_refine.py": "5070a9ad93645aaba55bea2936946f82cc948fafda9a0996463311a535e93d0f",
+      "tfopus/zhao2d_thermal_study.py": "b57e419c4e9ba546e3cd2447638b2cf64e469e4c1fc760e26446c41accd21941",
+      "scripts/zhao2d_flow_mesh_check.py": "51ccb9afe1eec6f964cb2fb6714520df056375b8e07cd044b9fcce455ea9539e",
+      "scripts/zhao2d_dual_check.py": "57afde862ffb0283284f7c23dc5a4a7391feb4b71ad4826ce59046c5d3c921b5",
+      "scripts/zhao2d_r1v_d_append.py": "4bb041666c5a1c1fa6c73a616f5d921a526136fce92eb0a760f50992a68f89dd",
+      "scripts/zhao2d_r1m_flow_check.py": "1484f46a99468e756ddc9f54a4b3b199c3399f4d38a9d2faa41139dc0ef9c698"
+    },
+    "toflux_src_sha256": {
+      "__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bc.py": "a3fc663f26d1d8ad4813ba02d4cb344d3b34b855b0647d99077f7160e1babecd",
+      "constrained_loss.py": "846b464db6ad182eefddfa30995831606698f6a71a989c33cca4be390c1d75e2",
+      "element.py": "ae8f5367dbfdb21f615682e525c6ff7cd7063b1632794870d659638fcafee3a4",
+      "fe_fluid.py": "8b012b6f1a1e644f809d10e946db3d52d496f8569ae1817a46d9272dc9407ade",
+      "fe_struct.py": "8c8224edc0c36fcb5796aa1d39f57769bdc6cb92556a2c38993daf38c31e7c8b",
+      "fe_thermal.py": "ffef199d9a2608f66077c19f369a6d1851125ba11b55faf9011385d2758e8461",
+      "geometry.py": "4bf21900872eb6c3733a124746acf6744d30ebc89a43d03683b78e62d4656a7f",
+      "material.py": "504a9e02d75a3978d2ce624139c62002a20e7dbb8db32fcff10083a84d002351",
+      "mesher.py": "e60c691a8f1680ed30988ac48fc32263a53a2cfd2026d5735e167221a3f5b458",
+      "mma.py": "619952b8585a29b39930d12291da5338c585210d79030c8cbf3130d592ae829f",
+      "solver.py": "df36a4e0d62304c8329dcb782f839451f2bc381002225c1f745865a754aa8b4b",
+      "utils.py": "9c788175c2ec1987daebc7f429b2681a20f344f6e772b602557d191393da970c",
+      "viz.py": "eb40ea7f4661d667a76133032bc41da4ae0802b0ae265c016d9c7223dc6afbbb"
+    },
+    "environment": {
+      "python": "3.13.6",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "jax": "0.11.0",
+      "numpy": "2.4.6",
+      "scipy": "1.17.1",
+      "x64": true,
+      "threads": {
+        "OPENBLAS_NUM_THREADS": "8",
+        "OMP_NUM_THREADS": "8",
+        "MKL_NUM_THREADS": "8",
+        "NUMEXPR_NUM_THREADS": "8"
+      },
+      "cpu_count": 32
+    }
+  },
+  "inputs_sha256": {
+    "zhao2d_r1l_vp_pilot.json": "a8479d622784104dcf9a0b51292d69f18ec20489d85f267e74d7e28aef3d9e12",
+    "zhao2d_r1l_vp_pilot_fields.npz": "08b62fb67c444a828cd341ec495da97d99940dc692827705b83edaa727b01b30",
+    "zhao2d_r1m_flow_check.json": "063134d3a34c2d55efa1db92b33111b3d09ed2752295d72ab53e113ff7d84477",
+    "zhao2d_r1n_beta32.json": "7cdef0ae73ff69cc0e653d327502d65830d172be0dc0a6ab8a17f0e34d2f4200",
+    "zhao2d_r1n_fields.npz": "c2113fda476c3e38af14f5562fc0725dddb1d6f51df4932676005999fea2f155",
+    "zhao2d_r1o.json": "d00b29cf1e9379e6d9f6a57dfedcf70b55d21a9681b0e202c70729cfd2af18e8",
+    "zhao2d_r1o_fields.npz": "91f8821707591eda4255c248e589848d5ebb988b0c6899b708dcc5b816f521c6",
+    "zhao2d_r1q_fineflow_check.json": "11b7d43d4fd20641e04066b35c584ffee550b1951056398744a17ecfac4476f4",
+    "zhao2d_r1r.json": "021abf1e31956c4734e0e40248a252904801490e9499a7a654c279e9a8f49279",
+    "zhao2d_r1r_fields.npz": "38d0c3c1fce3398c576ed22234f0d289f8866e7a3d0cd7399a1abde67399ad78",
+    "zhao2d_r1s.json": "12f7a28c8402cc0d70204cd0e063abcddb152c014c4c3e9af98545b3a8b3375c",
+    "zhao2d_r1t.json": "23d307ba9cadf2a6f3744d306f8bf9d8af07f30fe8a49e17bc094facf5c7ca7e",
+    "zhao2d_r1t_fields.npz": "fcc9c31d237d864774e18d3202f2e0262ab4ab32364c5793a533b766b14d58f6",
+    "zhao2d_r1u.json": "604cd112a47292fb456c3302a47a5c2d1a839e2fce14f2fcf30599801b112f95",
+    "zhao2d_r1u_fields.npz": "6179669ac2df34cfb053d9b1ac0e0484176317dbb0b22507716512eca7cd23d9",
+    "zhao2d_r1v_migration.json": "3b385179b604a8d438a062fd03b3441979ff61f1388c56fee431e6aa457a4b69",
+    "zhao2d_r1v_mma_migrated.npz": "f8c4147abbf653658818e326e81cf77765d3b55b6417d40019536304dd3fdd1e"
+  },
+  "contract": {
+    "model": {
+      "design": "h, 5000 raw variables",
+      "flow_refinement": 2,
+      "thermal_refinement": 4,
+      "thermal_quadrature": 3,
+      "thermal_path": "linear"
+    },
+    "projection": "volume_preserving",
+    "beta": 32.0,
+    "alpha_max": 10000000.0,
+    "updates_appended_at_most": 20,
+    "budget": 40,
+    "move_limit": 0.1,
+    "gate": 1e-08,
+    "weight": 0.5,
+    "continuation": "none",
+    "internal_restarts": "none",
+    "mma_reinitialised": false,
+    "resumed_from": "results/zhao2d_r1v_mma_migrated.npz (part 1)",
+    "fingerprint": "{\"alpha_max_reference\": 1000000.0, \"element_length_mode\": \"min_edge\", \"filter_radius_elements\": 2.0, \"flow_form\": {\"brinkman_in_supg_residual\": true, \"brinkman_in_tau\": true, \"viscous_form\": \"symmetric\"}, \"max_fluid_fraction\": 0.4, \"outlet\": \"traction\", \"projection\": \"volume_preserving\", \"projection_beta\": 0.0, \"reference\": \"tabs_fluid\", \"source\": \"whole_domain\", \"thermal_form\": {\"stabilise_source\": true, \"supg_heat_capacity\": true, \"tau\": \"two_limit\", \"tau_velocity_floor\": 1e-12}, \"volume_domain\": \"design\", \"weight\": 0.5}",
+    "resume_anchor": {
+      "source": "results/zhao2d_r1t.json, terminal",
+      "J_common_scale": 0.99478957220856,
+      "tolerances": {
+        "psi_relative": 1e-12,
+        "g_absolute": 1e-12,
+        "eta_absolute": 1e-12,
+        "C_and_J_relative": 1e-08
+      }
+    },
+    "binary_solves_at_most": {
+      "flow": 1,
+      "thermal": 1,
+      "layer": "D"
+    },
+    "isolated_components": "reported; no cell filled, no volume made up",
+    "near_limit_band": "largest single change >= 0.0999",
+    "authorised": "by the user, part 2, on the local CPU, after part 1, as the review of 7786ce7 states it"
+  },
+  "initial_design": {
+    "file": "results/zhao2d_r1t_fields.npz",
+    "key": "design",
+    "sha256_float64": "c917293a5b56102ceac570c8a0ea3268b46b3e4eb8a9d3a9fb4c9b526edefe13",
+    "also": "the migrated checkpoint's x, bit for bit"
+  },
+  "identities": {
+    "flow_mesh": {
+      "elements": 20800,
+      "nodes": 21141,
+      "node_coords_sha256": "ffd2cf1dea997a7954babfe065412d1f479d4c07f1830cef61ecb880872dfdf3",
+      "geometry_sha256": "e99cb7f1c2ed5df5132d6038ab89b48efcebf6a1727a4328afa123d87b3fac87",
+      "region_sha256": "86c9944e74120dcb4d4572c7e5d9bd34e77abef68fe329d82d9b10ad0536b3ef"
+    },
+    "thermal_mesh": {
+      "elements": 332800,
+      "nodes": 334161,
+      "node_coords_sha256": "f35779ddfc7d3796a9dfc37d0ca782bcab82836ceb18daf58e5c7840644d5c7d",
+      "geometry_sha256": "2b268625dd3e60bab7de753053f9700387791e7208d7a1307f132ed71bfda2cd",
+      "region_sha256": "c146be832d1330d05f7aae7c848851b1023b5aad28c3800d917011a71c6369b2",
+      "q_source_sha256": "6025a2e1abb708e3cc93cbd57876916ec9a923fca2b89428000e4a158f4f69bc",
+      "dirichlet_sha256": "ac85ae87e3de6589bb7b99df57ee4d7a99438d63f65581ec7788278a15883f6c",
+      "quadrature": 3
+    },
+    "design_mesh": {
+      "elements": 5200,
+      "nodes": 5371,
+      "node_coords_sha256": "621fec585ebf976472811c8bf1d2a7a6491be1ec981b9c1f7a8bc0c3a3ef4cf7",
+      "geometry_sha256": "ac96dae96ea53e6bc26ee3eaa0ba73bf551cd2f02c2d9dc544ac38ee134bddc6",
+      "region_sha256": "6f4bc48ab954ffa4745f1f366fb93ac5f637e13bfc6cd14dae3763c13f90155d"
+    },
+    "num_design": 5000,
+    "thermal_path": "linear",
+    "model_identity": {
+      "config": {
+        "alpha_max_reference": 1000000.0,
+        "element_length_mode": "min_edge",
+        "flow_form": {
+          "brinkman_in_supg_residual": true,
+          "brinkman_in_tau": true,
+          "viscous_form": "symmetric"
+        },
+        "outlet": "traction",
+        "reference": "tabs_fluid",
+        "source": "whole_domain",
+        "thermal_form": {
+          "stabilise_source": true,
+          "supg_heat_capacity": true,
+          "tau": "two_limit",
+          "tau_velocity_floor": 1e-12
+        }
+      },
+      "flow_mesh": {
+        "refinement": 2
+      },
+      "spec": {
+        "design_half_width": 0.005,
+        "design_height": 0.01,
+        "element_size": 0.0001,
+        "fluid_conductivity": 0.61,
+        "fluid_density": 1000.0,
+        "fluid_heat_capacity": 4180.0,
+        "fluid_viscosity": 0.001,
+        "heat_source": 100000000.0,
+        "inlet_half_width": 0.001,
+        "inlet_speed": 0.2,
+        "inlet_temperature": 0.0,
+        "q_alpha": 0.2,
+        "q_kappa": 0.2,
+        "reference_gamma": 0.4,
+        "solid_conductivity": 237.0,
+        "tab_length": 0.001
+      },
+      "thermal_mesh": {
+        "element_length_mode": "min_edge",
+        "quadrature": 3,
+        "refinement": 4
+      }
+    },
+    "nesting": {
+      "area_design_mesh": 5.200000000000002e-05,
+      "area_flow_mesh": 5.200000000000001e-05,
+      "area_thermal_mesh": 5.200000000000001e-05,
+      "heat_source_design_mesh": 5200.000000000002,
+      "heat_source_thermal_mesh": 5200.000000000001,
+      "design_cells": 5000,
+      "design_cells_flow_mesh": 20000,
+      "design_cells_thermal_mesh": 320000
+    }
+  },
+  "scale": {
+    "psi_0": 0.03157912835073678,
+    "c_0": 20343.13770002236,
+    "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+    "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622",
+    "source_model": {
+      "kind": "development: flow h, thermal nested",
+      "thermal_refinement": 4,
+      "thermal_quadrature": 3
+    },
+    "declared": "the development model's constants, used as a common scale; not a reference of this model"
+  },
+  "append": {
+    "from_binding_sha256": "3716f3fbeeba8fc8417a12a51f79e8537b40f22005c3da8b6c033f8763b4690f",
+    "to_binding_sha256": "55059b4a255b3edfea26794114bc6a9b263e3d459153d4c69115fa3b3d76b969",
+    "state_entries_changed": [
+      25000
+    ],
+    "is_converged": [
+      true,
+      false
+    ],
+    "epoch": 20,
+    "kktnorm": 0.006680745532137441,
+    "budget": [
+      20,
+      40
+    ],
+    "schedule_steps": [
+      20,
+      40
+    ]
+  },
+  "resume_map": {
+    "root": {
+      "eta": 0.7594682168777238,
+      "slope": -4.0800083480940506e-05,
+      "nondegenerate": true
+    },
+    "g0": -5.334086439923169e-05,
+    "eta_vs_r1t_terminal": 0.0,
+    "g_vs_r1t_terminal": 0.0
+  },
+  "resume_anchor": {
+    "source": "R1t's continuous terminal record (linear thermal path, value only)",
+    "psi_relative": 1.1102230246251565e-15,
+    "compliance_relative": -1.1435297153639112e-14,
+    "J_common_scale_relative": -7.993605777301127e-15,
+    "constraint_g_difference": 0.0,
+    "eta_difference": 0.0,
+    "v_f_design_domain_difference": 0.0,
+    "tolerances": {
+      "psi_relative": 1e-12,
+      "constraint_g_absolute": 1e-12,
+      "eta_absolute": 1e-12,
+      "C_and_J_relative": 1e-08
+    },
+    "reproduced": true
+  },
+  "history": [
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.994789572208552,
+      "psi": 0.017080013944498366,
+      "compliance": 29471.411498208123,
+      "constraint_g": -5.334086439923169e-05,
+      "v_f_whole_domain": 0.42305640735984634,
+      "v_f_design_domain": 0.39997866365424034,
+      "grey_fraction": 0.057692307978868484,
+      "flow_residual_relative": 1.9030952858342904e-14,
+      "thermal_residual_relative": 6.859100622806837e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7594682168777238,
+      "projection_root_slope": -4.0800083480940506e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 86.18243230000371,
+        "reverse_psi": 15.822070199996233,
+        "reverse_c": 9.542329099960625
+      },
+      "iteration": 20,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 129.20973896980286,
+      "model_changed": false,
+      "kkt_proxy": 0.006668061289802447,
+      "design_step_norm": 0.07884123391419412,
+      "proxy_criterion": null,
+      "J_star": 0.995153723413315,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9947174569768953,
+      "psi": 0.017154543508325234,
+      "compliance": 29420.465775836463,
+      "constraint_g": -5.3294530384828676e-05,
+      "v_f_whole_domain": 0.42305642518062125,
+      "v_f_design_domain": 0.3999786821878461,
+      "grey_fraction": 0.057692307978868484,
+      "flow_residual_relative": 1.8630442287055914e-14,
+      "thermal_residual_relative": 6.860027133320356e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7593243499407942,
+      "projection_root_slope": -4.068139042546968e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 5423.002458600036,
+        "reverse_psi": 9.356296299956739,
+        "reverse_c": 9.009380700008478
+      },
+      "iteration": 21,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 5455.790246725082,
+      "model_changed": false,
+      "kkt_proxy": 0.007230273481654287,
+      "design_step_norm": 0.079248475331017,
+      "proxy_criterion": null,
+      "J_star": 0.9950809786920873,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9946405137173078,
+      "psi": 0.017062601960073892,
+      "compliance": 29476.56358832969,
+      "constraint_g": -5.692867269435631e-05,
+      "v_f_whole_domain": 0.42305502743357903,
+      "v_f_design_domain": 0.39997722853092227,
+      "grey_fraction": 0.057500001043081284,
+      "flow_residual_relative": 1.912941791464099e-14,
+      "thermal_residual_relative": 6.835276075030722e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7594526145652785,
+      "projection_root_slope": -4.0295925347068914e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 56.90173709997907,
+        "reverse_psi": 9.686803799995687,
+        "reverse_c": 9.200860799988732
+      },
+      "iteration": 22,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 92.58815431594849,
+      "model_changed": false,
+      "kkt_proxy": 0.006554961394168418,
+      "design_step_norm": 0.08446566811774356,
+      "proxy_criterion": null,
+      "J_star": 0.9950047285817236,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9945803763740413,
+      "psi": 0.017152060276768473,
+      "compliance": 29416.4881636896,
+      "constraint_g": -5.6047942507797543e-05,
+      "v_f_whole_domain": 0.4230553661759584,
+      "v_f_design_domain": 0.3999775808229969,
+      "grey_fraction": 0.057500001043081284,
+      "flow_residual_relative": 1.8535711080612886e-14,
+      "thermal_residual_relative": 6.821372053080452e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7591952831859448,
+      "projection_root_slope": -4.035640274785463e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 56.11685829999624,
+        "reverse_psi": 9.509074299945496,
+        "reverse_c": 9.56636910000816
+      },
+      "iteration": 23,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 91.95257568359375,
+      "model_changed": false,
+      "kkt_proxy": 0.009260228438256697,
+      "design_step_norm": 0.08376361817064942,
+      "proxy_criterion": null,
+      "J_star": 0.9949438489415277,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9945651720233728,
+      "psi": 0.01704628455152078,
+      "compliance": 29484.00981933297,
+      "constraint_g": -6.740837594298998e-05,
+      "v_f_whole_domain": 0.4230509967784834,
+      "v_f_design_domain": 0.3999730366496228,
+      "grey_fraction": 0.057500001043081284,
+      "flow_residual_relative": 1.8326190559261526e-14,
+      "thermal_residual_relative": 6.860477638021958e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.75950038378596,
+      "projection_root_slope": -3.9777960246866744e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 57.90714600001229,
+        "reverse_psi": 9.665200299990829,
+        "reverse_c": 9.86695709999185
+      },
+      "iteration": 24,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 94.44282221794128,
+      "model_changed": false,
+      "kkt_proxy": 0.01611548362667122,
+      "design_step_norm": 0.07936275271058951,
+      "proxy_criterion": null,
+      "J_star": 0.9949294788940366,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9944648246237688,
+      "psi": 0.017116568230456177,
+      "compliance": 29434.650615857296,
+      "constraint_g": -7.681531156056298e-05,
+      "v_f_whole_domain": 0.42304737872632275,
+      "v_f_design_domain": 0.3999692738753758,
+      "grey_fraction": 0.057692307978868484,
+      "flow_residual_relative": 1.821176634826073e-14,
+      "thermal_residual_relative": 6.828486884432205e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7594543668601268,
+      "projection_root_slope": -4.003056402629175e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 25417.687259599974,
+        "reverse_psi": 9.258897099993192,
+        "reverse_c": 9.414345900004264
+      },
+      "iteration": 25,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 25453.818206071854,
+      "model_changed": false,
+      "kkt_proxy": 0.00929569429465725,
+      "design_step_norm": 0.09192464303255297,
+      "proxy_criterion": null,
+      "J_star": 0.9948285216080206,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9944317617344307,
+      "psi": 0.017082255334018297,
+      "compliance": 29455.40962929674,
+      "constraint_g": -7.12858924475368e-05,
+      "v_f_whole_domain": 0.4230495054259817,
+      "v_f_design_domain": 0.399971485643021,
+      "grey_fraction": 0.057884614914655685,
+      "flow_residual_relative": 1.8944730001053217e-14,
+      "thermal_residual_relative": 6.870903621104857e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7596476116152253,
+      "projection_root_slope": -3.9749723465490954e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 60.793415599968284,
+        "reverse_psi": 9.908996300015133,
+        "reverse_c": 9.685419099987485
+      },
+      "iteration": 26,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 97.36491537094116,
+      "model_changed": false,
+      "kkt_proxy": 0.012029769177062706,
+      "design_step_norm": 0.09567329857983768,
+      "proxy_criterion": null,
+      "J_star": 0.9947957152187743,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9943743549655154,
+      "psi": 0.017093866439365658,
+      "compliance": 29445.594137915017,
+      "constraint_g": -8.628277182565203e-05,
+      "v_f_whole_domain": 0.4230437373954516,
+      "v_f_design_domain": 0.39996548689126976,
+      "grey_fraction": 0.057884614914655685,
+      "flow_residual_relative": 1.8098592710642378e-14,
+      "thermal_residual_relative": 6.821907699299988e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7597278864327632,
+      "projection_root_slope": -3.988310072303455e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 58.344472499971744,
+        "reverse_psi": 9.640766499971505,
+        "reverse_c": 8.957148000015877
+      },
+      "iteration": 27,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 94.38605070114136,
+      "model_changed": false,
+      "kkt_proxy": 0.009393315685668391,
+      "design_step_norm": 0.10420008322846079,
+      "proxy_criterion": null,
+      "J_star": 0.9947381871688334,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9943374324116765,
+      "psi": 0.017090328997388732,
+      "compliance": 29446.370701520325,
+      "constraint_g": -9.10176235795479e-05,
+      "v_f_whole_domain": 0.4230419162986233,
+      "v_f_design_domain": 0.3999635929505682,
+      "grey_fraction": 0.058076921850442886,
+      "flow_residual_relative": 1.9259190307652805e-14,
+      "thermal_residual_relative": 6.863355223391626e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7599013410314825,
+      "projection_root_slope": -3.9728464491650814e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 57.78890420001699,
+        "reverse_psi": 9.518849899992347,
+        "reverse_c": 9.563986099965405
+      },
+      "iteration": 28,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 94.507577419281,
+      "model_changed": false,
+      "kkt_proxy": 0.01071667104260552,
+      "design_step_norm": 0.10116131445202876,
+      "proxy_criterion": null,
+      "J_star": 0.994701274210279,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9942401295646213,
+      "psi": 0.017108341765257225,
+      "compliance": 29430.808064048404,
+      "constraint_g": -7.702909972706617e-05,
+      "v_f_whole_domain": 0.42304729650010486,
+      "v_f_design_domain": 0.3999691883601092,
+      "grey_fraction": 0.057884614914655685,
+      "flow_residual_relative": 1.8017860609358303e-14,
+      "thermal_residual_relative": 6.86474250525311e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7599717091182807,
+      "projection_root_slope": -3.9754679255242174e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 57.5489843999967,
+        "reverse_psi": 9.886193499958608,
+        "reverse_c": 9.463374800048769
+      },
+      "iteration": 29,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 94.35231184959412,
+      "model_changed": false,
+      "kkt_proxy": 0.008123569056425646,
+      "design_step_norm": 0.11569770080210305,
+      "proxy_criterion": null,
+      "J_star": 0.9946037790699842,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9941546494746873,
+      "psi": 0.01707148427707543,
+      "compliance": 29451.07363180836,
+      "constraint_g": -5.1911424979622645e-05,
+      "v_f_whole_domain": 0.4230569571442386,
+      "v_f_design_domain": 0.3999792354300082,
+      "grey_fraction": 0.058076921850442886,
+      "flow_residual_relative": 1.797196286194014e-14,
+      "thermal_residual_relative": 6.840802970387234e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.760128891540077,
+      "projection_root_slope": -3.963167867823046e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 62.623232599988114,
+        "reverse_psi": 11.223381499992684,
+        "reverse_c": 10.90427220001584
+      },
+      "iteration": 30,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 102.46818733215332,
+      "model_changed": false,
+      "kkt_proxy": 0.006524262954951338,
+      "design_step_norm": 0.13317420829436716,
+      "proxy_criterion": null,
+      "J_star": 0.9945185493830864,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9940858063954308,
+      "psi": 0.017119495243873822,
+      "compliance": 29417.34420647207,
+      "constraint_g": -4.569019278988229e-05,
+      "v_f_whole_domain": 0.42305934992585,
+      "v_f_design_domain": 0.39998172392288406,
+      "grey_fraction": 0.058076921850442886,
+      "flow_residual_relative": 1.8022396018335386e-14,
+      "thermal_residual_relative": 6.880591906955072e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7600267776404577,
+      "projection_root_slope": -3.9770430029521575e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 65.3460607000161,
+        "reverse_psi": 11.273969000030775,
+        "reverse_c": 10.656471700000111
+      },
+      "iteration": 31,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 105.29166746139526,
+      "model_changed": false,
+      "kkt_proxy": 0.0074298924796437375,
+      "design_step_norm": 0.14995796547463264,
+      "proxy_criterion": null,
+      "J_star": 0.9944492895402528,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9940155417592696,
+      "psi": 0.01705031146855358,
+      "compliance": 29459.053288529343,
+      "constraint_g": -5.723865245188531e-05,
+      "v_f_whole_domain": 0.4230549082105953,
+      "v_f_design_domain": 0.39997710453901925,
+      "grey_fraction": 0.05846153944730759,
+      "flow_residual_relative": 1.8555768846864156e-14,
+      "thermal_residual_relative": 6.831755531597879e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7603058243946703,
+      "projection_root_slope": -3.957952188042735e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 63.701477799972054,
+        "reverse_psi": 11.629551400023047,
+        "reverse_c": 11.980942599999253
+      },
+      "iteration": 32,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 107.51092720031738,
+      "model_changed": false,
+      "kkt_proxy": 0.006677119909806701,
+      "design_step_norm": 0.16861192878524298,
+      "proxy_criterion": null,
+      "J_star": 0.994379540264969,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.993962161721966,
+      "psi": 0.017145058046063113,
+      "compliance": 29395.846118789483,
+      "constraint_g": -7.119267383381978e-05,
+      "v_f_whole_domain": 0.42304954127929467,
+      "v_f_design_domain": 0.3999715229304665,
+      "grey_fraction": 0.05865384638309479,
+      "flow_residual_relative": 1.9116112613040187e-14,
+      "thermal_residual_relative": 6.822008737065231e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7599686408846718,
+      "projection_root_slope": -3.996478226942998e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 62.403228000039235,
+        "reverse_psi": 11.242521800042596,
+        "reverse_c": 11.258792699954938
+      },
+      "iteration": 33,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 102.22166895866394,
+      "model_changed": false,
+      "kkt_proxy": 0.009740471155415487,
+      "design_step_norm": 0.2023205055821467,
+      "proxy_criterion": null,
+      "J_star": 0.9943253792346338,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9938930149772952,
+      "psi": 0.017054556390968235,
+      "compliance": 29451.33356950121,
+      "constraint_g": -0.00010131435030036329,
+      "v_f_whole_domain": 0.4230379560191152,
+      "v_f_design_domain": 0.3999594742598799,
+      "grey_fraction": 0.058269232511520386,
+      "flow_residual_relative": 1.9136323445324335e-14,
+      "thermal_residual_relative": 6.842925718530431e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7605100073859326,
+      "projection_root_slope": -3.998235431118599e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 64.82838959997753,
+        "reverse_psi": 13.296997700002976,
+        "reverse_c": 12.340842799982056
+      },
+      "iteration": 34,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 109.78117847442627,
+      "model_changed": false,
+      "kkt_proxy": 0.008694069989924039,
+      "design_step_norm": 0.2113191313648705,
+      "proxy_criterion": null,
+      "J_star": 0.9942569180975059,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9939510763749742,
+      "psi": 0.017162480044063108,
+      "compliance": 29384.171921659843,
+      "constraint_g": -0.000125329276634778,
+      "v_f_whole_domain": 0.4230287195089865,
+      "v_f_design_domain": 0.3999498682893461,
+      "grey_fraction": 0.05903846025466919,
+      "flow_residual_relative": 1.8594799313888076e-14,
+      "thermal_residual_relative": 6.814663895819584e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7599135958863046,
+      "projection_root_slope": -4.07684982907597e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 63.185633299988694,
+        "reverse_psi": 12.061910699994769,
+        "reverse_c": 12.088423000008333
+      },
+      "iteration": 35,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 108.05366969108582,
+      "model_changed": false,
+      "kkt_proxy": 0.015454468385522868,
+      "design_step_norm": 0.29712744276253494,
+      "proxy_criterion": null,
+      "J_star": 0.9943141496402939,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.994064356702717,
+      "psi": 0.017071495477000646,
+      "compliance": 29447.39274027802,
+      "constraint_g": -0.0002118209693268147,
+      "v_f_whole_domain": 0.42299545347333584,
+      "v_f_design_domain": 0.3999152716122693,
+      "grey_fraction": 0.058076921850442886,
+      "flow_residual_relative": 1.8394237177525143e-14,
+      "thermal_residual_relative": 6.833854232722043e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7608672410342296,
+      "projection_root_slope": -3.949617647995732e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 61.6361052999855,
+        "reverse_psi": 10.924142299976666,
+        "reverse_c": 11.506140400015283
+      },
+      "iteration": 36,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 101.41100597381592,
+      "model_changed": false,
+      "kkt_proxy": 0.016023163642104196,
+      "design_step_norm": 0.1997363993523151,
+      "proxy_criterion": null,
+      "J_star": 0.9944282111297149,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9937779776260556,
+      "psi": 0.017129255145580877,
+      "compliance": 29398.53251398009,
+      "constraint_g": -0.00021229575170422788,
+      "v_f_whole_domain": 0.4229952708647291,
+      "v_f_design_domain": 0.39991508169931833,
+      "grey_fraction": 0.05903846025466919,
+      "flow_residual_relative": 1.8741721630004224e-14,
+      "thermal_residual_relative": 6.838273169956831e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7606922354450862,
+      "projection_root_slope": -4.012039922847721e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 66.67295199999353,
+        "reverse_psi": 11.417977100005373,
+        "reverse_c": 11.647287100029644
+      },
+      "iteration": 37,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 108.8421483039856,
+      "model_changed": false,
+      "kkt_proxy": 0.010129902625579746,
+      "design_step_norm": 0.16270877211252663,
+      "proxy_criterion": null,
+      "J_star": 0.994141228332045,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9936257223094986,
+      "psi": 0.017123594571482076,
+      "compliance": 29395.984329555475,
+      "constraint_g": -7.770259919814837e-05,
+      "v_f_whole_domain": 0.4230470374618469,
+      "v_f_design_domain": 0.3999689189603208,
+      "grey_fraction": 0.05903846025466919,
+      "flow_residual_relative": 1.9180443796610096e-14,
+      "thermal_residual_relative": 6.847362435857342e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7607987682786002,
+      "projection_root_slope": -4.0441303512035276e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 66.40330340003129,
+        "reverse_psi": 11.14895709999837,
+        "reverse_c": 11.393818099983037
+      },
+      "iteration": 38,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 106.90644764900208,
+      "model_changed": false,
+      "kkt_proxy": 0.008122563837158873,
+      "design_step_norm": 0.22958084605665058,
+      "proxy_criterion": null,
+      "J_star": 0.9939889415299101,
+      "volume_feasible": true
+    },
+    {
+      "alpha_max": 10000000.0,
+      "beta": 32.0,
+      "J_common_scale": 0.9935985052650119,
+      "psi": 0.01711884351186613,
+      "compliance": 29397.937581413506,
+      "constraint_g": -9.016319686028229e-05,
+      "v_f_whole_domain": 0.4230422449242844,
+      "v_f_design_domain": 0.3999639347212559,
+      "grey_fraction": 0.05942307785153389,
+      "flow_residual_relative": 1.854114459986445e-14,
+      "thermal_residual_relative": 6.858491294400208e-11,
+      "projection": "volume_preserving",
+      "projection_eta": 0.7609752380707586,
+      "projection_root_slope": -4.0051839788961224e-05,
+      "scale": {
+        "psi_0": 0.03157912835073678,
+        "c_0": 20343.13770002236,
+        "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+        "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+      },
+      "thermal_path": "linear",
+      "timing_s": {
+        "forward": 65.39291420002701,
+        "reverse_psi": 11.582591599959414,
+        "reverse_c": 11.056322299991734
+      },
+      "iteration": 39,
+      "phase": "r1v-d-vp32-linear",
+      "seconds": 108.11046147346497,
+      "model_changed": false,
+      "kkt_proxy": 0.006659069286343923,
+      "design_step_norm": 0.18614466353077813,
+      "proxy_criterion": null,
+      "J_star": 0.9939617486199652,
+      "volume_feasible": true
+    }
+  ],
+  "terminal": {
+    "alpha_max": 10000000.0,
+    "beta": 32.0,
+    "J_common_scale": 0.9934856599463903,
+    "psi": 0.017083046527257246,
+    "compliance": 29416.406588134538,
+    "constraint_g": -4.685956916650191e-05,
+    "v_f_whole_domain": 0.4230589001657051,
+    "v_f_design_domain": 0.39998125617233343,
+    "grey_fraction": 0.05903846025466919,
+    "flow_residual_relative": 1.8406818198261713e-14,
+    "thermal_residual_relative": 6.859486970251011e-11,
+    "projection": "volume_preserving",
+    "projection_eta": 0.7610467193056327,
+    "projection_root_slope": -3.979284138832493e-05,
+    "scale": {
+      "psi_0": 0.03157912835073678,
+      "c_0": 20343.13770002236,
+      "source_file": "D:/Coding/thermalFluid/thermal-fluid-opus/tfopus/zhao2d_reference_dual_r4q3_v1.json",
+      "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+    },
+    "thermal_path": "linear",
+    "timing_s": {
+      "forward": 53.269907400012016
+    },
+    "iteration": 40,
+    "phase": "r1v-d-vp32-linear",
+    "terminal": true,
+    "J_star": 0.9938491315059225,
+    "volume_feasible": true
+  },
+  "steps": [
+    {
+      "update": 21,
+      "l2": 0.07884123391419412,
+      "linf": 0.02570416202359016,
+      "rms": 0.0011149834227568297
+    },
+    {
+      "update": 22,
+      "l2": 0.079248475331017,
+      "linf": 0.02631345132486984,
+      "rms": 0.0011207426861051392
+    },
+    {
+      "update": 23,
+      "l2": 0.08446566811774356,
+      "linf": 0.025309568551281414,
+      "rms": 0.0011945249340701767
+    },
+    {
+      "update": 24,
+      "l2": 0.08376361817064942,
+      "linf": 0.02482076211683698,
+      "rms": 0.0011845964485037385
+    },
+    {
+      "update": 25,
+      "l2": 0.07936275271058951,
+      "linf": 0.020332653527264377,
+      "rms": 0.001122358812305778
+    },
+    {
+      "update": 26,
+      "l2": 0.09192464303255297,
+      "linf": 0.03170742649751557,
+      "rms": 0.0013000107689294187
+    },
+    {
+      "update": 27,
+      "l2": 0.09567329857983768,
+      "linf": 0.028118126409191424,
+      "rms": 0.0013530247640857701
+    },
+    {
+      "update": 28,
+      "l2": 0.10420008322846079,
+      "linf": 0.035428014315729284,
+      "rms": 0.0014736117090209451
+    },
+    {
+      "update": 29,
+      "l2": 0.10116131445202876,
+      "linf": 0.03422502879222783,
+      "rms": 0.0014306370288554844
+    },
+    {
+      "update": 30,
+      "l2": 0.11569770080210305,
+      "linf": 0.05449426907268612,
+      "rms": 0.0016362125760971864
+    },
+    {
+      "update": 31,
+      "l2": 0.13317420829436716,
+      "linf": 0.06849419347588825,
+      "rms": 0.001883367715281936
+    },
+    {
+      "update": 32,
+      "l2": 0.14995796547463264,
+      "linf": 0.07365360046118419,
+      "rms": 0.0021207258856010187
+    },
+    {
+      "update": 33,
+      "l2": 0.16861192878524298,
+      "linf": 0.056610731872557385,
+      "rms": 0.002384532764659771
+    },
+    {
+      "update": 34,
+      "l2": 0.2023205055821467,
+      "linf": 0.09245388358201573,
+      "rms": 0.0028612440294045337
+    },
+    {
+      "update": 35,
+      "l2": 0.2113191313648705,
+      "linf": 0.07771745016676934,
+      "rms": 0.0029885038156510163
+    },
+    {
+      "update": 36,
+      "l2": 0.29712744276253494,
+      "linf": 0.09985911843995454,
+      "rms": 0.004202016593080123
+    },
+    {
+      "update": 37,
+      "l2": 0.1997363993523151,
+      "linf": 0.09825404277960081,
+      "rms": 0.0028246992486361273
+    },
+    {
+      "update": 38,
+      "l2": 0.16270877211252663,
+      "linf": 0.09936511420143979,
+      "rms": 0.0023010495223860835
+    },
+    {
+      "update": 39,
+      "l2": 0.22958084605665058,
+      "linf": 0.09983280110399795,
+      "rms": 0.0032467634615440497
+    },
+    {
+      "update": 40,
+      "l2": 0.18614466353077813,
+      "linf": 0.09921966889375489,
+      "rms": 0.0026324830772860284
+    }
+  ],
+  "near_limit_band_updates": [],
+  "stop": {
+    "stop_reason": "phase_end",
+    "proxy_criterion": null,
+    "proxy_fired_at_final_stage": false,
+    "mma_updates_this_run": 20,
+    "mma_updates_in_all": 40,
+    "convergence_verified": false,
+    "first_feasible_iteration": 20
+  },
+  "responses": {
+    "optimisation": {
+      "from": "the first resumed evaluation (R1t's continuous terminal, evaluated again)",
+      "to": "the terminal",
+      "J": -0.0013107417875992677,
+      "psi": 0.00017755153881804375,
+      "compliance": -0.001866381936845074,
+      "g": [
+        -5.334086439923169e-05,
+        -4.685956916650191e-05
+      ],
+      "grey": [
+        0.057692307978868484,
+        0.05903846025466919
+      ]
+    },
+    "over_r1t_and_r1v": {
+      "from": "R1t's zero step (R1r's continuous terminal, on the linear path)",
+      "to": "the terminal",
+      "J": -0.0021631927648356752,
+      "psi": 0.0011901669350242727,
+      "compliance": -0.0034119348584201736
+    },
+    "export_gap": {
+      "J": 0.3184836835227709,
+      "psi": -0.1999731651812623,
+      "compliance": 0.5124409792374625,
+      "note": "both on D, at the common scale"
+    }
+  },
+  "best_feasible_evaluated": {
+    "iteration": 40,
+    "design_row": 20,
+    "is_terminal": true,
+    "J_common_scale": 0.9934856599463903,
+    "psi": 0.017083046527257246,
+    "compliance": 29416.406588134538,
+    "constraint_g": -4.685956916650191e-05
+  },
+  "mma_checkpoint": {
+    "updates_done": 40,
+    "kktnorm": 0.006659069286343923,
+    "state_array_sha256": "a0d3f1568e4b5456a247acacf7082e3274fceca3dedb0cf8066193da259b2259",
+    "binding_sha256": "55059b4a255b3edfea26794114bc6a9b263e3d459153d4c69115fa3b3d76b969",
+    "binding": {
+      "budget": 40,
+      "entry": {
+        "model": {
+          "config": {
+            "alpha_max_reference": 1000000.0,
+            "element_length_mode": "min_edge",
+            "flow_form": {
+              "brinkman_in_supg_residual": true,
+              "brinkman_in_tau": true,
+              "viscous_form": "symmetric"
+            },
+            "outlet": "traction",
+            "reference": "tabs_fluid",
+            "source": "whole_domain",
+            "thermal_form": {
+              "stabilise_source": true,
+              "supg_heat_capacity": true,
+              "tau": "two_limit",
+              "tau_velocity_floor": 1e-12
+            }
+          },
+          "flow_mesh": {
+            "refinement": 2
+          },
+          "spec": {
+            "design_half_width": 0.005,
+            "design_height": 0.01,
+            "element_size": 0.0001,
+            "fluid_conductivity": 0.61,
+            "fluid_density": 1000.0,
+            "fluid_heat_capacity": 4180.0,
+            "fluid_viscosity": 0.001,
+            "heat_source": 100000000.0,
+            "inlet_half_width": 0.001,
+            "inlet_speed": 0.2,
+            "inlet_temperature": 0.0,
+            "q_alpha": 0.2,
+            "q_kappa": 0.2,
+            "reference_gamma": 0.4,
+            "solid_conductivity": 237.0,
+            "tab_length": 0.001
+          },
+          "thermal_mesh": {
+            "element_length_mode": "min_edge",
+            "quadrature": 3,
+            "refinement": 4
+          }
+        },
+        "optimisation": {
+          "config": {
+            "alpha_max_reference": 1000000.0,
+            "element_length_mode": "min_edge",
+            "filter_radius_elements": 2.0,
+            "flow_form": {
+              "brinkman_in_supg_residual": true,
+              "brinkman_in_tau": true,
+              "viscous_form": "symmetric"
+            },
+            "max_fluid_fraction": 0.4,
+            "outlet": "traction",
+            "projection": "volume_preserving",
+            "projection_beta": 0.0,
+            "reference": "tabs_fluid",
+            "source": "whole_domain",
+            "thermal_form": {
+              "stabilise_source": true,
+              "supg_heat_capacity": true,
+              "tau": "two_limit",
+              "tau_velocity_floor": 1e-12
+            },
+            "volume_domain": "design",
+            "weight": 0.5
+          },
+          "design_map": {
+            "design_elements_sha256": "33a95b787a43228746e3b0e8fe6134f7f778813aeb24992a03ec6c6f954c7e5d",
+            "num_design": 5000
+          },
+          "filter": {
+            "kind": "linear",
+            "radius_elements": 2.0,
+            "radius_m": 0.0002
+          },
+          "max_fluid_fraction": 0.4,
+          "projection": "volume_preserving",
+          "spec": {
+            "alpha_max_final": 10000000.0,
+            "alpha_max_growth": 1.03,
+            "alpha_max_initial": 1000000.0,
+            "design_half_width": 0.005,
+            "design_height": 0.01,
+            "element_size": 0.0001,
+            "fluid_conductivity": 0.61,
+            "fluid_density": 1000.0,
+            "fluid_heat_capacity": 4180.0,
+            "fluid_viscosity": 0.001,
+            "heat_source": 100000000.0,
+            "inlet_half_width": 0.001,
+            "inlet_speed": 0.2,
+            "inlet_temperature": 0.0,
+            "max_fluid_fraction": 0.4,
+            "q_alpha": 0.2,
+            "q_kappa": 0.2,
+            "reference_gamma": 0.4,
+            "reported_c_0": 0.0456,
+            "reported_num_elements": 5200,
+            "reported_psi_0": 20816.0,
+            "reported_reynolds": 200.0,
+            "solid_conductivity": 237.0,
+            "tab_length": 0.001,
+            "weight": 0.5
+          },
+          "volume_domain": "design",
+          "weight": 0.5
+        },
+        "scale": {
+          "c_0": 20343.13770002236,
+          "psi_0": 0.03157912835073678,
+          "source_identity": {
+            "config": {
+              "alpha_max_reference": 1000000.0,
+              "element_length_mode": "min_edge",
+              "flow_form": {
+                "brinkman_in_supg_residual": true,
+                "brinkman_in_tau": true,
+                "viscous_form": "symmetric"
+              },
+              "outlet": "traction",
+              "reference": "tabs_fluid",
+              "source": "whole_domain",
+              "thermal_form": {
+                "stabilise_source": true,
+                "supg_heat_capacity": true,
+                "tau": "two_limit",
+                "tau_velocity_floor": 1e-12
+              }
+            },
+            "spec": {
+              "design_half_width": 0.005,
+              "design_height": 0.01,
+              "element_size": 0.0001,
+              "fluid_conductivity": 0.61,
+              "fluid_density": 1000.0,
+              "fluid_heat_capacity": 4180.0,
+              "fluid_viscosity": 0.001,
+              "heat_source": 100000000.0,
+              "inlet_half_width": 0.001,
+              "inlet_speed": 0.2,
+              "inlet_temperature": 0.0,
+              "q_alpha": 0.2,
+              "q_kappa": 0.2,
+              "reference_gamma": 0.4,
+              "solid_conductivity": 237.0,
+              "tab_length": 0.001
+            },
+            "thermal_mesh": {
+              "element_length_mode": "min_edge",
+              "quadrature": 3,
+              "refinement": 4
+            }
+          },
+          "source_sha256": "f5f9198569abaa2469929d33ab3108fa33f384e85ad57f0ba4051fe88cf0e622"
+        },
+        "thermal_path": "linear"
+      },
+      "mma": {
+        "a": [
+          0.0
+        ],
+        "a0": 1.0,
+        "c": [
+          1000.0
+        ],
+        "d": [
+          1.0
+        ],
+        "kkt_tol": 1e-06,
+        "lower_bound_sha256": "695e6a4610a3284bfa1efc6e99523c46fda1bed2e8499671272b190ea5b458bf",
+        "max_iter": 40,
+        "move_limit": 0.1,
+        "num_cons": 1,
+        "num_design_var": 5000,
+        "step_tol": 1e-06,
+        "upper_bound_sha256": "19ed76cc8c426648e4558d34838c6c135c74616b0afc39455c75fa6b4bcba167"
+      },
+      "schedule": [
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1t-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        },
+        {
+          "alpha_max": 10000000.0,
+          "beta": 32.0,
+          "phase": "r1v-d-vp32-linear"
+        }
+      ]
+    },
+    "note": "MMA's state after the last update, under the appended binding; the fields file holds it under mma_*"
+  },
+  "export": {
+    "terminal_volume_feasible": true,
+    "t": 0.42220356775600926,
+    "fluid_cells": 2000,
+    "fluid_fraction": 0.4,
+    "cells_changed_from_0.5": 27,
+    "connected": true,
+    "fluid_components": 2,
+    "volume_feasible": true,
+    "binary_sha256": "7b787b1f0463c94e496aa15cc7cd8fbfb49ad3559f7b797997c735dcae26f675",
+    "fluid_cells_at_s_0_5": 2027,
+    "qualified": true,
+    "components": {
+      "sizes": [
+        2199,
+        1
+      ],
+      "isolated": [
+        {
+          "size": 1,
+          "touches_inlet": false,
+          "touches_outlet": false,
+          "cells": [
+            3750
+          ],
+          "centres_mm": [
+            [
+              3.5500000000000003,
+              5.050000000000001
+            ]
+          ]
+        }
+      ],
+      "single_component": false
+    },
+    "same_geometry_as": [],
+    "cells_differing_from": {
+      "r1t": 16,
+      "r1u": 17,
+      "r1r": 16,
+      "r1o": 40,
+      "r1n": 38,
+      "pilot": 62
+    }
+  },
+  "check_layer": {
+    "flow_mesh": {
+      "elements": 20800,
+      "nodes": 21141,
+      "node_coords_sha256": "ffd2cf1dea997a7954babfe065412d1f479d4c07f1830cef61ecb880872dfdf3",
+      "geometry_sha256": "e99cb7f1c2ed5df5132d6038ab89b48efcebf6a1727a4328afa123d87b3fac87",
+      "region_sha256": "86c9944e74120dcb4d4572c7e5d9bd34e77abef68fe329d82d9b10ad0536b3ef"
+    },
+    "thermal_mesh": {
+      "elements": 332800,
+      "nodes": 334161,
+      "node_coords_sha256": "f35779ddfc7d3796a9dfc37d0ca782bcab82836ceb18daf58e5c7840644d5c7d",
+      "geometry_sha256": "2b268625dd3e60bab7de753053f9700387791e7208d7a1307f132ed71bfda2cd",
+      "region_sha256": "c146be832d1330d05f7aae7c848851b1023b5aad28c3800d917011a71c6369b2",
+      "q_source_sha256": "6025a2e1abb708e3cc93cbd57876916ec9a923fca2b89428000e4a158f4f69bc",
+      "dirichlet_sha256": "ac85ae87e3de6589bb7b99df57ee4d7a99438d63f65581ec7788278a15883f6c",
+      "quadrature": 3
+    },
+    "transfer": {
+      "coarse_elements": 5200,
+      "fine_elements": 20800,
+      "children_per_parent": [
+        4
+      ],
+      "total_area_coarse": 5.200000000000002e-05,
+      "total_area_fine": 5.200000000000001e-05,
+      "design_cells_coarse": 5000,
+      "design_cells_fine": 20000,
+      "coarse_v_f_whole_domain": 0.4230769230769231,
+      "coarse_v_f_design_domain": 0.4,
+      "fine_v_f_whole_domain": 0.4230769230769231,
+      "fine_v_f_design_domain": 0.4
+    },
+    "copy_is_the_models_E_DF": true,
+    "thermal_material_is_the_parents": true
+  },
+  "candidates": {
+    "r1t": {
+      "J": 1.29548180494639,
+      "J_star": 1.2960217541012629,
+      "psi": 0.013985306585680351,
+      "compliance": 43699.055566004055,
+      "D_T_over_Q": 0.05647753396618425,
+      "T_max": 19.300183385430138
+    },
+    "r1u": {
+      "J": 1.295821722552446,
+      "J_star": 1.2963617890363441,
+      "psi": 0.013992034871260108,
+      "compliance": 43708.55121491014,
+      "D_T_over_Q": 0.05632243627065066,
+      "T_max": 19.301792680022636
+    },
+    "r1r": {
+      "J": 1.2975038625060855,
+      "J_star": 1.298043701970295,
+      "psi": 0.014126796908765733,
+      "compliance": 43690.178103479695,
+      "D_T_over_Q": 0.05612532803784661,
+      "T_max": 19.648691071706907
+    },
+    "r1o": {
+      "J": 1.3244021746536248,
+      "J_star": 1.3249631487748161,
+      "psi": 0.013170451392088204,
+      "compliance": 45400.6438787885,
+      "D_T_over_Q": 0.04897289324498352,
+      "T_max": 19.060793978530352
+    },
+    "r1n": {
+      "J": 1.330791221251423,
+      "J_star": 1.3313568024508435,
+      "psi": 0.012995174504055611,
+      "compliance": 45773.50300027716,
+      "D_T_over_Q": 0.052678562978747255,
+      "T_max": 19.585360501107502
+    },
+    "pilot": {
+      "J": 1.3518505470279887,
+      "J_star": 1.352432140186298,
+      "psi": 0.012313625240919703,
+      "compliance": 47069.37961177506,
+      "D_T_over_Q": 0.048924353049541534,
+      "T_max": 20.32285615474306
+    }
+  },
+  "candidate_components": {
+    "r1t": [
+      2199,
+      1
+    ],
+    "r1u": [
+      2199
+    ],
+    "r1r": [
+      2200
+    ],
+    "r1o": [
+      2200
+    ],
+    "r1n": [
+      2200
+    ],
+    "pilot": [
+      2200
+    ]
+  },
+  "against": {
+    "r1t": {
+      "kind": "qualified_comparison",
+      "J": 0.01112545730225345,
+      "J_star": 0.011128368476600148,
+      "psi": -0.022767534016274626,
+      "compliance": 0.018113050946969578,
+      "T_max": 0.03255740532100404,
+      "terms": {
+        "dissipation": -0.005041477710864022,
+        "thermal_compliance": 0.019454305217641417,
+        "dJ": 0.014412827506777415
+      }
+    },
+    "r1u": {
+      "kind": "qualified_comparison",
+      "J": 0.010860220704590029,
+      "J_star": 0.010863150100031582,
+      "psi": -0.02323745130632182,
+      "compliance": 0.01789186667501874,
+      "T_max": 0.03247131543928283,
+      "terms": {
+        "dissipation": -0.0051480082886720705,
+        "thermal_compliance": 0.019220918189393667,
+        "dJ": 0.01407290990072152
+      }
+    },
+    "r1r": {
+      "kind": "qualified_comparison",
+      "J": 0.009549697927796252,
+      "J_star": 0.009553345349985864,
+      "psi": -0.03255524019160483,
+      "compliance": 0.01831992262494575,
+      "T_max": 0.014242994912539775,
+      "terms": {
+        "dissipation": -0.00728172832060071,
+        "thermal_compliance": 0.019672498267682824,
+        "dJ": 0.012390769947081992
+      }
+    },
+    "r1o": {
+      "kind": "qualified_comparison",
+      "J": -0.010954030790723657,
+      "J_star": -0.010957879887942723,
+      "psi": 0.0376937916093647,
+      "compliance": -0.020045202341461676,
+      "T_max": 0.045525558962882684,
+      "terms": {
+        "dissipation": 0.00786032224608659,
+        "thermal_compliance": -0.02236786444654398,
+        "dJ": -0.014507542200457246
+      }
+    },
+    "r1n": {
+      "kind": "qualified_comparison",
+      "J": -0.01570237950518283,
+      "J_star": -0.015707615477500325,
+      "psi": 0.05169004371565755,
+      "compliance": -0.028027660772736773,
+      "T_max": 0.01752261734229421,
+      "terms": {
+        "dissipation": 0.010635523734960219,
+        "thermal_compliance": -0.031532112533215785,
+        "dJ": -0.02089658879825551
+      }
+    },
+    "pilot": {
+      "kind": "qualified_comparison",
+      "J": -0.03103591197049127,
+      "J_star": -0.031046125867670415,
+      "psi": 0.10990024260654407,
+      "compliance": -0.05478722785894541,
+      "T_max": -0.019402237218105856,
+      "terms": {
+        "dissipation": 0.021426658556134084,
+        "thermal_compliance": -0.06338257313095524,
+        "dJ": -0.041955914574821174
+      }
+    }
+  },
+  "lowest_by_weight": {
+    "note": "a fixed set of designs reweighted on the common scale; not an optimised front",
+    "all": [
+      {
+        "from": 0.0,
+        "to": 0.08875251184769548,
+        "lowest": "r1r"
+      },
+      {
+        "from": 0.08875251184769548,
+        "to": 0.7578506680587196,
+        "lowest": "r1t"
+      },
+      {
+        "from": 0.7578506680587196,
+        "to": 1.0,
+        "lowest": "pilot"
+      }
+    ],
+    "single_component": [
+      {
+        "from": 0.0,
+        "to": 0.17467220788194196,
+        "lowest": "r1r"
+      },
+      {
+        "from": 0.17467220788194196,
+        "to": 0.7565935596329951,
+        "lowest": "r1u"
+      },
+      {
+        "from": 0.7565935596329951,
+        "to": 1.0,
+        "lowest": "pilot"
+      }
+    ],
+    "single_component_designs": [
+      "r1u",
+      "r1r",
+      "r1o",
+      "r1n",
+      "pilot"
+    ]
+  },
+  "cells": {
+    "new/check": {
+      "design": "new",
+      "layer": "check",
+      "state": "solved here",
+      "fluid_fractions": {
+        "v_f_whole_domain": 0.4230769230769231,
+        "v_f_design_domain": 0.4
+      },
+      "thermal_path": "linear",
+      "volume_feasible": true,
+      "t_flow_solve_s": 44.67292009998346,
+      "flow_verification": {
+        "dofs": 63423,
+        "dirichlet_max_deviation": 0.0,
+        "residual_relative": 1.5939561957622373e-14,
+        "gate": 1e-08
+      },
+      "flow_identity": {
+        "config": {
+          "element_length_mode": "min_edge",
+          "flow_form": {
+            "brinkman_in_supg_residual": true,
+            "brinkman_in_tau": true,
+            "viscous_form": "symmetric"
+          },
+          "outlet": "traction"
+        },
+        "dirichlet_sha256": "c7a56986a01adeb33aed356505b79912c872b68f19fe05b97759ed172437411f",
+        "kind": "zhao2d flow state: press_vel, (p, u, v) per node",
+        "material": {
+          "alpha_max": 10000000.0,
+          "alpha_min": 0.0,
+          "q_alpha": 0.2
+        },
+        "mesh": {
+          "dofs": 63423,
+          "elements": 20800,
+          "geometry_sha256": "e99cb7f1c2ed5df5132d6038ab89b48efcebf6a1727a4328afa123d87b3fac87",
+          "nodes": 21141,
+          "quadrature": 2,
+          "region_sha256": "86c9944e74120dcb4d4572c7e5d9bd34e77abef68fe329d82d9b10ad0536b3ef"
+        },
+        "solid_fraction_sha256": "4e1c8c9982dee5bf1187fab318eb2bde64159a76326d9a7f899c00099799c312",
+        "solver": {
+          "linear": "SCIPY_SPARSE",
+          "linear_rtol": 1e-10,
+          "newton_max_iter": 40,
+          "newton_threshold": 1e-11
+        },
+        "spec": {
+          "design_half_width": 0.005,
+          "design_height": 0.01,
+          "element_size": 5e-05,
+          "fluid_density": 1000.0,
+          "fluid_viscosity": 0.001,
+          "inlet_half_width": 0.001,
+          "inlet_speed": 0.2,
+          "q_alpha": 0.2,
+          "tab_length": 0.001
+        }
+      },
+      "t_thermal_solve_s": 17.80123150005238,
+      "analysed": true,
+      "psi": 0.013666895642262844,
+      "compliance": 44490.57878580554,
+      "J": 1.3098946324531675,
+      "J_star": 1.3104443617345913,
+      "c_advective": 18774.560653949495,
+      "c_diffusive": 25716.018131856046,
+      "T_max": 19.928547278679293,
+      "T_min": 0.0,
+      "nodes_below_inlet": 0,
+      "H": 5486.072251046811,
+      "Q": 5200.000000000001,
+      "r_D": -0.07276298634320774,
+      "D_T": 286.145014027045,
+      "D_T_over_Q": 0.055027887312893264,
+      "balance_closure_relative": 1.1747239078921174e-12,
+      "integral_div_u_squared_flow_mesh": 0.08807350678980849,
+      "mass_imbalance_relative": 6.505213034913027e-15,
+      "residual_flow": 1.5939561957622373e-14,
+      "residual_thermal": 1.1714794158265834e-10,
+      "gate_passed": true,
+      "t_report_s": 77.69782150001265,
+      "report": {
+        "mesh": {
+          "h_flow": 5e-05,
+          "flow_elements": 20800,
+          "flow_quadrature": 2,
+          "h_thermal": 1.25e-05,
+          "thermal_elements": 332800,
+          "thermal_nodes": 334161,
+          "thermal_quadrature": 3,
+          "maps_flow_to_thermal": {
+            "factor": 4,
+            "coarse_elements": 20800,
+            "coarse_nodes": 21141,
+            "fine_elements": 332800,
+            "fine_nodes": 334161,
+            "parents_sha256": "7013faf156caa8132a3d9593a4b3990aa5cdab35de8fe1de6f792181c1915d61",
+            "node_map_sha256": "2a295a576ab2234fc3b69cfba46f650dc8714b94554bbe450eb05e3605d9b756"
+          },
+          "nesting": {
+            "area_flow_mesh": 5.200000000000001e-05,
+            "area_thermal_mesh": 5.200000000000001e-05,
+            "heat_source_flow_mesh": 5200.000000000002,
+            "heat_source_thermal_mesh": 5200.000000000001,
+            "design_cells_flow_mesh": 20000,
+            "design_cells_thermal_mesh": 320000
+          }
+        },
+        "residual_relative": {
+          "flow": 1.5939561957622373e-14,
+          "thermal": 1.1714794158265834e-10
+        },
+        "psi": 0.013666895642262844,
+        "c_advective": 18774.560653949495,
+        "c_diffusive": 25716.018131856046,
+        "compliance": 44490.57878580554,
+        "l_q": 46793.22890064202,
+        "d_supg": 2311.3883813902116,
+        "f_supg": 8.738266450371922,
+        "closure": 1.0336225386708975e-07,
+        "closure_relative": 2.2089147574441393e-12,
+        "net_supg_over_c": 0.0517559037841622,
+        "t_max": 19.928547278679293,
+        "nodes_below_inlet": 0,
+        "fraction_below_inlet": 0.0,
+        "min_temperature": 0.0,
+        "undershoot_depth": 0.0,
+        "heat_in": 5200.000000000001,
+        "mass": {
+          "inflow": 0.00019999999999999998,
+          "outflow": 0.00019999999999999868,
+          "imbalance_relative": 6.505213034913027e-15,
+          "wall_and_symmetry_flux": 0.0,
+          "note": "on the flow mesh, from the flow state itself"
+        },
+        "divergence": {
+          "flow_mesh": {
+            "integral_div_u": -2.710505431213761e-20,
+            "integral_div_u_squared": 0.08807350678980849
+          },
+          "thermal_mesh": {
+            "integral_div_u": 4.253375944637469e-18,
+            "integral_div_u_squared": 0.08807350678980835
+          },
+          "D_T": 286.145014027045,
+          "D_T2": 4222.404679192341,
+          "D_T_over_heat_in": 0.055027887312893264,
+          "minus_half_D_T2": -2111.2023395961705,
+          "minus_half_D_T2_over_C": -0.04745279556286054,
+          "note": "algebraic shares of this solution, not errors and not the change a divergence-free velocity would produce"
+        },
+        "identities": {
+          "enthalpy": {
+            "statement": "H = int b_f u.grad T + D_T",
+            "H": 5486.072251046811,
+            "b_f_u_grad_T": 5199.927237019882,
+            "D_T": 286.145014027045,
+            "closure": -1.1607426131376997e-10,
+            "closure_relative": 2.115798990646205e-14
+          },
+          "advective_half": {
+            "statement": "C_adv = 1/2 boundary int b_f T^2 u.n - 1/2 D_T2",
+            "c_advective": 18774.560653949495,
+            "half_boundary_t2_flux": 20885.762993545402,
+            "minus_half_D_T2": -2111.2023395961705,
+            "closure": 2.6284396881237626e-10,
+            "closure_relative": 1.4000006373362634e-14
+          },
+          "source": {
+            "statement": "H - Q = D_T + [int b_f u.grad T - Q]; the bracket is the Dirichlet reaction",
+            "H_minus_heat_in": 286.0722510468104,
+            "D_T": 286.145014027045,
+            "bracket": -0.07276298011856852,
+            "dirichlet_reaction": -0.07276298634320774,
+            "bracket_minus_reaction": 6.224639220731021e-09
+          },
+          "stabilisation": {
+            "statement": "C + D_SUPG - F_SUPG = L_Q",
+            "closure": 1.0336225386708975e-07,
+            "closure_relative": 2.2089147574441393e-12
+          }
+        },
+        "boundary": {
+          "inlet": {
+            "faces": 80,
+            "volume_flux": -0.0002,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": 0.07313745167200167
+          },
+          "outlet": {
+            "faces": 80,
+            "volume_flux": 0.00019999999999999868,
+            "enthalpy_flux": 5486.072251046811,
+            "half_t2_flux": 20885.762993545402,
+            "conduction_out": 0.3062824791260501
+          },
+          "wall": {
+            "faces": 1600,
+            "volume_flux": 0.0,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": -12.473986680373491
+          },
+          "symmetry": {
+            "faces": 960,
+            "volume_flux": 0.0,
+            "enthalpy_flux": 0.0,
+            "half_t2_flux": 0.0,
+            "conduction_out": -15.410932952364915
+          },
+          "total": {
+            "volume_flux": -1.328147661294743e-18,
+            "enthalpy_flux": 5486.072251046811,
+            "half_t2_flux": 20885.762993545402,
+            "conduction_out": -27.505499701940355
+          }
+        },
+        "reaction": {
+          "dirichlet_nodes": 81,
+          "reaction_at_dirichlet_nodes": -0.07276298634320774,
+          "sum_over_free_nodes": 6.2253391023739455e-09,
+          "sum_over_all_nodes": -0.07276298011786864
+        },
+        "heat": {
+          "mass_in": 0.0001999999999999999,
+          "mass_out": 0.00019999999999999868,
+          "mass_imbalance_rel": 6.0986372202309656e-15,
+          "wall_leak_rel": 0.0,
+          "inlet_flux_over_nominal": 0.9999999999999994,
+          "heat_in": 5200.000000000001,
+          "enthalpy_net_out": 5486.07225104681,
+          "conduction_net_out": -27.505499701936447,
+          "energy_imbalance_rel": 0.049724375258629494,
+          "temperature_weighted_divergence": 286.145014027045,
+          "temperature_weighted_divergence_rel": 0.055027887312893264
+        },
+        "tau": {
+          "whole_domain": {
+            "n": 332800,
+            "median": 6.889504213862414e-07,
+            "p10": 6.889503950925667e-07,
+            "p90": 7.554214767757698e-05
+          },
+          "fluid_s_lt_0.5": {
+            "n": 140800,
+            "median": 4.395798845926592e-05,
+            "p10": 2.7639723491579964e-05,
+            "p90": 0.00017022838086504192
+          }
+        },
+        "peclet": {
+          "definition": "b_f * |u at element centre| * h / (2 k)",
+          "h": 1.25e-05,
+          "whole_domain": {
+            "elements": 332800,
+            "median": 0.0003148620510992343,
+            "p90": 8.507103579064784,
+            "max": 12.843439928916842,
+            "fraction_above_1": 0.3870132211538462
+          },
+          "fluid_s_lt_0.5_incl_tabs": {
+            "elements": 140800,
+            "median": 6.006646026122457,
+            "p90": 9.632633746520105,
+            "max": 12.843439928916842,
+            "fraction_above_1": 0.9147585227272728
+          },
+          "fluid_s_lt_0.5_design_only": {
+            "elements": 128000,
+            "median": 5.687886959138828,
+            "p90": 9.278232008941389,
+            "max": 12.843439928916842,
+            "fraction_above_1": 0.910640625
+          }
+        },
+        "j_star": 1.3104443617345913
+      },
+      "state_sha256": {
+        "s": "4e1c8c9982dee5bf1187fab318eb2bde64159a76326d9a7f899c00099799c312",
+        "press_vel": "40b9c4364f03b0d7b115955dd9d06f4c74a02ef4cf1a39d74e3fc48ce569dff1",
+        "temperature": "63110854c43e786c184a237d3e31e0f4722fec30884477e24d0fb37aa6e913ae"
+      }
+    }
+  },
+  "checkpoints": [
+    {
+      "stage": "inputs",
+      "failures": []
+    },
+    {
+      "stage": "the model and the common scale",
+      "failures": []
+    },
+    {
+      "stage": "the append",
+      "failures": []
+    },
+    {
+      "stage": "the first resumed evaluation's map",
+      "failures": []
+    },
+    {
+      "stage": "the run's own binding check",
+      "failures": []
+    },
+    {
+      "stage": "the first resumed evaluation against R1t's terminal",
+      "failures": []
+    },
+    {
+      "stage": "the updates (20, phase_end)",
+      "failures": []
+    },
+    {
+      "stage": "check layer: before its solves",
+      "failures": []
+    },
+    {
+      "stage": "check layer: the new design's flow solve (44.7 s)",
+      "failures": []
+    },
+    {
+      "stage": "check layer: the new design's thermal solve (17.8 s)",
+      "failures": []
+    }
+  ],
+  "fields": {
+    "file": "zhao2d_r1v_fields.npz",
+    "arrays": [
+      "best_feasible_design",
+      "design",
+      "design_elem_centres",
+      "designs",
+      "initial_design",
+      "initial_press_vel",
+      "initial_solid_fraction",
+      "initial_temperature",
+      "mma_binding",
+      "mma_kktnorm",
+      "mma_num_design_var",
+      "mma_state_array",
+      "mma_updates_done",
+      "new_press_vel_check",
+      "new_solid_fraction_flow_h2",
+      "new_temperature_check",
+      "press_vel",
+      "solid_fraction",
+      "solid_fraction_binary",
+      "temperature"
+    ]
+  },
+  "cost": {
+    "build_s": 233.9177086999989,
+    "t_updates_including_terminal_s": 32836.43812249997,
+    "peak_working_set_mb_after_updates": 7322.13671875,
+    "build_check_s": 239.12767229997553,
+    "peak_working_set_mb": 7322.13671875,
+    "peak_working_set_note": "the whole process's, cumulative",
+    "wall_clock_total_s": 33462.88074629998
+  }
+}

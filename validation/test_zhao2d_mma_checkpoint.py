@@ -492,6 +492,103 @@ def test_r1v_migrates_r1ts_checkpoint_and_leaves_r1ts_files_alone(tmp_path, monk
         mv.main()
 
 
+def test_r1v_stops_at_a_first_resumed_evaluation_off_r1ts_terminal_before_an_update(
+        tmp_path, monkeypatch):
+    """Part 2: a first resumed evaluation whose C is off R1t's terminal by 1e-7 --
+    inside a looser criterion, outside the 1e-8 R1t's zero step had -- stops the
+    run, with its record written, before the next update. The run it asked for
+    resumes R1t's appended checkpoint; it does not start afresh."""
+    from types import SimpleNamespace
+
+    _scripts()
+    import zhao2d_r1v_d_append as rv
+
+    root = pathlib.Path(__file__).resolve().parent.parent / "results"
+    rows = json.loads((root / "zhao2d_r1m_flow_check.json").read_text(encoding="utf-8"))["rows"]
+    q = json.loads((root / "zhao2d_r1q_fineflow_check.json").read_text(encoding="utf-8"))
+    t = json.loads((root / "zhao2d_r1t.json").read_text(encoding="utf-8"))
+    term = t["terminal"]
+
+    flow_mesh, thermal_mesh = SimpleNamespace(num_elems=20800), SimpleNamespace(num_elems=332800)
+    fake = SimpleNamespace(
+        design_mesh=z.build_mesh(z.Zhao2DSpec(), dofs_per_node=3), flow_mesh=flow_mesh,
+        thermal_mesh=thermal_mesh, num_design=5000, nesting={},
+        model_identity=lambda: json.dumps(t["identities"]["model_identity"]), thermal_path="linear",
+        projection_root=lambda x, beta: {"eta": term["projection_eta"], "slope": -4.0e-5,
+                                         "nondegenerate": True},
+        fluid_fraction=lambda x, beta: (term["constraint_g"] + 1.0) * CONFIG.max_fluid_fraction)
+    updates = []
+
+    def fake_run(problem, scale, phases, move_limit, budget, on_iteration, resume):
+        assert problem is fake and budget == 40 and move_limit == 0.1
+        assert [(p.name, p.iterations, p.beta) for p in phases] == [
+            ("r1t-d-vp32-linear", 20, 32.0), ("r1v-d-vp32-linear", 20, 32.0)]
+        assert resume.updates_done == 20 and json.loads(resume.binding)["budget"] == 40
+        assert not _state(resume).is_converged
+        on_iteration({**term, "compliance": term["compliance"] * (1.0 + 1e-7), "iteration": 20,
+                      "phase": "r1v-d-vp32-linear", "seconds": 0.0})
+        updates.append(1)
+        pytest.fail("the run went on past a first resumed evaluation off R1t's terminal")
+
+    monkeypatch.setattr(rv.sys, "argv", ["r1v", "--out", str(tmp_path)])
+    monkeypatch.setattr(rv.faulthandler, "dump_traceback_later", lambda *a, **k: None)
+    monkeypatch.setattr(rv.ff, "Zhao2DFineFlowProblem", lambda *a, **k: fake)
+    monkeypatch.setattr(rv, "mesh_identity", lambda planar: (
+        rows["flow_h2"]["flow_mesh"] if planar is flow_mesh else rows["flow_h"]["flow_mesh"]))
+    monkeypatch.setattr(rv, "thermal_identity", lambda problem: rows["flow_h2"]["thermal_mesh"])
+    monkeypatch.setattr(rv.ff, "common_scale", lambda *a, **k: SimpleNamespace(
+        **{key: q["scale"][key] for key in ("psi_0", "c_0", "source_file", "source_sha256",
+                                            "source_model")}))
+    monkeypatch.setattr(rv.ff, "run", fake_run)
+
+    with pytest.raises(SystemExit, match="CHECKS FAILED at the first resumed evaluation against"):
+        rv.main()
+    assert updates == []
+    record = json.loads((tmp_path / rv.RECORD).read_text(encoding="utf-8"))
+    assert record["stopped"].startswith("the first resumed evaluation against R1t's terminal")
+    anchor = record["resume_anchor"]
+    assert anchor["reproduced"] is False
+    assert anchor["compliance_relative"] == pytest.approx(1e-7, rel=1e-6)
+    assert record["append"]["is_converged"] == [True, False]
+    assert [c["stage"] for c in record["checkpoints"]] == [
+        "inputs", "the model and the common scale", "the append",
+        "the first resumed evaluation's map", "the first resumed evaluation against R1t's terminal"]
+    assert not (tmp_path / rv.FIELDS).exists()
+
+
+def test_the_lowest_design_by_weight_reproduces_the_reviews_intervals():
+    """The review of 7786ce7 computed, independently, which of the six D designs
+    has the lowest J(w); the helper R1v reports with gives the same intervals."""
+    _scripts()
+    import zhao2d_r1v_d_append as rv
+
+    root = pathlib.Path(__file__).resolve().parent.parent / "results"
+
+    def cell(name, key):
+        return json.loads((root / name).read_text(encoding="utf-8"))["cells"][key]
+
+    cells = {"R1l": cell("zhao2d_r1m_flow_check.json", "pilot/flow_h2"),
+             "R1n": cell("zhao2d_r1n_beta32.json", "new/check"),
+             "R1o": cell("zhao2d_r1o.json", "new/check"),
+             "R1r": cell("zhao2d_r1r.json", "new/check"),
+             "R1t": cell("zhao2d_r1t.json", "new/check"),
+             "R1u": cell("zhao2d_r1u.json", "filled/check")}
+    scale = json.loads((root / "zhao2d_r1q_fineflow_check.json").read_text(encoding="utf-8"))["scale"]
+    points = {n: (c["psi"] / scale["psi_0"], c["compliance"] / scale["c_0"]) for n, c in cells.items()}
+
+    def shape(intervals):
+        return [(i["lowest"], i["to"]) for i in intervals]
+
+    got = shape(rv.lowest_by_weight(points))
+    assert [n for n, _ in got] == ["R1r", "R1t", "R1l"]
+    assert got[0][1] == pytest.approx(0.08875251184772005, rel=1e-9)
+    assert got[1][1] == pytest.approx(0.7578506680587201, rel=1e-9)
+    single = shape(rv.lowest_by_weight({n: p for n, p in points.items() if n != "R1t"}))
+    assert [n for n, _ in single] == ["R1r", "R1u", "R1l"]
+    assert single[0][1] == pytest.approx(0.1746722078819371, rel=1e-9)
+    assert single[1][1] == pytest.approx(0.7565935596329959, rel=1e-9)
+
+
 def test_r1t_stops_at_a_failed_zero_step_before_any_update(tmp_path, monkeypatch):
     """A zero step whose C is off R1r's terminal by 1e-7 -- inside a looser
     criterion, outside R1s's 1e-8 across the thermal paths -- stops the run,

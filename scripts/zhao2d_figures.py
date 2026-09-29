@@ -3,8 +3,8 @@
 Nothing is solved or re-optimised here: every field and number is read from
 results/ and drawn, so a figure shows exactly the state the records describe
 -- including that the R1d run is budget-limited and not converged, and that the
-thermal compliance still moves with the thermal mesh. Twelve figures, written to
-docs/figures/:
+thermal compliance still moves with the thermal mesh. Thirteen figures, written
+to docs/figures/:
 
   zhao2d_r1d_fields.png        the R1d design in the layout of Zhao Figs. 8 and
                                11 (density, velocity, temperature on the half
@@ -43,6 +43,9 @@ docs/figures/:
   zhao2d_r1t.png               R1t: twenty more updates on D from R1r's design on
                                the linear thermal path, after R1r's own, the new
                                binary design, and the five binary designs on D
+  zhao2d_r1v.png               R1v: R1t's run continued with MMA's history, after
+                               R1r's and R1t's updates, the new binary design, and
+                               the binary designs on D
 
     python scripts/zhao2d_figures.py [--results results] [--out docs/figures]
 """
@@ -1452,6 +1455,196 @@ def r1t_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
     return path
 
 
+def mark_isolated(ax, grid: np.ndarray, ye: np.ndarray, h: float, text: str) -> int:
+    """Circle every fluid component but the largest, by shared edges; returns how many."""
+    labels, _ = ndimage.label(np.nan_to_num(grid) > 0.5)  # 4-connectivity: shared edges
+    sizes = np.bincount(labels.ravel())[1:]
+    small = np.flatnonzero(sizes < sizes.max()) + 1
+    for k, lab in enumerate(small):
+        i, j = np.argwhere(labels == lab).mean(axis=0)
+        xc, yc = (i + 0.5) * h, ye[0] + (j + 0.5) * h
+        ax.plot([xc], [yc], "o", ms=11, mfc="none", mec=SURFACE, mew=2.2, zorder=4)
+        if k == 0:
+            ax.annotate(text, xy=(xc, yc), xytext=(xc - 0.0010, yc + 0.0023), fontsize=7.5,
+                        color=INK, ha="center", zorder=5,
+                        bbox=dict(boxstyle="round,pad=0.2", fc=SURFACE, ec="none"),
+                        arrowprops=dict(arrowstyle="-", color=INK2, lw=0.8))
+    return len(small)
+
+
+def r1v_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
+    rec = json.loads((res / "zhao2d_r1v.json").read_text(encoding="utf-8"))
+    rt = json.loads((res / "zhao2d_r1t.json").read_text(encoding="utf-8"))
+    rr = json.loads((res / "zhao2d_r1r.json").read_text(encoding="utf-8"))
+    ft = np.load(res / "zhao2d_r1t_fields.npz")
+    fv = np.load(res / "zhao2d_r1v_fields.npz")
+    h = g["element_size"]
+    ex, term, hist = rec["export"], rec["terminal"], rec["history"]
+    new = rec["cells"].get("new/check")
+    scale = rec["scale"]
+
+    fig = plt.figure(figsize=(11.0, 11.0))
+    top = fig.add_gridspec(1, 3, left=0.03, right=0.95, top=0.865, bottom=0.425, wspace=0.14)
+    low = fig.add_gridspec(1, 2, left=0.07, right=0.97, top=0.295, bottom=0.135, wspace=0.32)
+
+    panels = [
+        (ft["solid_fraction_binary"], ft["design_elem_centres"], "(a) R1t's qualified binary design",
+         "the numerical first before R1v; R1v resumes from\nR1t's raw continuous x and MMA's state"),
+        (fv["solid_fraction"], fv["design_elem_centres"], "(b) After R1v, continuous (β = 32)",
+         f"{len(hist)} more updates on D, MMA's history kept\ngrey {term['grey_fraction']:.1%}; "
+         f"J = {term['J_common_scale']:.4f} on D"),
+    ]
+    if "solid_fraction_binary" in fv.files:
+        panels.append((fv["solid_fraction_binary"], fv["design_elem_centres"],
+                       "(c) After R1v, qualified binary" if ex.get("qualified")
+                       else "(c) After R1v, exported, not qualified",
+                       f"t = {ex['t']:.4f}, {ex['fluid_cells']} fluid cells, "
+                       f"{'connected' if ex['connected'] else 'not connected'}\n"
+                       f"{ex['cells_differing_from']['r1t']} cells differ from (a)"))
+    for k, (s, centres, title, text) in enumerate(panels):
+        ax = fig.add_subplot(top[0, k])
+        field_axes(ax, g, title)
+        xe, ye, grid = density_grid(s, centres, h, g)
+        m = ax.pcolormesh(xe, ye, np.ma.masked_invalid(grid).T, cmap=DENSITY, vmin=0, vmax=1,
+                          shading="flat")
+        colorbar(fig, m, ax, "γ  (0 solid, 1 fluid)")
+        note(ax, text, y=-0.165)
+        if k == 0:
+            mark_isolated(ax, grid, ye, h, "isolated by shared edges\n(R1u fills it)")
+        elif k == 2:
+            mark_isolated(ax, grid, ye, h, "isolated by shared edges\n(reported, not filled)")
+
+    # R1r's updates, R1t's, then R1v's: MMA reinitialised at 20, carried over at 40
+    n_r = len(rr["history"])
+    runs = []
+    for run, offset in ((rr, 0), (rt, n_r), (rec, n_r)):
+        recs = run["history"] + [run["terminal"]]
+        runs.append((offset + np.array([r["iteration"] for r in recs]),
+                     np.array([r["J_common_scale"] for r in recs]),
+                     np.array([r["constraint_g"] for r in recs])))
+    (it_r, j_r, g_r), (it_t, j_t, g_t), (it_v, j_v, g_v) = runs
+    carried = n_r + rec["history"][0]["iteration"]
+    sub = low[0, 0].subgridspec(2, 1, height_ratios=[3, 1.2], hspace=0.12)
+    ax = fig.add_subplot(sub[0])
+    ax.grid(axis="y", color=GRID, lw=0.6)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    ax.plot(it_r, j_r, color=MUTED, lw=1.4)
+    ax.plot(it_t, j_t, color=INK2, lw=1.4)
+    ax.plot(it_v, j_v, color=INK, lw=1.6)
+    ax.plot([it_v[-1]], [j_v[-1]], "o", color=INK, ms=5)
+    for x in (n_r, carried):
+        ax.axvline(x, color=AXIS, lw=0.8, ls=(0, (3, 2)))
+    for x, text in ((n_r / 2, "R1r"), ((n_r + carried) / 2, "R1t"), ((carried + it_v[-1]) / 2, "R1v")):
+        ax.text(x, 0.97, text, transform=ax.get_xaxis_transform(), ha="center", va="top",
+                fontsize=8, color=INK2)
+    peak = int(np.argmax(j_t))
+    ax.annotate("MMA reinitialised:\nJ jumps", xy=(it_t[peak], j_t[peak]),
+                xytext=(it_t[peak] + 2.2, j_t[peak] - 0.22 * (j_t[peak] - j_v.min())), fontsize=7.5,
+                color=MUTED, ha="left", va="center",
+                arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.8))
+    # R1v's updates are small on this scale: zoomed, with R1t's last ones, in an inset
+    zoom = ax.inset_axes([0.63, 0.24, 0.35, 0.50])
+    keep = it_t >= carried - 4
+    zoom.plot(it_t[keep], j_t[keep], color=INK2, lw=1.2)
+    zoom.plot(it_v, j_v, color=INK, lw=1.4)
+    zoom.plot([it_v[-1]], [j_v[-1]], "o", color=INK, ms=4)
+    zoom.axvline(carried, color=AXIS, lw=0.8, ls=(0, (3, 2)))
+    zoom.set_xlim(carried - 4, it_v[-1])
+    zoom.yaxis.tick_right()
+    zoom.tick_params(labelsize=6.5, length=2)
+    zoom.grid(axis="y", color=GRID, lw=0.5)
+    zoom.set_title("MMA's history carried over: no jump", fontsize=7, color=MUTED, pad=2)
+    for side in ("top", "left"):
+        zoom.spines[side].set_visible(False)
+    ax.set_xlim(0, it_v[-1])
+    ax.set_ylabel("continuous J on D")
+    ax.set_xticks(range(0, int(it_v[-1]) + 1, 10))
+    ax.set_xticklabels([])
+    ax.set_title(f"(d) R1r's 20 updates, R1t's 20, then R1v's {len(hist)}, on D at β = 32",
+                 loc="left", fontsize=9.5)
+    ax2 = fig.add_subplot(sub[1])
+    ax2.grid(axis="y", color=GRID, lw=0.6)
+    for side in ("top", "right"):
+        ax2.spines[side].set_visible(False)
+    ax2.axhline(0.0, color=MUTED, lw=0.8, ls=(0, (3, 2)))
+    for x in (n_r, carried):
+        ax2.axvline(x, color=AXIS, lw=0.8, ls=(0, (3, 2)))
+    ax2.plot(it_r, g_r, color=MUTED, lw=1.2)
+    ax2.plot(it_t, g_t, color=INK2, lw=1.2)
+    ax2.plot(it_v, g_v, color=INK, lw=1.4)
+    ax2.set_xlim(0, it_v[-1])
+    ax2.set_xticks(range(0, int(it_v[-1]) + 1, 10))
+    ax2.set_ylabel("volume g")
+    ax2.set_xlabel("MMA update, counted across the three runs (each terminal re-evaluated)")
+
+    # the qualified binary designs on D: Psi against C, with J's level lines
+    ax = fig.add_subplot(low[0, 1])
+    points = [(name, rec["candidates"][name], colour, marker, face, label)
+              for name, colour, marker, face, label in (
+                  ("pilot", SERIES[0], "o", None, "the R1l pilot"),
+                  ("r1n", SERIES[1], "o", None, "R1n's design"),
+                  ("r1o", SERIES[2], "o", None, "R1o's design"),
+                  ("r1r", INK, "D", None, "R1r's design"),
+                  ("r1t", INK2, "^", None, "R1t's design"),
+                  ("r1u", INK2, "v", SURFACE, "R1t's, filled (R1u)"))]
+    if new is not None:
+        points.append(("new", new, INK, "s", SURFACE, "after R1v"))
+    psi = np.array([p[1]["psi"] for p in points])
+    comp = np.array([p[1]["compliance"] for p in points])
+    w = rec["contract"]["weight"]
+    span = np.array([psi.min(), psi.max()])
+    grid_psi = np.linspace(span[0] - 0.15 * np.ptp(span), span[1] + 0.15 * np.ptp(span), 2)
+    for name, cell, colour, marker, face, label in points:
+        if name in ("r1t", "new"):
+            ax.plot(grid_psi, (cell["J"] - w * grid_psi / scale["psi_0"]) * scale["c_0"] / (1 - w),
+                    color=colour, lw=0.8, ls=(0, (3, 2)) if name == "r1t" else (0, (1, 1.5)),
+                    zorder=1)
+        ax.plot([cell["psi"]], [cell["compliance"]], marker, color=colour,
+                mfc=face if face else colour, mew=1.6, ms=8, zorder=3,
+                label=f"{label}: J = {cell['J']:.4f}")
+    ax.set_xlim(grid_psi[0], grid_psi[1])
+    pad = 0.15 * np.ptp(comp)
+    ax.set_ylim(comp.min() - pad, comp.max() + pad)
+    ax.grid(color=GRID, lw=0.6)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    ax.set_xlabel("dissipated power Ψ")
+    ax.set_ylabel("thermal compliance C")
+    ax.set_title("(e) The qualified binary designs on D", loc="left", fontsize=9.5)
+    ax.text(0.98, 0.95, "equal J through R1t's design (dashed)\nand the new one (dotted);\n"
+            "R1t's and R1u's nearly coincide",
+            transform=ax.transAxes, ha="right", va="top", fontsize=7.5, color=MUTED)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.42, -0.21), ncol=3, frameon=False,
+              fontsize=7.5, columnspacing=1.2, handletextpad=0.4)
+
+    opt = rec["responses"]["optimisation"]
+    if new is not None:
+        vs, vu, vr = rec["against"]["r1t"], rec["against"]["r1u"], rec["against"]["r1r"]
+        head = (f"The new qualified binary design has J {vs['J']:+.2%} against R1t's on D "
+                f"(Ψ {vs['psi']:+.2%}, C {vs['compliance']:+.2%}, T_max {vs['T_max']:+.2%}); "
+                f"against R1u's {vu['J']:+.2%}, against R1r's {vr['J']:+.2%}."
+                f"\nThe continuous J on D changed {opt['J']:+.3%} over R1v's "
+                f"{len(hist)} updates; the export gap on D is "
+                f"{rec['responses']['export_gap']['J']:+.1%}. ")
+    else:
+        head = (f"The continuous J on D changed {opt['J']:+.3%}; no qualified binary design was "
+                f"analysed: {rec.get('stopped', '')}.\n")
+    fig.suptitle("R1v — R1t's run continued on D, MMA's history carried over (20 → "
+                 f"{rec['stop']['mma_updates_in_all']} updates)",
+                 x=0.02, ha="left", fontsize=11.5, color=INK, y=0.985)
+    fig.text(0.02, 0.958, f"{head}Stop: {rec['stop']['stop_reason']}, not converged.\nThe first "
+             "resumed evaluation reproduced R1t's terminal; every state passed the 10⁻⁸ gate.",
+             fontsize=8.5, color=INK2, ha="left", va="top", linespacing=1.4)
+    footer(fig, "Drawn from results/zhao2d_r1v.json, zhao2d_r1v_fields.npz, zhao2d_r1t.json, "
+           "zhao2d_r1t_fields.npz and zhao2d_r1r.json — scripts/zhao2d_figures.py; no state is "
+           "re-solved.")
+    path = out / "zhao2d_r1v.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--results", type=pathlib.Path, default=REPO / "results")
@@ -1469,7 +1662,8 @@ def main() -> None:
              "zhao2d_r1m_flow_check.json", "zhao2d_r1m_fields.npz",
              "zhao2d_r1n_beta32.json", "zhao2d_r1n_fields.npz", "zhao2d_r1o.json",
              "zhao2d_r1o_fields.npz", "zhao2d_r1p_bridge.json", "zhao2d_r1r.json",
-             "zhao2d_r1r_fields.npz", "zhao2d_r1t.json", "zhao2d_r1t_fields.npz"]
+             "zhao2d_r1r_fields.npz", "zhao2d_r1t.json", "zhao2d_r1t_fields.npz",
+             "zhao2d_r1v.json", "zhao2d_r1v_fields.npz"]
     for n in names:
         print(f"read results/{n}  sha256 {sha(res / n)}")
     sources = [f"results/{n}" for n in names]
@@ -1478,7 +1672,8 @@ def main() -> None:
                  terminal_figure(res, args.out, g), r1l_figure(res, args.out, g),
                  r1m_figure(res, args.out, g), r1n_figure(res, args.out, g),
                  r1o_figure(res, args.out, g), r1p_figure(res, args.out),
-                 r1r_figure(res, args.out, g), r1t_figure(res, args.out, g)):
+                 r1r_figure(res, args.out, g), r1t_figure(res, args.out, g),
+                 r1v_figure(res, args.out, g)):
         print(f"wrote {path.relative_to(REPO) if path.is_relative_to(REPO) else path}")
 
 
