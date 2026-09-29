@@ -1,0 +1,347 @@
+{
+  "note": "written before any solve: each iterate's binary design, and whether it is reused (a candidate's D state) or solved once; a label is the group's earliest iterate, the identity its digest and the model",
+  "model_identity": {
+    "flow_mesh": {
+      "elements": 20800,
+      "nodes": 21141,
+      "node_coords_sha256": "ffd2cf1dea997a7954babfe065412d1f479d4c07f1830cef61ecb880872dfdf3",
+      "geometry_sha256": "e99cb7f1c2ed5df5132d6038ab89b48efcebf6a1727a4328afa123d87b3fac87",
+      "region_sha256": "86c9944e74120dcb4d4572c7e5d9bd34e77abef68fe329d82d9b10ad0536b3ef"
+    },
+    "thermal_mesh": {
+      "elements": 332800,
+      "nodes": 334161,
+      "node_coords_sha256": "f35779ddfc7d3796a9dfc37d0ca782bcab82836ceb18daf58e5c7840644d5c7d",
+      "geometry_sha256": "2b268625dd3e60bab7de753053f9700387791e7208d7a1307f132ed71bfda2cd",
+      "region_sha256": "c146be832d1330d05f7aae7c848851b1023b5aad28c3800d917011a71c6369b2",
+      "q_source_sha256": "6025a2e1abb708e3cc93cbd57876916ec9a923fca2b89428000e4a158f4f69bc",
+      "dirichlet_sha256": "ac85ae87e3de6589bb7b99df57ee4d7a99438d63f65581ec7788278a15883f6c",
+      "quadrature": 3
+    },
+    "thermal_path": "linear",
+    "alpha_max": 10000000.0
+  },
+  "iterates": [
+    {
+      "iteration": 20,
+      "sha256": "04c583c68ab1b1ec3a270813d4fcbdb1d8fe98b1469d9e73ed8fe6ae3b9f5b99",
+      "label": 20,
+      "action": "reuse",
+      "reuse_of": "r1t"
+    },
+    {
+      "iteration": 21,
+      "sha256": "a1134eb5091902921b861eb000e646e66a2c2cfa2f5ee5592425585878aa8c59",
+      "label": 21,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 22,
+      "sha256": "f890c50b0ab6411413903a908d3337201e63506d36da4b742b22e83dcee322d4",
+      "label": 22,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 23,
+      "sha256": "43fbf1afe8f2427f54fad1379816aabb50a0afc59795fe1cbefaa1ea4bcce5e3",
+      "label": 23,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 24,
+      "sha256": "1e9a5743a2920d649e831e005a6aad27f098c22f071eabd25c8562b88942d860",
+      "label": 24,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 25,
+      "sha256": "2fac13ffdb47ad44995965e51ff3b1cb35560128eace3554d1d4d4da9526050d",
+      "label": 25,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 26,
+      "sha256": "716775a9db67bf9dc6142efbe92cbd64ed91a39ad03a4c288614feef09ef32c8",
+      "label": 26,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 27,
+      "sha256": "a084393b20469844592ebbfda5a37b158acf36c210323a2b0735baa99a8bd608",
+      "label": 27,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 28,
+      "sha256": "f4ea47a097ac41062709e6a487c880eb31e1d2ceb407bbd11c6a49c041aaa3d7",
+      "label": 28,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 29,
+      "sha256": "a084393b20469844592ebbfda5a37b158acf36c210323a2b0735baa99a8bd608",
+      "label": 27,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 30,
+      "sha256": "654c0c98aa7697805948f66b39c64c5c3643ecdc72c4d8e58bc85538fe581003",
+      "label": 30,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 31,
+      "sha256": "76188852e089b3810006ae8b0e3a0797374e469ba146b14c2527f283a4dd27b3",
+      "label": 31,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 32,
+      "sha256": "9a582d67cc88133a5614eed42cced0b42f1f24457e0bf1b3c841d93e8615a9ad",
+      "label": 32,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 33,
+      "sha256": "b6c724af38067253883da8dc8d66630a17f01b465ca63ffed608d0d3ceb94799",
+      "label": 33,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 34,
+      "sha256": "b3e064731e2b072f2d624c37d8f6908e55e6281b42ee142244fbe010bf19234a",
+      "label": 34,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 35,
+      "sha256": "9d1075861646bf1336a02d40d44005ca52ef11d4a9380b4a9d6b7c412545c645",
+      "label": 35,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 36,
+      "sha256": "98d7e4d27bc6f6738037dbafa83d3d525d46f3c8fb98cc2b824be5ecaaaf33a2",
+      "label": 36,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 37,
+      "sha256": "7b787b1f0463c94e496aa15cc7cd8fbfb49ad3559f7b797997c735dcae26f675",
+      "label": 37,
+      "action": "reuse",
+      "reuse_of": "r1v"
+    },
+    {
+      "iteration": 38,
+      "sha256": "dedf4c2a4498a6c8b79b6ee02683d44e5d779857869e64422889435207a49261",
+      "label": 38,
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "iteration": 39,
+      "sha256": "7b787b1f0463c94e496aa15cc7cd8fbfb49ad3559f7b797997c735dcae26f675",
+      "label": 37,
+      "action": "reuse",
+      "reuse_of": "r1v"
+    },
+    {
+      "iteration": 40,
+      "sha256": "7b787b1f0463c94e496aa15cc7cd8fbfb49ad3559f7b797997c735dcae26f675",
+      "label": 37,
+      "action": "reuse",
+      "reuse_of": "r1v"
+    }
+  ],
+  "groups": [
+    {
+      "label": 20,
+      "iterations": [
+        20
+      ],
+      "sha256": "04c583c68ab1b1ec3a270813d4fcbdb1d8fe98b1469d9e73ed8fe6ae3b9f5b99",
+      "action": "reuse",
+      "reuse_of": "r1t"
+    },
+    {
+      "label": 21,
+      "iterations": [
+        21
+      ],
+      "sha256": "a1134eb5091902921b861eb000e646e66a2c2cfa2f5ee5592425585878aa8c59",
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "label": 22,
+      "iterations": [
+        22
+      ],
+      "sha256": "f890c50b0ab6411413903a908d3337201e63506d36da4b742b22e83dcee322d4",
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "label": 23,
+      "iterations": [
+        23
+      ],
+      "sha256": "43fbf1afe8f2427f54fad1379816aabb50a0afc59795fe1cbefaa1ea4bcce5e3",
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "label": 24,
+      "iterations": [
+        24
+      ],
+      "sha256": "1e9a5743a2920d649e831e005a6aad27f098c22f071eabd25c8562b88942d860",
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "label": 25,
+      "iterations": [
+        25
+      ],
+      "sha256": "2fac13ffdb47ad44995965e51ff3b1cb35560128eace3554d1d4d4da9526050d",
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "label": 26,
+      "iterations": [
+        26
+      ],
+      "sha256": "716775a9db67bf9dc6142efbe92cbd64ed91a39ad03a4c288614feef09ef32c8",
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "label": 27,
+      "iterations": [
+        27,
+        29
+      ],
+      "sha256": "a084393b20469844592ebbfda5a37b158acf36c210323a2b0735baa99a8bd608",
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "label": 28,
+      "iterations": [
+        28
+      ],
+      "sha256": "f4ea47a097ac41062709e6a487c880eb31e1d2ceb407bbd11c6a49c041aaa3d7",
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "label": 30,
+      "iterations": [
+        30
+      ],
+      "sha256": "654c0c98aa7697805948f66b39c64c5c3643ecdc72c4d8e58bc85538fe581003",
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "label": 31,
+      "iterations": [
+        31
+      ],
+      "sha256": "76188852e089b3810006ae8b0e3a0797374e469ba146b14c2527f283a4dd27b3",
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "label": 32,
+      "iterations": [
+        32
+      ],
+      "sha256": "9a582d67cc88133a5614eed42cced0b42f1f24457e0bf1b3c841d93e8615a9ad",
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "label": 33,
+      "iterations": [
+        33
+      ],
+      "sha256": "b6c724af38067253883da8dc8d66630a17f01b465ca63ffed608d0d3ceb94799",
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "label": 34,
+      "iterations": [
+        34
+      ],
+      "sha256": "b3e064731e2b072f2d624c37d8f6908e55e6281b42ee142244fbe010bf19234a",
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "label": 35,
+      "iterations": [
+        35
+      ],
+      "sha256": "9d1075861646bf1336a02d40d44005ca52ef11d4a9380b4a9d6b7c412545c645",
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "label": 36,
+      "iterations": [
+        36
+      ],
+      "sha256": "98d7e4d27bc6f6738037dbafa83d3d525d46f3c8fb98cc2b824be5ecaaaf33a2",
+      "action": "solve",
+      "reuse_of": null
+    },
+    {
+      "label": 37,
+      "iterations": [
+        37,
+        39,
+        40
+      ],
+      "sha256": "7b787b1f0463c94e496aa15cc7cd8fbfb49ad3559f7b797997c735dcae26f675",
+      "action": "reuse",
+      "reuse_of": "r1v"
+    },
+    {
+      "label": 38,
+      "iterations": [
+        38
+      ],
+      "sha256": "dedf4c2a4498a6c8b79b6ee02683d44e5d779857869e64422889435207a49261",
+      "action": "solve",
+      "reuse_of": null
+    }
+  ],
+  "counts": {
+    "iterates": 21,
+    "distinct": 18,
+    "reuse": 2,
+    "solve": 16,
+    "not_qualified": 0
+  }
+}
