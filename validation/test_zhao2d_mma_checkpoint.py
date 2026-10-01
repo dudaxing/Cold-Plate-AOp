@@ -453,12 +453,21 @@ def test_the_locked_source_matches_its_bytes_or_its_text_up_to_line_endings(tmp_
 def test_r1v_migrates_r1ts_checkpoint_and_leaves_r1ts_files_alone(tmp_path, monkeypatch):
     """The real migration: R1t's record and fields, the design side on h, no solve.
 
-    Its last stage also needs the reference file's recorded bytes, which on an
-    LF checkout have to be restored first (as for R1u's test)."""
+    Its last stage also needs the reference file's recorded bytes, which
+    .gitattributes checks out as CRLF (see "Reproducing R1u's test on an LF
+    checkout"). The replay is of R1t's sources: once one of the files it locks
+    has changed, it is skipped rather than failed, since the migration is closed
+    and its output is re-checked by hash where it is used (R1v part 2)."""
     _scripts()
     import zhao2d_r1v_migrate as mv
 
     root = pathlib.Path(__file__).resolve().parent.parent / "results"
+    recorded = json.loads((root / "zhao2d_r1t.json").read_text(encoding="utf-8"))["provenance"][
+        "source_sha256"]
+    changed = [n for n in mv.LOCKED_SOURCE
+               if n not in recorded or mv.locked_match(mv.REPO / n, recorded[n]) is None]
+    if changed:
+        pytest.skip(f"the source R1t ran with has changed since: {changed}")
     before = {n: hashlib.sha256((root / n).read_bytes()).hexdigest() for n in mv.INPUTS}
     monkeypatch.setattr(mv.sys, "argv", ["r1v", "--out", str(tmp_path)])
     mv.main()

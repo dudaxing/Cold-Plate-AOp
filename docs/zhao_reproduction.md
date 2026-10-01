@@ -4416,9 +4416,15 @@ conflict:
   before solving anything, and so does R1u's negative test.
 - The review restored that one file to the recorded CRLF bytes, and checked
   its sha256 and JSON content. The same test then passed.
-- To replay on such a checkout, do the same: check out that file with CRLF
-  line ends (for example `git config core.autocrlf true` before checking out)
-  and compare its sha256 with `scale.source_sha256` in the record.
+- Since 1 October 2026, `.gitattributes` checks this file and
+  `tfopus/zhao2d_reference.json` out with CRLF line ends on every checkout, so
+  a fresh clone gets the recorded bytes. In a clone made before that, delete
+  the file, check it out again (`git checkout --
+  tfopus/zhao2d_reference_dual_r4q3_v1.json`) and compare its sha256 with
+  `scale.source_sha256` in the record.
+- The advice first given here, `git config core.autocrlf true` before
+  checking out, does not work: the `eol=lf` attribute overrides it. Found
+  while reviewing the code on 1 October.
 - The hash gate is not relaxed.
 
 ## R1v: the contract (as proposed in the review of 7786ce7; both parts authorised and run)
@@ -4701,8 +4707,8 @@ committed.
     endings, and records which way each matched. On this checkout all nine
     matched byte for byte.
   - The dry stage needs the reference file's recorded CRLF bytes, as R1u's
-    test does, because the scale's binding names them. Restore them as
-    described under R1u.
+    test does, because the scale's binding names them. A checkout gets them
+    since 1 October; for an older clone, see R1u.
 
 The user then confirmed part 2, on the local CPU.
 
@@ -5314,9 +5320,9 @@ only in part; see "Before and around the run".
     an earlier run's fields and manifest are removed and the record is the
     new run's. (The refusal of an earlier run's files without
     `--overwrite` is in the script but not tested.)
-  - **On an LF checkout,** the manifest test, like a re-run of the script,
-    needs the development reference restored to its recorded CRLF bytes
-    first: the inputs checkpoint compares its hash with R1q's. See
+  - The manifest test, like a re-run of the script, needs the development
+    reference's recorded CRLF bytes: the inputs checkpoint compares its hash
+    with R1q's. A checkout gets them since 1 October; for an older clone, see
     "Reproducing R1u's test on an LF checkout".
 
 **Before and around the run.** The first three items are from the
@@ -5797,14 +5803,14 @@ pytest validation/test_zhao2d.py
 ```bash
 python scripts/zhao2d_freeze_reference.py --write   # freezes Psi_0 and C_0
 python scripts/zhao2d_gradient_check.py             # Psi, C, g and J against finite differences
-python scripts/zhao2d_optimise.py --coarse --budget 25   # R1c mechanism check
-python scripts/zhao2d_optimise.py --budget 300           # R1d, the main case (~80 min)
+python scripts/zhao2d_optimise.py --coarse --budget 25 --out DIR   # R1c mechanism check
+python scripts/zhao2d_optimise.py --budget 300 --out DIR           # R1d, the main case (~80 min)
 python scripts/zhao2d_binary_diagnostic.py               # R1d thresholding and connectivity
-python scripts/zhao2d_refine_check.py                    # R1e, h vs h/2 on a fixed design
-python scripts/zhao2d_thermal_separation.py              # R1f, analyses A/B/C/D
-python scripts/zhao2d_thermal_separation.py --binary     # R1f binary controls A', C'
-python scripts/zhao2d_advection_benchmark.py --pe 1000   # R1f accuracy reference
-python scripts/zhao2d_dual_check.py                      # R1g, h / h/2 / h/4 on one flow
+python scripts/zhao2d_refine_check.py --out DIR          # R1e, h vs h/2 on a fixed design
+python scripts/zhao2d_thermal_separation.py --out DIR    # R1f, analyses A/B/C/D
+python scripts/zhao2d_thermal_separation.py --binary --out DIR   # R1f binary controls A', C'
+python scripts/zhao2d_advection_benchmark.py --pe 1000 --out DIR # R1f accuracy reference
+python scripts/zhao2d_dual_check.py --out DIR            # R1g, h / h/2 / h/4 on one flow
 python scripts/zhao2d_gradient_check.py --thermal-refinement 2   # R1g gradients
 python scripts/zhao2d_flow_mesh_check.py --out DIR       # R1h rerun; keeps results/ unless --overwrite
 python scripts/zhao2d_thermal_h8_check.py --out DIR      # R1i, h_T = h/8 on the saved coarse flow
@@ -5826,9 +5832,16 @@ python scripts/zhao2d_r1t_d_continue.py --out DIR        # R1t: 20 more updates 
 python scripts/zhao2d_r1u_fill_check.py --out DIR        # R1u: R1t's binary design with its isolated cell filled, 1F + 1T on D (~5 min)
 python scripts/zhao2d_r1v_migrate.py --out DIR           # R1v part 1: R1t's MMA checkpoint re-signed, a dry append; no solves (~10 s)
 python scripts/zhao2d_r1v_d_append.py --out DIR          # R1v part 2: 20 updates appended to R1t's run on D, MMA's history kept (~50 min if the machine stays awake)
-python scripts/zhao2d_r1w_pool_screen.py --out DIR       # R1w: the 18 binary designs R1v's saved iterates export, on D; 16 solved (1F + 1T each), ranked once; no MMA (~35 min; on an LF checkout, restore the reference's CRLF bytes first, see R1u)
+python scripts/zhao2d_r1w_pool_screen.py --out DIR       # R1w: the 18 binary designs R1v's saved iterates export, on D; 16 solved (1F + 1T each), ranked once; no MMA (~35 min)
 python scripts/zhao2d_figures.py                         # docs/figures/ from the saved results, no solves
 ```
+
+The R1c–R1g scripts write into `--out`, whose default is `results/`, the cited
+records, and they do not refuse to overwrite. R1e–R1g also read R1d's design
+from `--out`: replay them in order into one `DIR`, or copy
+`results/zhao2d_r1d_main.json` and `results/zhao2d_r1d_main_fields.npz` into
+`DIR` first. The scripts from R1h on refuse to overwrite a record without
+`--overwrite`.
 
 `zhao2d_short_run.py` is retired to a pointer: it had its own optimisation loop
 with the terminal-pairing defect, and both entry points now share

@@ -1,2 +1,8 @@
 * text=auto eol=lf
 
+# The two Zhao reference files are hashed byte for byte: the records of R1h on
+# check the hash, and R1t's and R1v's MMA checkpoints carry it in their binding.
+# They were written on Windows, so the recorded hashes are of CRLF bytes. Check
+# them out that way everywhere, or a fresh clone refuses every D-layer stage.
+tfopus/zhao2d_reference.json text eol=crlf
+tfopus/zhao2d_reference_dual_r4q3_v1.json text eol=crlf

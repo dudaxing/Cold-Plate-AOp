@@ -444,11 +444,11 @@ results (`validation/test_callback_solve.py`).
 ```bash
 python scripts/zhao2d_reference_study.py --provenance   # the option sweep
 python scripts/zhao2d_swap_test.py                      # the transposition test
-python scripts/zhao2d_optimise.py --budget 300          # the 2D optimisation run
-python scripts/zhao2d_refine_check.py                   # fixed-design mesh check
-python scripts/zhao2d_thermal_separation.py             # what moves the compliance
-python scripts/zhao2d_advection_benchmark.py --pe 1000  # analytic accuracy reference
-python scripts/zhao2d_dual_check.py                     # dual-mesh thermal model, h/2 vs h/4
+python scripts/zhao2d_optimise.py --budget 300 --out DIR          # the 2D optimisation run
+python scripts/zhao2d_refine_check.py --out DIR                   # fixed-design mesh check
+python scripts/zhao2d_thermal_separation.py --out DIR             # what moves the compliance
+python scripts/zhao2d_advection_benchmark.py --pe 1000 --out DIR  # analytic accuracy reference
+python scripts/zhao2d_dual_check.py --out DIR                     # dual-mesh thermal model, h/2 vs h/4
 python scripts/zhao2d_flow_mesh_check.py --out DIR      # flow h vs h/2 on common thermal meshes
 python scripts/zhao2d_thermal_h8_check.py --out DIR     # one more thermal level, h_T = h/8
 python scripts/zhao2d_freeze_dual_reference.py --write  # the development model's own reference
@@ -465,6 +465,12 @@ python scripts/zhao2d_r1p_bridge.py --out DIR           # R1n's and R1o's design
 python scripts/zhao2d_r1q_fineflow_check.py --out DIR   # the check model's gradient in the coarse design variables
 python scripts/zhao2d_figures.py                        # docs/figures/, drawn from the saved results
 ```
+
+The five lines from the optimisation run to the dual-mesh check write into
+`--out` (default `results/`, the cited records) without refusing to
+overwrite, and the mesh check, the compliance study and the dual-mesh check
+read the optimisation run's design from `--out`: run them in order into one
+`DIR`.
 
 `Zhao2DSpec.provenance()` prints, per field, whether a number comes from the
 paper, is derived, or is a reconstruction choice — plus the list of gaps the
