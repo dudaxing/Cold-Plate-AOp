@@ -12,7 +12,7 @@ governing equations, objective, constraint) is kept.
 | Target | Original parametrisation | Reproduced as | Status |
 |---|---|---|---|
 | Zhou et al., *Appl. Sci.* **16**, 7255 (2026) — conformal cooling | BSOF B-spline offset surfaces | per-surface-column solid fraction swept through the wall | geometry + meshes done here; the work continues in its own repository, Cooling-conformal-AOp |
-| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8, 1.95% with the flow also refined to h/2); one β = 32 stage from it gives a second qualified binary design, 1.86% better again on the development model and 1.56% on the finer check model (lower C, higher Ψ), then the preferred candidate at w = 0.5; 30 more updates at the same β give a third design, 0.58% worse on the development model and 0.48% better on the check model, which now ranks: it is the current lead candidate. The two models' order of those designs flips with the flow mesh, so the check model has been made differentiable in the same design variables, its gradient verified; 20 updates on it from the lead candidate's continuous design give a qualified binary design 2.03% below that candidate's on the check model (lower C, higher Ψ and maximum temperature), generated and ranked on the same model, budget used, not converged; it is now the first choice of the four candidates at w = 0.5 on the check model. A thermal solve by one linear solve, beside upstream's Newton loop, gives the same states, objectives and gradients on the check model at the points tested, to differences of round-off size (R1s); the Newton path stays the default, and the next run may choose the new one explicitly. 20 more updates on the check model on that path, with MMA's state now saved, give a qualified binary design 0.16% below the first choice's (lower Ψ and maximum temperature, C nearly unchanged), with one fluid cell isolated by shared edges; budget used, not converged. It is the numerical first; R1r's stays the choice with no isolated cell. With that cell filled and nothing else, the design is still 0.13% below R1r's (R1u), keeping 83% of the lead; it is now the representative with no isolated cell. A finished run can now be given more budget without reinitialising MMA (on a small mesh, 2 updates with 2 appended equal 4 at once, bit for bit), and R1t's saved MMA state has been re-signed with the current binding, untouched (R1v part 1). Continued for 20 more updates with that history (R1v part 2), the run lowered the continuous J on the check model by another 0.13%, but the qualified binary design exported from its terminal is 1.1% above R1t's there (lower Ψ, higher C) and has the same isolated cell; budget used, not converged. The review of that stage closed it and found that the run's 21 saved designs export to 18 distinct binary designs, 16 of them never evaluated, so the terminal's result does not show that none beats R1t's; R1t's stays the numerical first among the evaluated designs. Next, R1w, not yet authorised; its plan was accepted by the review of R1v's close-out (45fa8b0): evaluate those 16 on the check model (at most 16 flow and 16 thermal solves, no optimisation) and rank the whole set once |
+| Zhao et al., *Appl. Therm. Eng.* **291** (2026) 130088 — cold plate / heat sink | CBS closed B-spline features | per-element solid fraction | 2D optimisation run; dual-mesh thermal model built and verified; flow-mesh effect measured at fixed design; thermal step still shrinking at h/8, production mesh not yet chosen; development model (flow h, thermal h/4) wired into the driver with its own reference and a checked gradient; a 30-update warm start on it lowers J by 10.9% (12.5% on h/8), budget-limited and not converged, and direct thresholding at s = 0.5 does not keep the gain in a volume-feasible binary design; on the volume-preserving projection, 30 more updates give the first qualified binary design better than the start, by 0.85% (1.60% on thermal h/8, 1.95% with the flow also refined to h/2); one β = 32 stage from it gives a second qualified binary design, 1.86% better again on the development model and 1.56% on the finer check model (lower C, higher Ψ), then the preferred candidate at w = 0.5; 30 more updates at the same β give a third design, 0.58% worse on the development model and 0.48% better on the check model, which now ranks: it is the current lead candidate. The two models' order of those designs flips with the flow mesh, so the check model has been made differentiable in the same design variables, its gradient verified; 20 updates on it from the lead candidate's continuous design give a qualified binary design 2.03% below that candidate's on the check model (lower C, higher Ψ and maximum temperature), generated and ranked on the same model, budget used, not converged; it is now the first choice of the four candidates at w = 0.5 on the check model. A thermal solve by one linear solve, beside upstream's Newton loop, gives the same states, objectives and gradients on the check model at the points tested, to differences of round-off size (R1s); the Newton path stays the default, and the next run may choose the new one explicitly. 20 more updates on the check model on that path, with MMA's state now saved, give a qualified binary design 0.16% below the first choice's (lower Ψ and maximum temperature, C nearly unchanged), with one fluid cell isolated by shared edges; budget used, not converged. It is the numerical first; R1r's stays the choice with no isolated cell. With that cell filled and nothing else, the design is still 0.13% below R1r's (R1u), keeping 83% of the lead; it is now the representative with no isolated cell. A finished run can now be given more budget without reinitialising MMA (on a small mesh, 2 updates with 2 appended equal 4 at once, bit for bit), and R1t's saved MMA state has been re-signed with the current binding, untouched (R1v part 1). Continued for 20 more updates with that history (R1v part 2), the run lowered the continuous J on the check model by another 0.13%, but the qualified binary design exported from its terminal is 1.1% above R1t's there (lower Ψ, higher C) and has the same isolated cell; budget used, not converged. The review of that stage closed it and found that the run's 21 saved designs export to 18 distinct binary designs, 16 of them not evaluated at the time, so the terminal's result does not show that none beats R1t's; R1t's stays the numerical first among the evaluated designs. R1w then solved those 16 on the check model (one flow and one thermal solve each, no optimisation) and ranked all 18 once: R1t's design is still the lowest at w = 0.5, the nearest 0.027% above it and R1v's terminal's 16th, so choosing the terminal missed designs better than R1v's but none better than R1t's, on this model and under the rule |
 
 Per-case detail, including the reconstruction choices and the gaps found in each
 paper: [`docs/zhou_reproduction.md`](docs/zhou_reproduction.md),
@@ -355,7 +355,7 @@ The review of that stage closed both parts. Resuming is accepted as solved.
 It re-assembled the two new final states independently, and found two
 things that change the next step:
 - Exported by the same rule, the run's 21 saved designs give 18 distinct
-  binary designs. Only R1t's and the terminal's have been evaluated, so the
+  binary designs. Only R1t's and the terminal's had been evaluated, so the
   terminal's result does not show that none of the other 16 beats R1t's.
 - With the raw design fixed, re-projecting at any finite β keeps the cells'
   order, so the exported geometry does not change (barring a tie at the
@@ -366,12 +366,34 @@ It kept the roles: R1t's design stays the numerical first among the
 evaluated designs, the filled one the representative with no isolated cell,
 and R1v's is kept as a different trade-off.
 
-Automatic appends at β = 32 are paused. Next, R1w, not yet authorised; its
-plan was accepted by the review of R1v's close-out (45fa8b0). It would
-evaluate those 16 binary designs on the check model (at most 16 flow and 16
-thermal solves, no optimisation), rank the whole set once, and stop. A design
-whose solve fails would have no valid value, not a worse one; the ranking
-would then cover only the designs that passed.
+Automatic appends at β = 32 are paused.
+
+**The 18 binary designs the rule exports along that run, ranked once
+(R1w).** Authorised on the local CPU. The 16 not evaluated before were each
+solved once on the check model, one flow and one thermal solve, and R1t's
+and R1v's states were reused; no optimisation. Every state passed its gate,
+and none failed.
+- By J at w = 0.5, R1t's design, where the run started, is still the lowest
+  of the 18. The nearest, from iterate 28, is 0.027% above it, with
+  dissipation and compliance both slightly higher.
+- The designs fall in two bands: six within 0.21% of R1t's, and twelve
+  0.76–1.14% above it. R1v's terminal's is 16th. One cell is solid in all
+  six and fluid in all twelve; that is co-occurrence, and what the cell is
+  worth was not measured.
+- Over these 18 and R1u's, R1r's, R1o's, R1n's and the pilot's designs,
+  none of the 16 new ones has the lowest J at any weight. Among the 18
+  alone, iterate 27's and 35's have the lowest J for w from about 0.77 to
+  0.98. All 18 keep the isolated cell.
+- So, at w = 0.5, choosing the terminal missed 14 designs better than
+  R1v's that the run's updates produced (R1t's, already evaluated, makes
+  15), but none better than R1t's. That is under the rule, on one discrete
+  model, which generated and ranked the designs.
+- 33 minutes by the script's timer.
+
+Next, for the review: whether to take R1t's design as the density method's
+result at w = 0.5 on the check model and stop optimising at β = 32, or to
+change what is optimised, either the generating objective or the binary
+geometry directly. Either would be a new contract.
 
 **Upstream TOFLUX has four defects** that the validation suite pins down, two of
 which only surface on meshes that are not axis-aligned boxes. They are applied

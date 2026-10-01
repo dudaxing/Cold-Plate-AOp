@@ -1,0 +1,144 @@
+{
+ "note": "Excerpt of the local Windows System event log around the R1w run, extracted after the run on 2026-09-30 with Get-WinEvent: LogName System, from 2026-09-29 20:00 to the extraction time, all Kernel-Power events and Power-Troubleshooter 1 (none of the latter in the window). 506 is the system entering modern standby, 507 leaving it, 566 a change of the system session's state. The last events before the run are the exit from modern standby and a change of the system session's state (7 to 9), both at 22:00:24.417 on 2026-09-29; there is none after them up to the extraction time, so none during the run. The log alone does not show when the process could run. Each event's 'message' is the first line of its text, as in R1v's excerpt. Added on 2026-10-01, while the write-up was checked before commit: in run_timing, the launch time, the log file's and the fields file's times, the range by which the process outlasts the timer, and the tighter timer start (the record's and the manifest's file times, and the solves' clock times, date from 30 September; the record's was then rounded to the millisecond); and the power-source changes in power_source.",
+ "extracted_with": "Get-WinEvent -FilterHashtable @{LogName='System'; StartTime='2026-09-29 20:00'; EndTime=<now>}, filtered to provider Microsoft-Windows-Kernel-Power, and Microsoft-Windows-Power-Troubleshooter id 1",
+ "extracted_at": "2026-09-30T05:43:55.900+09:00",
+ "run_timing": {
+  "launched": "2026-09-30T01:36:36.4+09:00",
+  "launched_note": "the session's own record: the shell call that started the pipeline 'python -u scripts/zhao2d_r1w_pool_screen.py | grep | tee results/zhao2d_r1w.log' is stamped 01:36:36.359 and its acknowledgement 01:36:36.405; none of the script's outputs holds it (copied here on 2026-10-01)",
+  "log_file_created": "2026-09-30T01:36:36.742+09:00",
+  "log_file_last_written": "2026-09-30T02:09:48.388+09:00",
+  "log_file_note": "file times, which git does not keep. tee, the pipeline's last stage, created the log, so its creation does not bound the Python process's start; the last line, 'exit 0', was appended after the process ended",
+  "manifest_file_written": "2026-09-30T01:36:51.038+09:00",
+  "manifest_file_written_note": "a file time, which git does not keep",
+  "fields_file_created": "2026-09-30T02:09:41.965+09:00",
+  "fields_file_created_note": "a file time, which git does not keep; np.savez_compressed creates it after finish() reads the clock",
+  "record_file": "results/zhao2d_r1w.json",
+  "record_file_written": "2026-09-30T02:09:44.519+09:00",
+  "record_file_written_note": "a file time, which git does not keep (02:09:44.5188968; written on 30 September as .518, truncated, and rounded on 2026-10-01 like the other times)",
+  "wall_clock_total_s": 1983.0925834999944,
+  "timer_started": "between 2026-09-30T01:36:37.9+09:00 and 01:36:38.9+09:00",
+  "timer_started_note": "the timer starts after the imports and stops after the last solve ended (02:09:41, to the second) and before the fields file was created (02:09:41.965), so its start is the wall clock back from each. (Written on 30 September as 01:36:41.426, approximate, then as 01:36:37.9 to 01:36:41.4 from the record's write time: a correct but looser bound.)",
+  "process_longer_than_timer_s": "2.55 to 8.94: at least from the fields file's creation to the record's write (2.55 s); at most from the launch (01:36:36.359, the call's stamp) to the log file's last write, less the timer (8.94 s)",
+  "solves_first_started": "2026-09-30T01:40:04+0900",
+  "solves_last_ended": "2026-09-30T02:09:41+0900",
+  "solves_note": "the record's own clock times, per design, as the script wrote them"
+ },
+ "count": 4,
+ "events": [
+  {
+   "time": "2026-09-29T20:39:56.600+09:00",
+   "provider": "Microsoft-Windows-Kernel-Power",
+   "id": 566,
+   "gloss": "Kernel-Power 566: the system session changed state",
+   "message": "The system session has transitioned from 6 to 7."
+  },
+  {
+   "time": "2026-09-29T20:39:56.600+09:00",
+   "provider": "Microsoft-Windows-Kernel-Power",
+   "id": 506,
+   "gloss": "Kernel-Power 506: the system is entering modern standby",
+   "message": "The system is entering Modern Standby"
+  },
+  {
+   "time": "2026-09-29T22:00:24.417+09:00",
+   "provider": "Microsoft-Windows-Kernel-Power",
+   "id": 507,
+   "gloss": "Kernel-Power 507: the system is exiting modern standby",
+   "message": "The system is exiting Modern Standby"
+  },
+  {
+   "time": "2026-09-29T22:00:24.417+09:00",
+   "provider": "Microsoft-Windows-Kernel-Power",
+   "id": 566,
+   "gloss": "Kernel-Power 566: the system session changed state",
+   "message": "The system session has transitioned from 7 to 9."
+  }
+ ],
+ "power_source": {
+  "note": "Kernel-Power 105 (power source change) from 2026-09-20 to the query, with each event's data. The last before the run, on 2026-09-23 at 23:55:11.629, reports AcOnline true; none is logged after it up to the query. That is the log's record of the power source, not a measurement of it.",
+  "extracted_with": "Get-WinEvent -FilterHashtable @{LogName='System'; ProviderName='Microsoft-Windows-Kernel-Power'; Id=105; StartTime='2026-09-20'; EndTime=<now>}",
+  "queried_at": "2026-10-01T11:06:43.708+09:00",
+  "events": [
+   {
+    "time": "2026-09-21T00:34:47.115+09:00",
+    "record_id": 173761,
+    "id": 105,
+    "data": {
+     "AcOnline": "false",
+     "RemainingCapacity": "89990",
+     "FullChargeCapacity": "92430"
+    }
+   },
+   {
+    "time": "2026-09-21T00:34:54.603+09:00",
+    "record_id": 173762,
+    "id": 105,
+    "data": {
+     "AcOnline": "true",
+     "RemainingCapacity": "89970",
+     "FullChargeCapacity": "92430"
+    }
+   },
+   {
+    "time": "2026-09-21T09:24:10.907+09:00",
+    "record_id": 173799,
+    "id": 105,
+    "data": {
+     "AcOnline": "false",
+     "RemainingCapacity": "89800",
+     "FullChargeCapacity": "92430"
+    }
+   },
+   {
+    "time": "2026-09-21T09:24:26.428+09:00",
+    "record_id": 173805,
+    "id": 105,
+    "data": {
+     "AcOnline": "true",
+     "RemainingCapacity": "89640",
+     "FullChargeCapacity": "92430"
+    }
+   },
+   {
+    "time": "2026-09-23T10:12:18.200+09:00",
+    "record_id": 174233,
+    "id": 105,
+    "data": {
+     "AcOnline": "false",
+     "RemainingCapacity": "88560",
+     "FullChargeCapacity": "92430"
+    }
+   },
+   {
+    "time": "2026-09-23T11:02:31.982+09:00",
+    "record_id": 174323,
+    "id": 105,
+    "data": {
+     "AcOnline": "true",
+     "RemainingCapacity": "50340",
+     "FullChargeCapacity": "92430"
+    }
+   },
+   {
+    "time": "2026-09-23T23:52:23.754+09:00",
+    "record_id": 174839,
+    "id": 105,
+    "data": {
+     "AcOnline": "false",
+     "RemainingCapacity": "92080",
+     "FullChargeCapacity": "92430"
+    }
+   },
+   {
+    "time": "2026-09-23T23:55:11.629+09:00",
+    "record_id": 174871,
+    "id": 105,
+    "data": {
+     "AcOnline": "true",
+     "RemainingCapacity": "89380",
+     "FullChargeCapacity": "92430"
+    }
+   }
+  ]
+ }
+}

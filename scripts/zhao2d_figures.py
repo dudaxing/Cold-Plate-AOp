@@ -3,7 +3,7 @@
 Nothing is solved or re-optimised here: every field and number is read from
 results/ and drawn, so a figure shows exactly the state the records describe
 -- including that the R1d run is budget-limited and not converged, and that the
-thermal compliance still moves with the thermal mesh. Thirteen figures, written
+thermal compliance still moves with the thermal mesh. Fourteen figures, written
 to docs/figures/:
 
   zhao2d_r1d_fields.png        the R1d design in the layout of Zhao Figs. 8 and
@@ -46,6 +46,9 @@ to docs/figures/:
   zhao2d_r1v.png               R1v: R1t's run continued with MMA's history, after
                                R1r's and R1t's updates, the new binary design, and
                                the binary designs on D
+  zhao2d_r1w.png               R1w: the 18 binary designs along R1v's trajectory,
+                               ranked once on D -- where they differ, their J by
+                               iterate, and their Psi and C against R1t's design
 
     python scripts/zhao2d_figures.py [--results results] [--out docs/figures]
 """
@@ -1645,6 +1648,195 @@ def r1v_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
     return path
 
 
+def r1w_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
+    rec = json.loads((res / "zhao2d_r1w.json").read_text(encoding="utf-8"))
+    rv = json.loads((res / "zhao2d_r1v.json").read_text(encoding="utf-8"))
+    fw = np.load(res / "zhao2d_r1w_fields.npz")
+    ft = np.load(res / "zhao2d_r1t_fields.npz")
+    h = g["element_size"]
+    rank = rec["ranking"]
+    rows = {row["label"]: row for row in rank["table"]}
+    labels = sorted(rows)
+    j_t = rows[20]["J"]  # R1t's binary design
+    j_c = {p["iteration"]: p["continuous_J"] for p in rec["pool"]}
+    iterates = sorted(j_c)
+    masks = np.array([fw[f"binary_{k}"] for k in labels])
+    varying = np.flatnonzero(~np.all(masks == masks[0], axis=0))
+    # two bands in J, split at the largest gap; then the cells that are the same within each
+    # band and differ between them (a description of the saved designs, not a cause)
+    order = sorted(labels, key=lambda k: rows[k]["J"])
+    cut = int(np.argmax(np.diff([rows[k]["J"] for k in order])))
+    near, far = sorted(order[:cut + 1]), sorted(order[cut + 1:])
+    m_near = masks[[labels.index(k) for k in near]]
+    m_far = masks[[labels.index(k) for k in far]]
+    split = np.flatnonzero(np.all(m_near == m_near[0], axis=0) & np.all(m_far == m_far[0], axis=0)
+                           & (m_near[0] != m_far[0]))
+    if len(split) != 1:
+        raise RuntimeError(f"expected one cell to separate the two bands, found {split.tolist()}")
+    cell = int(split[0])
+    state = {1.0: "solid", 0.0: "fluid"}
+    band = {k: SERIES[0] if k in near else SERIES[1] for k in labels}
+    reused = {k for k in labels if rows[k]["source"] != "solved here"}
+    r1v_label = next(k for k in labels if rows[k]["source"] == "r1v's recorded D state")
+    # the text below states these; check them against the record rather than restate them
+    fluid_cells = {p["fluid_cells"] for p in rec["pool"]}
+    solves = rec["cost"]["solves"]
+    if not (rank["lowest"] == 20 and rows[20]["source"] == "r1t's recorded D state"
+            and rec["contract"]["weight"] == 0.5
+            and solves["flow_made"] == solves["thermal_made"] == len(labels) - len(reused)
+            and len(fluid_cells) == 1 and rec["contract"]["gate"] == 1e-8
+            and all(r["isolated_cells"] == rows[20]["isolated_cells"] for r in rank["table"])
+            and all(c["gate_passed"] for c in rec["cells"].values())
+            and not any(c["failures"] for c in rec["checkpoints"])
+            and solves["mma"] == 0 and solves["reverse_passes"] == 0):
+        raise RuntimeError("the record no longer says what this figure's text states")
+
+    fig = plt.figure(figsize=(11.0, 8.6))
+    left = fig.add_gridspec(1, 1, left=0.02, right=0.33, top=0.84, bottom=0.19)
+    right = fig.add_gridspec(2, 1, left=0.42, right=0.98, top=0.835, bottom=0.10, hspace=0.42)
+
+    # (a) R1t's design, with the cells that vary across the pool
+    ax = fig.add_subplot(left[0, 0])
+    field_axes(ax, g, "(a) R1t's qualified binary design (iterate 20)")
+    centres = ft["design_elem_centres"]
+    xe, ye, grid = density_grid(fw["binary_20"], centres, h, g)
+    m = ax.pcolormesh(xe, ye, np.ma.masked_invalid(grid).T, cmap=DENSITY, vmin=0, vmax=1,
+                      shading="flat")
+    colorbar(fig, m, ax, "γ  (0 solid, 1 fluid)")
+    for k in varying:
+        cx, cy = centres[k]
+        ax.add_patch(plt.Rectangle((cx - h / 2, cy - h / 2), h, h, fill=False, ec=SERIES[2],
+                                   lw=1.1, zorder=4.5))  # above the rings, below the labels
+    cx, cy = centres[cell]
+    ax.plot([cx], [cy], "o", ms=12, mfc="none", mec=SURFACE, mew=3.2, zorder=4)
+    ax.plot([cx], [cy], "o", ms=12, mfc="none", mec=INK, mew=1.4, zorder=4)
+    ax.annotate(f"cell {cell}: {state[m_near[0][cell]]} in the {len(near)}\nlowest-J designs "
+                f"(w = 0.5),\n{state[m_far[0][cell]]} in the other {len(far)}", xy=(cx, cy),
+                xytext=(cx + 0.0005, cy + 0.0006),
+                fontsize=7.5, color=INK, ha="left", va="center", zorder=5,
+                bbox=dict(boxstyle="round,pad=0.2", fc=SURFACE, ec="none"),
+                arrowprops=dict(arrowstyle="-", color=INK2, lw=0.8))
+    mark_isolated(ax, grid, ye, h, f"isolated by shared\nedges in all {len(labels)}")
+    note(ax, f"green: the {len(varying)} cells whose state differs\nbetween the {len(labels)} "
+             f"designs; each design has\n{fluid_cells.pop()} fluid cells in the design domain",
+         y=-0.135)
+
+    # (b) J on D by iterate: the binary design each iterate exports, and the iterate itself
+    ax = fig.add_subplot(right[0, 0])
+    ax.grid(axis="y", color=GRID, lw=0.6)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    ax.axhline(0.0, color=AXIS, lw=0.8)
+    cont = np.array([100 * (j_c[i] / j_c[20] - 1) for i in iterates])
+    ax.plot(iterates, cont, color=INK2, lw=1.4, marker="o", ms=3, zorder=2)
+    for i in iterates:
+        k = next(lab for lab in labels if i in rows[lab]["iterations"])
+        ax.plot([i], [100 * (rows[k]["J"] / j_t - 1)], "o", ms=7, color=band[k],
+                mfc=SURFACE if k in reused else band[k], mew=1.6, zorder=4 if k in reused else 3)
+    handles = [
+        plt.Line2D([], [], ls="none", marker="o", ms=7, color=SERIES[0],
+                   label=f"exported binary design, cell {cell} {state[m_near[0][cell]]} "
+                         f"({len(near)} designs)"),
+        plt.Line2D([], [], ls="none", marker="o", ms=7, color=SERIES[1],
+                   label=f"exported binary design, cell {cell} {state[m_far[0][cell]]} "
+                         f"({len(far)} designs)"),
+        plt.Line2D([], [], ls="none", marker="o", ms=7, color=INK2, mfc=SURFACE, mew=1.6,
+                   label="open: R1t's or R1v's recorded D state, reused"),
+        plt.Line2D([], [], color=INK2, lw=1.4, marker="o", ms=3,
+                   label="the continuous design at the iterate"),
+    ]
+    ax.legend(handles=handles, loc="center right", bbox_to_anchor=(1.0, 0.36), frameon=False,
+              fontsize=7.5, handletextpad=0.4)
+    second = rows[rank["order"][1]]
+    ax.annotate(f"iterate {second['label']}: {100 * (second['J'] / j_t - 1):+.3f}%",
+                xy=(second["label"], 100 * (second["J"] / j_t - 1)), xytext=(24.4, 0.40),
+                fontsize=7.5, color=INK2, ha="left",
+                arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.8))
+    ax.annotate(f"R1t's design: the lowest of the {len(labels)}", xy=(20, 0.0),
+                xytext=(20.4, 0.62), fontsize=7.5, color=INK2, ha="left",
+                arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.8, relpos=(0, 0)))
+    ax.set_xlim(19.4, 40.6)
+    ax.set_xticks(range(20, 41, 2))
+    ax.set_xlabel("iterate of R1v's run (20 is R1t's terminal)")
+    ax.set_ylabel("J on D, change from its own\nvalue at iterate 20 (%)")
+    ax.set_title("(b) J at w = 0.5 on D along R1v's trajectory", loc="left", fontsize=9.5)
+
+    # (c) Psi and C against R1t's design, with J's level line through it
+    ax = fig.add_subplot(right[1, 0])
+    ax.grid(color=GRID, lw=0.6)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    scale = rec["scale"]
+    w = rec["contract"]["weight"]
+    t = rows[20]
+
+    def rel(c):
+        return 100 * (c["psi"] / t["psi"] - 1), 100 * (c["compliance"] / t["compliance"] - 1)
+
+    slope = -(w * t["psi"] / scale["psi_0"]) / ((1 - w) * t["compliance"] / scale["c_0"])
+    xs = np.array([-2.7, 1.35])
+    ax.plot(xs, slope * xs, color=INK2, lw=0.9, ls=(0, (3, 2)), zorder=1)
+    ax.text(-2.6, slope * -2.6 + 0.06, "equal J at w = 0.5 through R1t's design", fontsize=7.5,
+            color=MUTED, rotation=np.degrees(np.arctan(slope)), transform_rotates_text=True,
+            rotation_mode="anchor", ha="left", va="bottom")
+    for k in labels:
+        x, y = rel(rows[k])
+        ax.plot([x], [y], "o", ms=6.5, color=band[k], mfc=SURFACE if k in reused else band[k],
+                mew=1.5, zorder=5 if k in reused else 3)
+    cands = rv["candidates"]
+    xu, yu = rel(cands["r1u"])
+    ax.plot([xu], [yu], "v", color=INK, mfc=SURFACE, mew=1.4, ms=6.5, zorder=4)
+    ax.annotate("R1t's, filled (R1u)", xy=(xu, yu), xytext=(xu + 0.02, -0.24), fontsize=7.5,
+                color=INK2, ha="left", va="center",
+                arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.8, relpos=(0, 1)))
+    ax.annotate("R1t's (iterate 20)", xy=(0.0, 0.0), xytext=(-0.95, -0.24), fontsize=7.5,
+                color=INK2, ha="left", va="center",
+                arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.8))
+    xr, yr = rel(cands["r1r"])
+    ax.plot([xr], [yr], "D", color=INK, ms=6.5, zorder=4)
+    ax.text(xr, yr + 0.13, "R1r's", fontsize=7.5, color=INK2, ha="center", va="bottom")
+    xv, yv = rel(rows[r1v_label])
+    its = ", ".join(str(i) for i in rows[r1v_label]["iterations"])
+    ax.annotate(f"R1v's (iterates {its})", xy=(xv, yv), xytext=(xv - 0.05, yv + 0.23),
+                fontsize=7.5, color=INK2, ha="left",
+                arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.8, relpos=(0, 0)))
+    names = {"r1o": "R1o's", "r1n": "R1n's", "pilot": "the pilot's"}
+    ax.text(0.99, 0.97, "off the panel (Ψ, C from R1t's):\n"
+            + "\n".join(f"{names[n]} {x:+.1f}%, {y:+.1f}%"
+                        for n, (x, y) in ((n, rel(cands[n])) for n in names)),
+            transform=ax.transAxes, ha="right", va="top", fontsize=7.5, color=MUTED,
+            linespacing=1.35)
+    ax.set_xlim(*xs)
+    ax.set_ylim(-0.35, 2.15)
+    ax.set_xlabel("dissipated power Ψ, change from R1t's design (%)")
+    ax.set_ylabel("thermal compliance C,\nchange from R1t's design (%)")
+    ax.set_title(f"(c) The {len(labels)} designs on D, with the candidates nearest R1t's",
+                 loc="left", fontsize=9.5)
+
+    env = {i["lowest"]: i for i in rank["lowest_by_weight"]["intervals"]}
+    if set(env) != {"r1r", "i20", "pilot"}:
+        raise RuntimeError(f"the envelope's designs changed: {sorted(env)}")
+    fig.suptitle(f"R1w — the {len(labels)} binary designs along R1v's trajectory, ranked once on D",
+                 x=0.02, ha="left", fontsize=11.5, color=INK, y=0.985)
+    fig.text(0.02, 0.958,
+             f"{rank['scope'].capitalize()}: R1t's design is the lowest in J at w = 0.5; the "
+             f"nearest, iterate {second['label']}'s, is {100 * (second['J'] / j_t - 1):+.3f}%. "
+             f"{solves['flow_made']} designs solved (1F + 1T each), {len(reused)} reused; every "
+             "state passed the 10⁻⁸ gate.\nLowest by weight over these "
+             f"{len(labels)} and R1u's, R1r's, R1o's, R1n's and the pilot's: R1r's for w < "
+             f"{env['r1r']['to']:.4f}, R1t's for {env['i20']['from']:.4f} < w < "
+             f"{env['i20']['to']:.4f}, the pilot's above.\n"
+             f"The {len(labels)} come from R1t's and R1v's runs on D; R1w ranked them on D with no "
+             "MMA update and no AD.",
+             fontsize=8.5, color=INK2, ha="left", va="top", linespacing=1.4)
+    footer(fig, "Drawn from results/zhao2d_r1w.json, zhao2d_r1w_fields.npz, zhao2d_r1v.json and "
+           "zhao2d_r1t_fields.npz — scripts/zhao2d_figures.py; no state is re-solved.")
+    path = out / "zhao2d_r1w.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--results", type=pathlib.Path, default=REPO / "results")
@@ -1663,7 +1855,8 @@ def main() -> None:
              "zhao2d_r1n_beta32.json", "zhao2d_r1n_fields.npz", "zhao2d_r1o.json",
              "zhao2d_r1o_fields.npz", "zhao2d_r1p_bridge.json", "zhao2d_r1r.json",
              "zhao2d_r1r_fields.npz", "zhao2d_r1t.json", "zhao2d_r1t_fields.npz",
-             "zhao2d_r1v.json", "zhao2d_r1v_fields.npz"]
+             "zhao2d_r1v.json", "zhao2d_r1v_fields.npz", "zhao2d_r1w.json",
+             "zhao2d_r1w_fields.npz"]
     for n in names:
         print(f"read results/{n}  sha256 {sha(res / n)}")
     sources = [f"results/{n}" for n in names]
@@ -1673,7 +1866,7 @@ def main() -> None:
                  r1m_figure(res, args.out, g), r1n_figure(res, args.out, g),
                  r1o_figure(res, args.out, g), r1p_figure(res, args.out),
                  r1r_figure(res, args.out, g), r1t_figure(res, args.out, g),
-                 r1v_figure(res, args.out, g)):
+                 r1v_figure(res, args.out, g), r1w_figure(res, args.out, g)):
         print(f"wrote {path.relative_to(REPO) if path.is_relative_to(REPO) else path}")
 
 

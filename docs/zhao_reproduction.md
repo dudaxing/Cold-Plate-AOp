@@ -35,8 +35,8 @@ governing equations, objective, constraint — is kept.
 | R1s | the thermal solve as one linear solve for a given flow and density, as an optional path beside upstream's Newton loop: equivalence on a small mesh (state, objectives, transpose solve, full design gradient), then on the main mesh two fixed-flow temperatures and at most one full D value and gradient; at most 1F + 3T, no MMA | **done** — `tfopus/affine_solve.py` and `thermal_path="linear"`, the Newton path still the default; 10 tests. On the main mesh, within criteria fixed beforehand: the temperatures agree with the Newton path's to 2–5×10⁻¹² and C to 1.4–3.8×10⁻¹²; at R1q's main point Ψ, g and their gradients are bit for bit R1q's, J's and C's gradients within 9.2×10⁻¹² and 1.8×10⁻¹². Each fixed-flow temperature took 16–20 s. The value and gradient took 122.8 s. Not paired with the Newton path's timings, so no factor is claimed. Closed in the review of e664d79, which allows the next authorised run to choose the linear path explicitly; the default stays Newton |
 | R1t | from R1r's raw terminal design, on D with the linear thermal path chosen explicitly: at most 20 MMA updates, then at most 1F + 1T for its qualified binary design; first a thin save and restore of MMA's real state (including `kktnorm`), tested as 4 updates against 2 + save + load + 2 | **done** — `MMACheckpoint` with `resume` and `stop_after`; 4 updates equal 2 + save + load + 2 bit for bit; 5 tests. The zero step matches R1r's terminal across the thermal paths (C 1.7×10⁻¹², J 1.2×10⁻¹²). Budget used, not converged: the continuous J on D fell 0.085%, and MMA's state after the 20 updates is saved. The new qualified binary design differs from R1r's in 16 cells and has J 0.156% below it on D (Ψ −1.00%, C +0.02%, T_max −1.77%). It has one fluid cell isolated by shared edges (it touches the main channel at a corner), which the rule allows and none of the other candidates has. Lowest of the five for 0.0888 < w < 0.7579. Evaluations averaged 118 s, not paired with R1r's. Closed in the review of 0650e7b, which accepted the numbers, made R1t the numerical first under the rule with R1r kept as the choice without an isolated cell, and found two gaps in the checkpoint: its binding missed the optimisation problem (fixed since), and a spent 20/20 budget could not be extended (built in R1v part 1; closed in the review of 03ccf6c) |
 | R1u | a diagnostic geometry: R1t's qualified binary design with its isolated fluid cell 3750 filled, nothing else changed (1999 fluid cells); on D with the linear path, at most 1F + 1T, no MMA, no AD | **done** — the isolated cell found by shared edges and filled, nothing else: 1999 fluid cells, one component. On D, J is 0.026% above R1t's (Ψ +0.048%, C +0.022%), and still 0.130% below R1r's (Ψ −0.95%, C +0.04%, T_max −1.77%). Among the designs with no isolated cell it is lowest for 0.1747 < w < 0.7566. 1F + 1T, 312 s. Closed in the review of 7786ce7 with the binding fix. The filled design keeps 83.19% of R1t's absolute advantage in J over R1r's; the cell is not without effect. R1t stays the numerical first and the optimisation trajectory. The filled design ("R1t, filled") becomes the representative with no isolated component |
-| R1v | a real continuation of R1t's run. Part 1: migrate R1t's checkpoint to the new binding from its own record, and an append-only budget operation, tested on a small mesh (2 of 2, then 2 appended, equals 4 at once). Part 2, with separate confirmation: at most 20 appended updates (20 → at most 40) from R1t's raw design and MMA history on D, then at most 1F + 1T | part 1 **done** — `MMACheckpoint.append_budget` and `migrate_legacy_checkpoint`; 8 new tests. On a small mesh, 2 of 2 with 2 appended makes the updates of 4 at once, bit for bit, and a pause inside the appended budget is the uninterrupted run's pause, flag included. R1t's checkpoint is migrated with its state untouched: only the binding's entry gains the optimisation block, rebuilt from R1t's record and the source it ran with, byte for byte. Dry: appending 20 is accepted, and the driver's resume would start at R1t's raw terminal design. Nothing solved on the main mesh. Part 2 **done** — the first resumed evaluation reproduces R1t's terminal (J to 8×10⁻¹⁵, g and η exactly), and the first appended step is the size of R1t's last ones, with no jump in J. Budget used, not converged: the continuous J on D fell 0.131% more (0.216% over R1t and R1v). The qualified binary design exported from the terminal is 1.11% above R1t's on D (Ψ −2.28%, C +1.81%, T_max +3.26%), and 0.95% above R1r's. It has the same isolated cell, 3750, and is the lowest of the seven at no weight. Two evaluations took 5456 s and 25 454 s; they coincide with the machine's overnight standby in the Windows event log, and both states passed their gates like the rest. Closed, both parts, in the review of 03ccf6c. It found that the 21 saved designs export to 18 distinct binary designs, 16 of them not evaluated, so the terminal's result does not show that none beats R1t's. R1t's design stays the numerical first among the evaluated designs, R1u's the representative with no isolated component, and R1v's is kept as a trade-off. Automatic appends at β = 32 are paused |
-| R1w | binary candidate selection along R1v's saved trajectory: the 21 raw designs exported by the frozen rule, deduplicated to 18 geometries, R1t's and R1v's reused, each of the other at most 16 solved on D (at most 16F + 16T; 0 MMA, 0 main-mesh AD), ranked once, then stop | proposed in the review of 03ccf6c; plan accepted in the review of 45fa8b0, which recommends the local CPU; not authorised |
+| R1v | a real continuation of R1t's run. Part 1: migrate R1t's checkpoint to the new binding from its own record, and an append-only budget operation, tested on a small mesh (2 of 2, then 2 appended, equals 4 at once). Part 2, with separate confirmation: at most 20 appended updates (20 → at most 40) from R1t's raw design and MMA history on D, then at most 1F + 1T | part 1 **done** — `MMACheckpoint.append_budget` and `migrate_legacy_checkpoint`; 8 new tests. On a small mesh, 2 of 2 with 2 appended makes the updates of 4 at once, bit for bit, and a pause inside the appended budget is the uninterrupted run's pause, flag included. R1t's checkpoint is migrated with its state untouched: only the binding's entry gains the optimisation block, rebuilt from R1t's record and the source it ran with, byte for byte. Dry: appending 20 is accepted, and the driver's resume would start at R1t's raw terminal design. Nothing solved on the main mesh. Part 2 **done** — the first resumed evaluation reproduces R1t's terminal (J to 8×10⁻¹⁵, g and η exactly), and the first appended step is the size of R1t's last ones, with no jump in J. Budget used, not converged: the continuous J on D fell 0.131% more (0.216% over R1t and R1v). The qualified binary design exported from the terminal is 1.11% above R1t's on D (Ψ −2.28%, C +1.81%, T_max +3.26%), and 0.95% above R1r's. It has the same isolated cell, 3750, and is the lowest of the seven at no weight. Two evaluations took 5456 s and 25 454 s; they coincide with the machine's overnight standby in the Windows event log, and both states passed their gates like the rest. Closed, both parts, in the review of 03ccf6c. It found that the 21 saved designs export to 18 distinct binary designs, 16 of them not evaluated at the time, so the terminal's result does not show that none beats R1t's. R1t's design stays the numerical first among the evaluated designs, R1u's the representative with no isolated component, and R1v's is kept as a trade-off. Automatic appends at β = 32 are paused |
+| R1w | binary candidate selection along R1v's saved trajectory: the 21 raw designs exported by the frozen rule, deduplicated to 18 geometries, R1t's and R1v's reused, each of the other at most 16 solved on D (at most 16F + 16T; 0 MMA, 0 main-mesh AD), ranked once, then stop | **done** — the 21 saved designs export to 18 binary designs: 16 solved on D (1F + 1T each), R1t's and R1v's reused, every state within the 10⁻⁸ gate, none failed. Ranked once by J at w = 0.5 on D: R1t's design (iterate 20) is the lowest; the nearest, iterate 28's, is +0.027% (Ψ +0.11%, C +0.01%). Six designs lie within 0.21% of R1t's and twelve 0.76–1.14% above it, R1v's terminal's 16th; one cell, 1728, is solid in all six and fluid in all twelve, which is co-occurrence only. Over these 18 and R1u's, R1r's, R1o's, R1n's and the pilot's, none of the 16 new designs is the lowest at any weight; among the 18 alone, iterate 27's and 35's are the lowest for 0.774 < w < 0.976. All 18 keep the isolated cell 3750. 33 min by the script's timer, on the local CPU. So, at w = 0.5, choosing the terminal missed the 14 new designs better than R1v's (R1t's, already evaluated, makes 15), but none better than R1t's, under the rule and on this model |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
 
 ## Figures
@@ -175,6 +175,28 @@ R1v. In the density panels, dark is fluid and light is solid.
 - (e) The seven qualified binary designs on D, Ψ against C, with the lines of
   equal J through R1t's design and the new one. R1t's and R1u's nearly
   coincide.
+
+![R1w: the 18 binary designs along R1v's trajectory, ranked once on D](figures/zhao2d_r1w.png)
+
+R1w. In the density panel, dark is fluid and light is solid.
+
+- (a) R1t's qualified binary design, the lowest of the 18 in J at
+  w = 0.5. The green squares mark the 22 cells whose state differs between
+  the 18 designs. The black ring marks cell 1728, solid in the six designs
+  lowest in J at w = 0.5 and fluid in the other twelve; the white ring marks
+  the isolated cell 3750, which all 18 keep.
+- (b) J at w = 0.5 on D along R1v's run, each series against its own value
+  at iterate 20. For each iterate, its exported binary design's J against
+  R1t's, coloured by the state of cell 1728 (open: R1t's or R1v's recorded
+  state, reused), and the continuous design's J against iterate 20's. The
+  colour groups the designs; it does not show that the cell causes the
+  difference.
+- (c) The 18 designs' Ψ and C against R1t's design, with the line of equal J
+  at w = 0.5 through it, and the candidates nearest R1t's. Every other design
+  lies above the line. R1v's design and iterate 38's nearly coincide (Ψ
+  −2.28% and −2.27%, C +1.81% and +1.79%), and R1v's open marker is drawn
+  over 38's; R1t's and R1u's nearly coincide too. R1o's, R1n's and the
+  pilot's are off the panel, at lower Ψ and higher C.
 
 ## R1d: the 300-update run
 
@@ -5154,7 +5176,7 @@ w = 0.5; R1u's is the representative with no fluid component isolated by
 shared edges. Nothing assumes that an intermediate design
 will win.
 
-## R1w: the contract (as proposed in the review of 03ccf6c, its plan accepted in the review of 45fa8b0; not yet authorised)
+## R1w: the contract (as proposed in the review of 03ccf6c, its plan accepted in the review of 45fa8b0; authorised and run)
 
 A selection of binary candidates along R1v's saved trajectory, not more
 continuous optimisation. It answers one question: under the original rule,
@@ -5246,6 +5268,294 @@ already produced?
   the machine staying awake are confirmed before the run.
 - **Then,** and only after R1w: whether to change the generating objective,
   or to optimise the binary geometry explicitly.
+
+## R1w: what it found
+
+Authorised by the user on 2026-09-30, on the local CPU, as the contract
+above has it: at most 16F + 16T, stop after one ranking of the fixed pool.
+Nothing in the contract was changed. One of its pre-run conditions was met
+only in part; see "Before and around the run".
+
+- **Script:** `scripts/zhao2d_r1w_pool_screen.py`. Its docstring says R1v
+  "exported and evaluated only the first (R1t's) and the last"; the first's
+  binary design was exported and evaluated in R1t, and R1v reused its
+  values. The script is left as it ran, since its hash is in the record.
+- **Record:** `results/zhao2d_r1w.json` (and `.log`).
+- **Manifest:** `results/zhao2d_r1w_manifest.json`, written before the
+  check-layer route was built.
+- **Fields:** `results/zhao2d_r1w_fields.npz`. It holds the 18 binary
+  designs (`binary_<label>`) and, for each of the 16 solved, its copy to h/2,
+  u and p, and T (`i<label>_…`).
+- **Power events:** `results/zhao2d_r1w_power_events.json`, extracted after
+  the run. The launch time, the log's and the fields file's times and the
+  power-source changes quoted below were added to it on 1 October, while
+  this write-up was checked before commit.
+- **Figure:** `docs/figures/zhao2d_r1w.png`.
+- **Tests:** 6 in `validation/test_zhao2d_r1w_pool.py`, on the new entry's
+  own logic. The main-mesh solves are not run there. All 6 passed before
+  the run (at 01:26, 28.5 s) and again after it (15.6 s); the outputs are
+  in the session's record only.
+  - The pool is grouped by digest and labelled by its earliest iterate; a
+    candidate's design is reused, and a design the rule does not qualify is
+    never reused.
+  - Each design is solved once, in order. A failure is recorded, not
+    retried, and the run goes on; an error while reporting a result does
+    not stop it.
+  - The ranking lists failed and unqualified designs apart, ranks neither,
+    and narrows its claim when the pool is incomplete.
+  - A changed recorded digest (R1t's binary design, in the test) stops the
+    script at the inputs checkpoint, before anything is built, with its
+    record written.
+  - On the real records, geometry only: the manifest is written before the
+    route is built. It has 21 iterates, 18 designs, 2 reused and 16 to
+    solve, with the groups and actions below, and four of its digests match
+    the review of 03ccf6c's catalogue by prefix.
+  - A run into a folder whose lock is held is refused. Under `--overwrite`,
+    an earlier run's fields and manifest are removed and the record is the
+    new run's. (The refusal of an earlier run's files without
+    `--overwrite` is in the script but not tested.)
+  - **On an LF checkout,** the manifest test, like a re-run of the script,
+    needs the development reference restored to its recorded CRLF bytes
+    first: the inputs checkpoint compares its hash with R1q's. See
+    "Reproducing R1u's test on an LF checkout".
+
+**Before and around the run.** The first three items are from the
+session's own record, which none of the script's outputs holds (the excerpt
+now copies the launch time). The fourth is from the System log, queried on
+1 October and saved in the excerpt.
+
+- The option the user chose in the authorisation question said the run
+  needs the machine plugged in, lid open and awake; the user chose it at
+  00:58. At 01:04:55 the session asked again for the machine to stay
+  plugged in with the lid open. There was no separate reply.
+- The session asked the app to keep the machine awake at 01:04:51. By the
+  app's reply, that hold prevents idle sleep only and ends once the session
+  has been idle for about 5 minutes. The session had no turn from 01:26:33
+  to 01:36:23 and did not renew the hold, so the record does not show it in
+  force at the launch.
+- The resource window: the other session reported its heavy run over at
+  01:36:23 ("conformal done"), a heads-up went back at 01:36:29, and at
+  01:36:32 the largest Python process on the machine had a working set of
+  0.05 GiB (55 MiB). R1w was launched at 01:36:36.4, and "cold-plate done"
+  was sent at 02:09:53, after the run.
+- In the System log, the last power-source change before the run
+  (Kernel-Power 105, 23 September at 23:55:11) reports AC online, and none
+  is logged after it up to a query on 1 October. The excerpt holds the
+  power-source changes since 20 September. That is the log's record of the
+  power source, not a measurement of it.
+
+So, of the contract's "the resource window with the other session, the
+power and the machine staying awake are confirmed before the run", the
+resource window was confirmed. The power, the lid and staying awake were
+asked of the user, with no separate reply, and the app's hold was asked
+for. The excerpt, read after the run, shows no Kernel-Power event during it
+(see "Standby" below).
+
+### The four checkpoints, all passed
+
+- **Inputs.**
+  - The records of R1m, R1n, R1o, R1q, R1r, R1t, R1u and R1v have no failed
+    checkpoint. The R1l pilot's has no failed check, and its export
+    qualifies.
+  - R1v's `designs` has 21 rows of 5000, with the continuous J recorded for
+    iterates 20 to 40. The first row is R1t's raw terminal and the last
+    R1v's, bit for bit.
+  - Each candidate's saved binary design has the digest its record gives.
+    Each one's D state is usable (it passed its gate) and volume-feasible.
+  - R1t's and R1v's D states were solved on R1m's check-layer meshes, on
+    the linear path.
+  - The scale is R1q's: the same Ψ₀, C₀ and file hash. Each candidate's
+    recorded J is exactly w·Ψ/Ψ₀ + (1 − w)·C/C₀ on it.
+- **The pool and the manifest,** geometry only. The design side was built
+  in 6.1 s.
+  - Every row's constraint g is R1v's recorded g to 10⁻¹², so the rows line
+    up with the iterates.
+  - The map gives R1t's and R1v's saved densities for iterates 20 and 40,
+    bit for bit. Iterate 20 exports R1t's binary design and 40 R1v's.
+  - 16 designs to solve, within the 16 allowed.
+- **The check-layer route,** built in 192.5 s: flow h/2 (20 800 elements),
+  thermal h/8 (332 800), quadrature 3.
+  - Both meshes' identities are R1m's.
+  - On R1t's binary design, the copy to h/2 is a pure refinement: 4
+    children per parent, v_f 0.4 in the design domain on both. The h/8
+    material is the parents'.
+  - The flow-state identities recorded with R1t's and R1v's D states
+    (everything their flow states depend on, the design's digest on h/2
+    included) equal this route's at their designs, and both states are
+    recorded on the linear path. So they were reused, not re-solved; their
+    residuals were not recomputed here.
+- **The solves:** 16 of 16 with valid performance, none failed. None was
+  retried: the script has no retry, and the contract adds no automatic
+  retry and no retry budget. The gate was not changed.
+
+### The pool
+
+The 21 saved designs, each exported by R1l's rule at β = 32:
+
+- All 21 are volume-feasible (g from −2.1×10⁻⁴ to −4.6×10⁻⁵). Each export
+  has 2000 fluid cells in the design domain, at a cut t from 0.4162 to
+  0.4305, and connects inlet and outlet, so every one qualifies.
+- By shared edges each export has two fluid components: 2199 cells, the
+  tabs' 200 included, and the single cell 3750.
+- They give 18 distinct binary designs. The grouping is the one the reviews
+  of 03ccf6c and 45fa8b0 found:
+  - iterate 20 exports R1t's design, and 37, 39 and 40 export R1v's. Both
+    were reused;
+  - 27 and 29 export one design, solved once, labelled 27;
+  - the other 15 iterates each export a design of their own: 21 to 26, 28,
+    30 to 36, and 38. Those 15 and 27's are the 16 solved.
+- The designs differ from R1t's in 2 to 16 cells. Across the 18, 22 cells
+  change state.
+
+### The solves
+
+Each of the 16 on R1m's check-layer route, one flow and one thermal solve:
+
+- the copy to h/2 checked again as a pure refinement, the h/8 material the
+  parents', and v_f 0.4 in the design domain on h/2;
+- the flow on the Newton path: 8 iterations each, 25.9–37.4 s, relative
+  residual 1.50–1.64×10⁻¹⁴, the Dirichlet values exact;
+- the temperature by one linear solve: 13.3–20.4 s, relative residual
+  1.150–1.183×10⁻¹⁰;
+- the report and the gate: 58.2–69.2 s. Every state passed the 10⁻⁸ gate,
+  with no node below the inlet temperature, the mass imbalance at most
+  6.6×10⁻¹⁵, and the heat-balance identity H − Q − r_D = D_T holding to
+  1.5×10⁻¹² of Q. (The deficit D_T/Q itself, 5.49–5.69%, is in the table
+  below.)
+
+In all 16F + 16T, 0 MMA updates and 0 reverse passes.
+
+- **Time.** The solves took 1777.3 s, from 01:40:04 to 02:09:41 on the
+  record's clock. The script's timer, which starts after the imports and
+  stops before the fields and the record are written, read 1983.1 s
+  (33.1 min), with the route 192.5 s of it. By the file times and the
+  launch, the process ran at least 2.55 s and at most 8.94 s longer: at
+  least from the fields file's creation (02:09:41.965) to the record's
+  write (02:09:44.519), at most from the launch (01:36:36.36) to the log's
+  last write (02:09:48.39), less the timer. (tee created the log at
+  01:36:36.7, which does not bound the process's start.) The planning
+  estimate was 35–45 minutes. Peak working set 4688 MiB, the whole
+  process's cumulative peak.
+- **Standby.** The saved excerpt of the System log has no Kernel-Power
+  event after 22:00:24.417 on 29 September (the exit from modern standby
+  and, in the same millisecond, the session's change from 7 to 9), up to
+  the extraction at 05:43:55 on 30 September. The run, from its launch
+  at 01:36:36.4 to its log's last write at 02:09:48.4, lies inside that
+  window, so none falls inside the run.
+
+### The ranking, once
+
+By J at w = 0.5 on D at the common scale, under the rule: all 18 designs
+of the pool, none without valid performance and none unqualified. R1t's
+design: J 1.295482, Ψ 0.0139853, C 43 699.06, T_max 19.300. The other
+columns are against R1t's design; D_T/Q is each design's own.
+
+| rank | iterates | state | J on D | J | Ψ | C | T_max | D_T/Q | cells from R1t's |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 20 | R1t's, reused | 1.295482 | — | — | — | — | 5.65% | 0 |
+| 2 | 28 | solved | 1.295835 | +0.027% | +0.11% | +0.01% | +0.38% | 5.61% | 10 |
+| 3 | 26 | solved | 1.296304 | +0.063% | +0.03% | +0.07% | +0.47% | 5.59% | 10 |
+| 4 | 22 | solved | 1.297069 | +0.123% | −0.10% | +0.17% | +0.12% | 5.67% | 2 |
+| 5 | 23 | solved | 1.297471 | +0.154% | +0.11% | +0.16% | +0.30% | 5.69% | 4 |
+| 6 | 21 | solved | 1.298191 | +0.209% | −0.30% | +0.32% | +0.07% | 5.65% | 4 |
+| 7 | 30 | solved | 1.305354 | +0.762% | −1.83% | +1.30% | +1.37% | 5.58% | 10 |
+| 8 | 25 | solved | 1.306250 | +0.831% | −1.92% | +1.40% | +1.37% | 5.63% | 6 |
+| 9 | 24 | solved | 1.306380 | +0.841% | −1.60% | +1.34% | +1.20% | 5.64% | 4 |
+| 10 | 33 | solved | 1.306703 | +0.866% | −1.94% | +1.44% | +1.57% | 5.52% | 14 |
+| 11 | 27, 29 | solved | 1.306804 | +0.874% | −2.10% | +1.49% | +1.47% | 5.61% | 8 |
+| 12 | 31 | solved | 1.307581 | +0.934% | −1.95% | +1.53% | +1.34% | 5.59% | 8 |
+| 13 | 35 | solved | 1.309075 | +1.049% | −2.27% | +1.73% | +1.55% | 5.53% | 14 |
+| 14 | 34 | solved | 1.309499 | +1.082% | −2.13% | +1.74% | +3.15% | 5.54% | 14 |
+| 15 | 38 | solved | 1.309669 | +1.095% | −2.27% | +1.79% | +3.00% | 5.49% | 16 |
+| 16 | 37, 39, 40 | R1v's, reused | 1.309895 | +1.113% | −2.28% | +1.81% | +3.26% | 5.50% | 16 |
+| 17 | 32 | solved | 1.310187 | +1.135% | −2.21% | +1.82% | +3.16% | 5.54% | 12 |
+| 18 | 36 | solved | 1.310235 | +1.139% | −2.13% | +1.81% | +3.38% | 5.50% | 16 |
+
+- **R1t's design has the lowest J of the 18.** It also has the lowest C and
+  the lowest T_max. R1v's has the lowest Ψ.
+- **The nearest is iterate 28's,** +0.027%: Ψ +0.11% and C +0.01%, so both
+  objectives are higher. In the common-scale terms, ΔJ = +0.000247
+  (dissipation) + 0.000106 (thermal compliance) = +0.000353.
+  - 26's and 23's are also higher in both. R1t's design is lower than those
+    three at every weight.
+  - The other 14 have lower Ψ and higher C than R1t's: a trade-off, with a
+    higher J at w = 0.5.
+- **R1v's terminal is 16th.** Fifteen of the 18 have a lower J than it;
+  only 32's and 36's are higher.
+- **Two bands.** Split at the largest gap in J (from +0.209% to +0.762%):
+  - six designs within 0.21% of R1t's J, exported at iterates 20–23, 26
+    and 28;
+  - twelve 0.76–1.14% above it, exported at the other 15 iterates: 24, 25,
+    27 and 29–40.
+
+  Along the run the lower band holds iterates 20–23, then 26 and 28. From
+  29 on, every iterate exports an upper-band design.
+- **One cell's state matches the split.** Cell 1728, at (1.55, 2.85) mm,
+  is solid in all six lower designs and fluid in all twelve upper ones. Of
+  the 22 cells that change, it is the only one that splits the pool that
+  way. That is a description of the saved designs, read from the fields
+  after the run. Other cells change within each band, and no design
+  differing from R1t's in cell 1728 alone was solved, so what that cell is
+  worth is not measured.
+- **Continuous against binary.** From iterate 20 to 40 the continuous J on
+  D fell 0.131% (0.045% by iterate 28). The export gap, each iterate's
+  binary J relative to its continuous J (J_bin/J_cont − 1), is:
+  - +30.23% at iterate 20;
+  - +30.32–30.51% at the other five iterates of the lower band;
+  - +31.30–31.85% at the fifteen of the upper band.
+
+  These are relative differences of recorded values. They do not attribute
+  the gap to cells or to a mechanism.
+- **By weight.** Over these 18 and R1u's, R1r's, R1o's, R1n's and the
+  pilot's, 23 designs: R1r's has the lowest J for w below 0.0888, R1t's
+  from there to 0.7579, and the pilot's above. That is the envelope R1v
+  found for seven designs: none of the 16 new ones is the lowest at any
+  weight over these 23.
+  - Among the 18 alone, R1t's is the lowest up to w = 0.7742, iterate 27's
+    from there to 0.8798, 35's to 0.9755, and R1v's above. Over the 23, the
+    pilot's is lower than all of them there.
+  - It is arithmetic on a fixed set of designs, not a new optimisation or a
+    front.
+- **Components.** All 18 keep the isolated cell 3750. Among designs with no
+  isolated component, R1u's stays the representative.
+
+### What R1w says, and what it does not
+
+- **It answers its question.** Under the frozen rule, on D, at w = 0.5 and
+  the common scale, the best binary design along R1v's saved trajectory is
+  R1t's, the one the segment started from.
+  - Choosing the terminal missed fourteen designs that the segment's
+    updates produced, each with a lower J than the terminal's. They are
+    exported at iterates 21–31, 33–35 and 38, and were first evaluated
+    here. Counting R1t's, 15 of the 18 are lower than the terminal's.
+  - It missed none lower than R1t's.
+- **Nothing here changes the roles the reviews set.** R1t's design stays
+  the numerical first among the evaluated designs, which now include every
+  binary design the rule exports from the 21 saved iterates. R1u's stays
+  the representative with no isolated component, and R1v's a kept
+  trade-off.
+- **It does not say:**
+  - anything about binary designs outside this pool. The pool is R1v's 21
+    saved iterates, the contract's scope; other stages' saved trajectories
+    were not part of it. No other rule, β, w, threshold or fill was tried;
+  - that R1t's design is optimal, or that the optimisation has converged.
+    R1v's run is budget-limited;
+  - why the upper band's J at w = 0.5 is higher. Cell 1728's state
+    co-occurs with it; what the cell is worth was not measured;
+  - anything physical beyond this discrete model. D generated the 18 and
+    ranked them. The margins to the nearest ones are ΔJ 0.00035 to 0.0027
+    (0.027% to 0.21%). Four earlier designs have J recorded on both flow
+    meshes at the common scale (x₃₀₀'s, the pilot's, R1n's and R1o's; R1m
+    and R1p). Over their six pairs, one flow-mesh step (h → h/2, thermal
+    h/8) changed the difference between the two designs by 0.00066 to
+    0.011, the most for R1o's and R1n's, whose order flipped. So these
+    margins are below some of those changes and above others. In the same
+    step each of those designs' C moved 8–9%, mostly in common. No error
+    bound speaks for the physical problem.
+- **For the review:** whether to take R1t's design as the density method's
+  result at w = 0.5 on D and stop optimising at β = 32. The alternatives the
+  contract names are to change the generating objective or to optimise the
+  binary geometry explicitly. Either would be a new contract.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
@@ -5516,6 +5826,7 @@ python scripts/zhao2d_r1t_d_continue.py --out DIR        # R1t: 20 more updates 
 python scripts/zhao2d_r1u_fill_check.py --out DIR        # R1u: R1t's binary design with its isolated cell filled, 1F + 1T on D (~5 min)
 python scripts/zhao2d_r1v_migrate.py --out DIR           # R1v part 1: R1t's MMA checkpoint re-signed, a dry append; no solves (~10 s)
 python scripts/zhao2d_r1v_d_append.py --out DIR          # R1v part 2: 20 updates appended to R1t's run on D, MMA's history kept (~50 min if the machine stays awake)
+python scripts/zhao2d_r1w_pool_screen.py --out DIR       # R1w: the 18 binary designs R1v's saved iterates export, on D; 16 solved (1F + 1T each), ranked once; no MMA (~35 min; on an LF checkout, restore the reference's CRLF bytes first, see R1u)
 python scripts/zhao2d_figures.py                         # docs/figures/ from the saved results, no solves
 ```
 
