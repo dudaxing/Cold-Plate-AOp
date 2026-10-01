@@ -65,7 +65,11 @@ scale. Like-for-like is the filled point, on the paper's 5200-element mesh
 (R1d's own 2×2 model). The arrow is the same design with only the thermal mesh
 refined to h/8 (3×3), which moves C/C₀ from 1.30 to 1.79. The parametrisation,
 the stabilisation details and the convergence state all differ from the
-paper's, so this places the result; it does not rank the two methods. (b) C
+paper's, so this places the result; it does not rank the two methods. The
+square, added on 1 October, is the current lead: R1t's binary design on the
+check layer D (flow h/2, thermal h/8), J 1.203; R1u's falls on the same point.
+It sits on finer meshes than the paper's and is a binary design, so it too is
+placed, not compared (see "The lead designs placed against the paper"). (b) C
 against the thermal mesh at the fixed design, on the coarse and the fine flow
 (R1g, R1h, R1i).
 
@@ -197,6 +201,22 @@ R1w. In the density panel, dark is fluid and light is solid.
   −2.28% and −2.27%, C +1.81% and +1.79%), and R1v's open marker is drawn
   over 38's; R1t's and R1u's nearly coincide too. R1o's, R1n's and the
   pilot's are off the panel, at lower Ψ and higher C.
+
+![The lead design on D, in the layout of Zhao Figs. 8 and 11](figures/zhao2d_lead_fields.png)
+
+The lead design on the check layer D, from saved states. In the density
+panel, dark is fluid and light is solid.
+
+- (a) R1t's qualified binary design. The ring marks its isolated cell 3750,
+  which R1u fills.
+- (b) |u| on the flow mesh h/2, and (c) T on the thermal mesh h/8.
+- (d) R1u's temperature minus R1t's, both on h/8. Filling the one cell moves
+  T by −0.045 to +0.327; the largest rise is at (3.49, 4.96) mm, just off the
+  filled cell's corner.
+
+Zhao's Fig. 11 colours |u| on 0–0.3 and T on 0–12 on its 5200-element mesh.
+Here they reach 0.302 and 19.30, on meshes with 4 and 64 times its elements.
+See "The lead designs placed against the paper".
 
 ## R1d: the 300-update run
 
@@ -5562,6 +5582,50 @@ columns are against R1t's design; D_T/Q is each design's own.
   result at w = 0.5 on D and stop optimising at β = 32. The alternatives the
   contract names are to change the generating objective or to optimise the
   binary geometry explicitly. Either would be a new contract.
+
+## The lead designs placed against the paper
+
+Asked for on 1 October: the lead designs set against the paper's numbers
+and figures, from saved states only. Nothing was solved. The scale is the
+paper's constants read with their labels swapped (Ψ₀ = 0.0456, C₀ = 20816;
+the R0 finding), with J = (Ψ/Ψ₀ + C/C₀)/2. Figure: `docs/figures/zhao2d_lead_fields.png`,
+and the square in `docs/figures/zhao2d_status.png`.
+
+| design | meshes (flow, thermal) | Ψ/Ψ₀ | C/C₀ | J | max \|u\| | T_max |
+|---|---|---|---|---|---|---|
+| Zhao, Tables 4 and 7 (cases 1–12) | 5200 elements | 0.471–0.631 | 1.179–1.349 | 0.871–0.910 | | |
+| R1d's continuous design | h, h: the paper's mesh | 0.315 | 1.297 | 0.806 | 0.310 | 13.83 |
+| the same, thermal h/8 (R1i) | h, h/8 | 0.315 | 1.794 | 1.054 | | 16.06 |
+| R1t's qualified binary design | h/2, h/8: D | 0.307 | 2.099 | 1.203 | 0.302 | 19.30 |
+| R1u's (R1t's, cell 3750 filled) | h/2, h/8: D | 0.307 | 2.100 | 1.203 | 0.302 | 19.30 |
+
+- **What it shows.** On this scale R1t's and R1u's designs on D have a lower
+  Ψ/Ψ₀ than every case in Tables 4 and 7, a higher C/C₀ than every case, and
+  a higher J. R1d's continuous design on the paper's own mesh also has a
+  lower Ψ/Ψ₀ (0.315), with its C/C₀ (1.297) inside the paper's range.
+- **What it does not show:** which method does better, or why the values
+  differ. Several things differ at once, and their shares are not separated:
+  - the meshes. D's thermal mesh has 64 times the paper's elements: on
+    R1d's design, going from its own 2×2 model to thermal h/8 at 3×3 raised
+    C/C₀ from 1.30 to 1.79 (R1d, R1i). Its flow mesh has 4 times the
+    elements: refining the flow h → h/2 lowered C by 2.5% and 2.7% on R1d's
+    design (R1h, thermal h/2 and h/4) and by 8.0% and 8.4% on two binary
+    designs at thermal h/8 (R1m). R1t's design was not solved on the paper's
+    mesh, so the net effect of D's two refinements on its C is not measured;
+  - binary designs here, the paper's own CBS designs there;
+  - the parametrisation, the stabilisation (R1's forms are not a literal
+    transcription of eqs. 13–18; see "R1: the frozen configuration"), and an
+    optimisation that is not converged;
+  - the constants, which are the paper's with their labels swapped by the R0
+    finding, not an author's erratum.
+- **The fields.** Zhao's Fig. 11 colours |u| on 0–0.3 and T on 0–12. R1t's
+  design on D reaches 0.302 and 19.30. A colour scale is not a reported
+  maximum, so this is a range check only.
+- **On the paper's mesh.** Evaluating R1t's binary design on the
+  5200-element model (flow and thermal h) would take one flow and one thermal
+  solve. It would remove the mesh difference only; the other three would
+  remain, so it would still place the design, not compare the methods. It was
+  not run; no new solve was asked for.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 

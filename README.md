@@ -390,6 +390,18 @@ and none failed.
   model, which generated and ranked the designs.
 - 33 minutes by the script's timer.
 
+**The lead design, placed against the paper (no new solves).** On the
+paper's scale, with its two constants swapped as found above (Ψ₀ = 0.0456,
+C₀ = 20816; not an author erratum), R1t's binary design on the check model
+has Ψ/Ψ₀ 0.31 and C/C₀ 2.10 (J 1.20), against Tables 4 and 7's 0.47–0.63 and
+1.18–1.35 (J 0.87–0.91). It sits on finer meshes than the paper's and it is a
+binary design. On R1d's design, refining the thermal mesh to h/8 raised C/C₀
+from 1.30 to 1.79, while the flow refinement, also part of the check model,
+lowered C by 8.0–8.4% on the two binary designs R1m checked. So this places
+the design; it does not compare the two methods. Its
+density, velocity and temperature, in the layout of the paper's Figs. 8 and
+11, are in `docs/figures/zhao2d_lead_fields.png`.
+
 Next, for the review: whether to take R1t's design as the density method's
 result at w = 0.5 on the check model and stop optimising at β = 32, or to
 change what is optimised, either the generating objective or the binary

@@ -3,7 +3,7 @@
 Nothing is solved or re-optimised here: every field and number is read from
 results/ and drawn, so a figure shows exactly the state the records describe
 -- including that the R1d run is budget-limited and not converged, and that the
-thermal compliance still moves with the thermal mesh. Fourteen figures, written
+thermal compliance still moves with the thermal mesh. Fifteen figures, written
 to docs/figures/:
 
   zhao2d_r1d_fields.png        the R1d design in the layout of Zhao Figs. 8 and
@@ -13,8 +13,9 @@ to docs/figures/:
                                solved so far (h/8, R1i)
   zhao2d_r1d_history.png       the 300-update history on the frozen self scale
   zhao2d_status.png            where the result sits against Zhao Tables 4 and 7
-                               on the paper-interpreted scale, and how C moves
-                               with the thermal mesh on the coarse and fine flow
+                               on the paper-interpreted scale (R1d, and the
+                               current lead on D), and how C moves with the
+                               thermal mesh on the coarse and fine flow
   zhao2d_r1k_warm_start.png    R1k: density and temperature at x_300 and after
                                30 updates on the flow h / thermal h/4 model, the
                                objective's history and the design step
@@ -49,6 +50,9 @@ to docs/figures/:
   zhao2d_r1w.png               R1w: the 18 binary designs along R1v's trajectory,
                                ranked once on D -- where they differ, their J by
                                iterate, and their Psi and C against R1t's design
+  zhao2d_lead_fields.png       the lead design on D (R1t's binary design) in the
+                               layout of Zhao Figs. 8 and 11: density, |u| on
+                               h/2, T on h/8, and R1u's temperature difference
 
     python scripts/zhao2d_figures.py [--results results] [--out docs/figures]
 """
@@ -366,6 +370,8 @@ def status_figure(res: pathlib.Path, out: pathlib.Path) -> pathlib.Path:
     r1g = json.loads((res / "zhao2d_r1g_dual.json").read_text(encoding="utf-8"))
     r1h = json.loads((res / "zhao2d_r1h_matrix.json").read_text(encoding="utf-8"))
     r1i = json.loads((res / "zhao2d_r1i_h8.json").read_text(encoding="utf-8"))
+    lead = json.loads((res / "zhao2d_r1t.json").read_text(encoding="utf-8"))["cells"]["new/check"]
+    filled = json.loads((res / "zhao2d_r1u.json").read_text(encoding="utf-8"))["cells"]["filled/check"]
     term = meta["terminal"]
 
     fig, (left, right) = plt.subplots(1, 2, figsize=(11.0, 5.6))
@@ -373,8 +379,8 @@ def status_figure(res: pathlib.Path, out: pathlib.Path) -> pathlib.Path:
 
     # (a) against the paper, on the paper-interpreted scale
     ax = left
-    xlo, xhi, ylo, yhi = 0.25, 0.70, 1.05, 1.90
-    for j in (0.8, 0.85, 0.9, 0.95, 1.0, 1.05):
+    xlo, xhi, ylo, yhi = 0.25, 0.70, 1.05, 2.25
+    for j in (0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25):
         ax.plot([xlo, xhi], [2 * j - xlo, 2 * j - xhi], color=GRID, lw=0.8, zorder=0)
         # label where the line leaves the box at the lower right, pulled inside it
         xl = min(xhi, 2 * j - ylo) - 0.012
@@ -400,6 +406,14 @@ def status_figure(res: pathlib.Path, out: pathlib.Path) -> pathlib.Path:
     j8 = 0.5 * (psi / PAPER_PSI_0 + c8 / PAPER_C_0)
     ax.text(psi / PAPER_PSI_0 + 0.012, c8 / PAPER_C_0, f"J {j8:.3f}", fontsize=8,
             color=INK, va="center")
+    # the current lead, a binary design on D's finer meshes; R1u's falls on the same point
+    lx, ly = lead["psi"] / PAPER_PSI_0, lead["compliance"] / PAPER_C_0
+    fx, fy = filled["psi"] / PAPER_PSI_0, filled["compliance"] / PAPER_C_0
+    if max(abs(fx - lx), abs(fy - ly)) > 0.005:
+        raise RuntimeError("R1u's point no longer falls on R1t's; give it its own marker")
+    ax.plot([lx], [ly], "s", ms=7.5, color=INK, mec=SURFACE, mew=1.2,
+            label="R1t's binary design on D (flow h/2, thermal h/8); R1u's coincides")
+    ax.text(lx + 0.012, ly, f"J {0.5 * (lx + ly):.3f}", fontsize=8, color=INK, va="center")
     ax.set_xlim(xlo, xhi)
     ax.set_ylim(ylo, yhi)
     ax.set_xlabel("Ψ/Ψ₀  (paper-interpreted scale, Ψ₀ = 0.0456)")
@@ -458,11 +472,13 @@ def status_figure(res: pathlib.Path, out: pathlib.Path) -> pathlib.Path:
              "author erratum); different parametrisation (per-element density vs CBS) and "
              "stabilisation details,\nand R1d is not converged. Like-for-like is the filled "
              "point, on the paper's 5200-element mesh; the arrow is the same design with a "
-             "finer thermal mesh alone. (b) Differences\nbetween meshes, not errors against "
-             "an exact solution.", fontsize=8, color=INK2, ha="left", va="top")
+             "finer thermal mesh alone. The square is the current lead,\na binary design on "
+             "the check layer's finer meshes: placed, not compared. (b) Differences between "
+             "meshes, not errors against an exact solution.", fontsize=8, color=INK2,
+             ha="left", va="top")
     footer(fig, "Drawn from results/zhao2d_r1d_main.json, zhao2d_r1g_dual.json, "
-           "zhao2d_r1h_matrix.json, zhao2d_r1i_h8.json and Zhao et al. Tables 4 and 7 — "
-           "scripts/zhao2d_figures.py")
+           "zhao2d_r1h_matrix.json, zhao2d_r1i_h8.json, zhao2d_r1t.json, zhao2d_r1u.json and "
+           "Zhao et al. Tables 4 and 7 — scripts/zhao2d_figures.py")
     path = out / "zhao2d_status.png"
     fig.savefig(path, dpi=150)
     plt.close(fig)
@@ -1837,6 +1853,100 @@ def r1w_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
     return path
 
 
+def digest(*arrays) -> str:
+    """sha256 over dtype, shape and bytes: tfopus.zhao2d_flow_study.digest, restated so this
+    script still needs no JAX."""
+    h = hashlib.sha256()
+    for a in arrays:
+        a = np.ascontiguousarray(np.asarray(a))
+        h.update(f"{a.dtype.str}{a.shape}".encode())
+        h.update(a.tobytes())
+    return h.hexdigest()
+
+
+def lead_figure(res: pathlib.Path, out: pathlib.Path, g: dict) -> pathlib.Path:
+    """R1t's binary design on D in the layout of Zhao Figs. 8 and 11, and R1u's difference."""
+    ft = np.load(res / "zhao2d_r1t_fields.npz")
+    fu = np.load(res / "zhao2d_r1u_fields.npz")
+    rt = json.loads((res / "zhao2d_r1t.json").read_text(encoding="utf-8"))
+    ru = json.loads((res / "zhao2d_r1u.json").read_text(encoding="utf-8"))
+    coords_2 = np.load(res / "zhao2d_r1m_fields.npz")["flow_node_coords_h2"]
+    coords_8 = np.load(res / "zhao2d_r1i_fields.npz")["thermal_node_coords_h8"]
+    ct, cu = rt["cells"]["new/check"], ru["cells"]["filled/check"]
+    layer = rt["check_layer"]
+    pv_t, temp_t = ft["new_press_vel_check"], ft["new_temperature_check"]
+    pv_u, temp_u = fu["press_vel"], fu["temperature"]
+    # the saved meshes and states are the ones the records describe, by their own hashes
+    if not (digest(coords_2) == layer["flow_mesh"]["node_coords_sha256"]
+            and digest(coords_8) == layer["thermal_mesh"]["node_coords_sha256"]
+            and all(ru["check_layer"][m]["node_coords_sha256"] == layer[m]["node_coords_sha256"]
+                    for m in ("flow_mesh", "thermal_mesh"))
+            and digest(ft["solid_fraction_binary"]) == rt["export"]["binary_sha256"]
+            and digest(pv_t) == ct["state_sha256"]["press_vel"]
+            and digest(temp_t) == ct["state_sha256"]["temperature"]
+            and digest(pv_u) == cu["state_sha256"]["press_vel"]
+            and digest(temp_u) == cu["state_sha256"]["temperature"]):
+        raise RuntimeError("the saved meshes or states are not the ones R1t's and R1u's records hash")
+    h = g["element_size"]
+    tri_2 = triangulation(coords_2, h / 2, g)
+    tri_8 = triangulation(coords_8, h / 8, g)
+    speed = np.linalg.norm(pv_t.reshape(-1, 3)[:, 1:], axis=1)
+    d_temp = temp_u - temp_t
+    d_max = float(np.abs(d_temp).max())
+
+    fig, axes = plt.subplots(1, 4, figsize=(11.0, 8.0))
+    fig.subplots_adjust(left=0.02, right=0.99, top=0.86, bottom=0.17, wspace=0.10)
+
+    ax = axes[0]
+    field_axes(ax, g, "(a) R1t's qualified binary design")
+    xe, ye, grid = density_grid(ft["solid_fraction_binary"], ft["design_elem_centres"], h, g)
+    m = ax.pcolormesh(xe, ye, np.ma.masked_invalid(grid).T, cmap=DENSITY, vmin=0, vmax=1,
+                      shading="flat")
+    colorbar(fig, m, ax, "γ  (0 solid, 1 fluid)")
+    mark_isolated(ax, grid, ye, h, "isolated by shared\nedges (R1u fills it)")
+    note(ax, f"design mesh h, {int(round((1 - ft['solid_fraction_binary']).sum()))} fluid cells\n"
+             f"with the tabs; v_f (design domain) {ct['fluid_fractions']['v_f_design_domain']:.3f}")
+
+    ax = axes[1]
+    field_axes(ax, g, "(b) Velocity |u|, flow mesh h/2")
+    m = ax.tripcolor(tri_2, speed, cmap=SPEED, vmin=0, vmax=max(0.3, float(speed.max())),
+                     shading="gouraud")
+    colorbar(fig, m, ax, "|u|")
+    note(ax, f"max |u| {speed.max():.3f}\nΨ = {ct['psi']:.6f}")
+
+    ax = axes[2]
+    field_axes(ax, g, "(c) Temperature, thermal mesh h/8")
+    m = ax.tripcolor(tri_8, temp_t, cmap=HEAT, vmin=0, vmax=float(temp_t.max()),
+                     shading="gouraud")
+    colorbar(fig, m, ax, "T")
+    note(ax, f"T_max {ct['T_max']:.2f}; C = {ct['compliance']:.0f}\n"
+             f"D_T/Q {ct['D_T_over_Q']:.2%}")
+
+    ax = axes[3]
+    field_axes(ax, g, "(d) R1u − R1t: temperature")
+    m = ax.tripcolor(tri_8, d_temp, cmap=DIVERGE, vmin=-d_max, vmax=d_max, shading="gouraud")
+    colorbar(fig, m, ax, "ΔT")
+    note(ax, (f"cell filled, nothing else changed\nΔT {d_temp.min():+.3f} to {d_temp.max():+.3f}\n"
+              f"J {cu['J'] / ct['J'] - 1:+.3%} on the common scale").replace("-", "−"))
+
+    fig.suptitle("The lead designs on the check layer D, in the layout of Zhao Figs. 8 and 11",
+                 x=0.02, ha="left", fontsize=11.5, color=INK, y=0.975)
+    fig.text(0.02, 0.925,
+             "R1t's qualified binary design, the numerical first among the evaluated designs "
+             "at w = 0.5 on D (flow h/2, thermal h/8), and R1u's, the same design with its "
+             "isolated cell filled.\nZhao's Fig. 11 scales |u| 0–0.3 and T 0–12 on its "
+             "5200-element mesh. D has 4 and 64 times its elements (flow, thermal); refining "
+             "the thermal mesh raised C, the flow lowered it (R1i; R1h, R1m).",
+             fontsize=8.5, color=INK2, ha="left", va="top")
+    footer(fig, "Drawn from results/zhao2d_r1t_fields.npz, zhao2d_r1u_fields.npz and their records, "
+           "nodes from zhao2d_r1m/r1i_fields.npz; design, states and nodes checked by hash — "
+           "scripts/zhao2d_figures.py; nothing re-solved.")
+    path = out / "zhao2d_lead_fields.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--results", type=pathlib.Path, default=REPO / "results")
@@ -1856,7 +1966,7 @@ def main() -> None:
              "zhao2d_r1o_fields.npz", "zhao2d_r1p_bridge.json", "zhao2d_r1r.json",
              "zhao2d_r1r_fields.npz", "zhao2d_r1t.json", "zhao2d_r1t_fields.npz",
              "zhao2d_r1v.json", "zhao2d_r1v_fields.npz", "zhao2d_r1w.json",
-             "zhao2d_r1w_fields.npz"]
+             "zhao2d_r1w_fields.npz", "zhao2d_r1u.json", "zhao2d_r1u_fields.npz"]
     for n in names:
         print(f"read results/{n}  sha256 {sha(res / n)}")
     sources = [f"results/{n}" for n in names]
@@ -1866,7 +1976,8 @@ def main() -> None:
                  r1m_figure(res, args.out, g), r1n_figure(res, args.out, g),
                  r1o_figure(res, args.out, g), r1p_figure(res, args.out),
                  r1r_figure(res, args.out, g), r1t_figure(res, args.out, g),
-                 r1v_figure(res, args.out, g), r1w_figure(res, args.out, g)):
+                 r1v_figure(res, args.out, g), r1w_figure(res, args.out, g),
+                 lead_figure(res, args.out, g)):
         print(f"wrote {path.relative_to(REPO) if path.is_relative_to(REPO) else path}")
 
 
