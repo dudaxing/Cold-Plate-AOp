@@ -16,6 +16,7 @@ import json
 import pathlib
 import sys
 
+import numpy as np
 import pytest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
@@ -183,3 +184,82 @@ def test_r1w_refuses_a_second_run_in_the_same_folder_and_cleans_up_under_overwri
     assert not (tmp_path / rw.FIELDS).exists() and not (tmp_path / rw.MANIFEST).exists()
     assert json.loads((tmp_path / rw.RECORD).read_text(encoding="utf-8"))["stopped"].startswith("inputs")
     assert not (tmp_path / rw.LOCK).exists()  # released when the record is written
+
+
+def test_a_recomputed_density_is_compared_to_a_stated_tolerance_not_bit_for_bit():
+    """A continuous density recomputed elsewhere may differ in its last bits; a changed map may not."""
+    saved = np.linspace(0.0, 1.0, 11)
+    same = rw.density_match(saved, saved)
+    assert same == {"bitwise": True, "max_abs_diff": 0.0, "atol": rw.DENSITY_ATOL, "match": True}
+
+    roundoff = rw.density_match(saved + 1e-14 * (-1.0) ** np.arange(11), saved)
+    assert roundoff["match"] and not roundoff["bitwise"]
+    assert 0.0 < roundoff["max_abs_diff"] < 1e-13
+
+    assert not rw.density_match(saved + 1e-6, saved)["match"]  # a real change of the map
+    assert not rw.density_match(saved[:-1], saved)["match"]  # another mesh
+    with_nan = saved.copy()
+    with_nan[3] = np.nan
+    assert not rw.density_match(with_nan, saved)["match"]
+
+
+def _r1t_density_shifted(monkeypatch, shift):
+    """np.load as the script sees it, with R1t's saved continuous density moved by `shift`."""
+    real = np.load
+
+    class Fields(dict):
+        @property
+        def files(self):
+            return list(self)
+
+    def load(path, *args, **kwargs):
+        fields = real(path, *args, **kwargs)
+        if pathlib.Path(path).name != "zhao2d_r1t_fields.npz":
+            return fields
+        out = Fields({key: fields[key] for key in fields.files})
+        out["solid_fraction"] = out["solid_fraction"] + shift
+        return out
+
+    monkeypatch.setattr(rw.np, "load", load)
+
+
+def test_r1w_accepts_a_saved_density_off_by_round_off(tmp_path, monkeypatch):
+    """As on another platform: the pool and its manifest go through, and the record says how."""
+
+    class RouteNotBuilt(Exception):
+        pass
+
+    def stop(*a, **k):
+        raise RouteNotBuilt
+
+    _r1t_density_shifted(monkeypatch, 1e-13 * (-1.0) ** np.arange(5200))
+    monkeypatch.setattr(rw.dual, "Zhao2DDualProblem", stop)
+    monkeypatch.setattr(rw.faulthandler, "dump_traceback_later", lambda *a, **k: None)
+    monkeypatch.setattr(rw.sys, "argv", ["r1w", "--out", str(tmp_path)])
+    with pytest.raises(RouteNotBuilt):
+        rw.main()
+    assert (tmp_path / rw.MANIFEST).exists()
+    record = json.loads((tmp_path / rw.RECORD).read_text(encoding="utf-8"))
+    r1t = record["density_checks"]["r1t"]
+    assert r1t["match"] and not r1t["bitwise"] and 0.0 < r1t["max_abs_diff"] < 1e-12
+    assert record["density_checks"]["r1v"]["match"]  # untouched; bit for bit is not required
+    # the binary designs are still compared exactly: iterate 20 exports R1t's
+    assert record["manifest"]["groups"][0]["reuse_of"] == "r1t"
+
+
+def test_r1w_refuses_a_saved_density_that_is_really_different(tmp_path, monkeypatch):
+    """A difference beyond round-off stops the run at the pool, before the manifest or the route."""
+
+    def never(*a, **k):
+        pytest.fail("the route was built after the density check failed")
+
+    _r1t_density_shifted(monkeypatch, 1e-6)
+    monkeypatch.setattr(rw.dual, "Zhao2DDualProblem", never)
+    monkeypatch.setattr(rw.faulthandler, "dump_traceback_later", lambda *a, **k: None)
+    monkeypatch.setattr(rw.sys, "argv", ["r1w", "--out", str(tmp_path)])
+    with pytest.raises(SystemExit, match="CHECKS FAILED at the pool and the manifest"):
+        rw.main()
+    assert not (tmp_path / rw.MANIFEST).exists()
+    record = json.loads((tmp_path / rw.RECORD).read_text(encoding="utf-8"))
+    assert not record["density_checks"]["r1t"]["match"]
+    assert record["density_checks"]["r1t"]["max_abs_diff"] == pytest.approx(1e-6)

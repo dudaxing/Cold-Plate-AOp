@@ -19,7 +19,8 @@ the next build or solve:
   R1q's;
 * the pool, geometry only. Each design is mapped by the frozen filter and
   projection at beta = 32 and exported by R1l's rule. R1t's and R1v's designs
-  map to their saved densities and export to their saved binary designs.
+  map to their saved densities (every cell within DENSITY_ATOL; the run itself
+  matched bit for bit) and export, exactly, to their saved binary designs.
   Before any solve, the manifest -- each iterate, its binary design's digest,
   and whether that design is reused or solved -- is written to a file;
 * the check-layer route: R1m's meshes;
@@ -115,6 +116,29 @@ class SolveFailed(RuntimeError):
 
 def rel(b, a) -> float:
     return b / a - 1.0
+
+
+# A continuous density is recomputed in floating point (the filter's sums, the exponentials of
+# Eq. (19), the projection's bisection for eta), so another platform or library build may differ
+# from a saved one in the last bits. Agreement is therefore numerical: every cell within
+# DENSITY_ATOL. Measured on R1t's and R1v's raw terminals (3 October, design side only): another
+# summation order, NumPy's exp, or x moved by 1 ulp moved s by at most 9e-15, while beta
+# 32 -> 32.00001 moved it by 1.3e-7 and the filter radius 2 -> 2.0001 elements by 5e-4. A smaller
+# change (beta by under about 7e-9, or the bisection cut to 36 halvings) would pass; the binary
+# designs, compared exactly, still guard the export, whose cut is at least 1.1e-4 from the
+# nearest density in all 21 designs.
+DENSITY_ATOL = 1e-10
+
+
+def density_match(recomputed, saved, atol: float = DENSITY_ATOL) -> dict:
+    """How a recomputed continuous density agrees with a saved one: bit for bit, within atol, or not."""
+    a = np.asarray(recomputed, dtype=np.float64)
+    b = np.asarray(saved, dtype=np.float64)
+    if a.shape != b.shape or not (np.isfinite(a).all() and np.isfinite(b).all()):
+        return {"bitwise": False, "max_abs_diff": None, "atol": atol, "match": False}
+    diff = float(np.max(np.abs(a - b))) if a.size else 0.0
+    return {"bitwise": bool(np.array_equal(a, b)), "max_abs_diff": diff, "atol": atol,
+            "match": diff <= atol}
 
 
 def load_json(path: pathlib.Path) -> dict:
@@ -415,10 +439,15 @@ def main() -> None:
             densities[it] = s
             digests.append(d)
         record["pool"] = pool
-        require(np.array_equal(densities[POOL_ITERATIONS[0]], ft["solid_fraction"]),
-                "the map does not give R1t's saved density for its raw terminal")
-        require(np.array_equal(densities[POOL_ITERATIONS[-1]], fv["solid_fraction"]),
-                "the map does not give R1v's saved density for its raw terminal")
+        # the recomputed continuous densities against the saved ones, to DENSITY_ATOL; the raw
+        # designs (above) and the binary designs (below) are compared exactly
+        record["density_checks"] = {
+            name: density_match(densities[it], saved["solid_fraction"])
+            for name, it, saved in (("r1t", POOL_ITERATIONS[0], ft), ("r1v", POOL_ITERATIONS[-1], fv))}
+        for name, owner in (("r1t", "R1t"), ("r1v", "R1v")):
+            m = record["density_checks"][name]
+            require(m["match"], f"the map does not give {owner}'s saved density for its raw terminal "
+                                f"(largest difference {m['max_abs_diff']}, allowed {DENSITY_ATOL})")
         require(digests[0] == binary_sha["r1t"], "iterate 20 does not export to R1t's binary design")
         require(digests[-1] == binary_sha["r1v"], "iterate 40 does not export to R1v's binary design")
         known = {binary_sha[n]: n for n in NAMES}

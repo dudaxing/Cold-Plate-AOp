@@ -6,6 +6,9 @@ scipy>=1.13
 chex
 pytest>=8
 
+# Plotting: scripts/zhao2d_figures.py and the figures of zhao2d_refine_check.py.
+matplotlib>=3.8
+
 # Needed only by upstream modules the suite does not exercise:
 #   shapely   -> toflux.src.geometry (BREP meshes)
 #   absl-py   -> toflux.src.mma

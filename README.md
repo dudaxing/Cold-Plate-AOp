@@ -23,6 +23,77 @@ latter's [Figures](docs/zhao_reproduction.md#figures) section.
 
 ![The R1d design: density, velocity and temperature](docs/figures/zhao2d_r1d_fields.png)
 
+## The 2D deliverable (Zhao §4.1)
+
+The 2D heat sink of Zhao §4.1 is delivered with the limits below; the 3D
+heat sink of §4.2 is outside this delivery. For it the code provides a
+density-based design, the flow and heat analysis, gradient-based
+optimisation with MMA, saving and resuming MMA's state, the binary export,
+and the re-check of results on a finer model.
+
+**The two designs.** Both are qualified binary designs on the check model D
+(flow mesh h/2, thermal mesh h/8, the same 5000 design cells), at w = 0.5 on
+the common scale.
+- **R1t's** is the numerical representative under the original
+  qualification rule: the lowest J among the evaluated designs, which
+  include all 18 binary designs along R1v's run.
+- **R1u's** is a derived geometry representative: R1t's with its one
+  isolated fluid cell (3750) filled and nothing else changed. Its J is
+  0.026% higher.
+
+**Limits of use.** They bound how the result may be used and stated; they
+are not open work for this delivery.
+- The model is steady, incompressible, laminar flow with constant
+  properties, coupled one way: the flow drives the heat transfer.
+- A solid is a finite Brinkman resistance, not a body-fitted impermeable
+  wall.
+- Mesh independence is not shown. Refining the thermal mesh still raises C,
+  and refining the flow lowers it (see the findings below).
+- Every optimisation stopped on its budget or on a stopping proxy; none is
+  shown converged or optimal.
+- The binary export does not guarantee the absence of isolated fluid
+  (R1t's design has one such cell), a minimum channel width, or
+  manufacturability.
+- Against the paper, the design is placed, not compared (see "The lead
+  design, placed against the paper" below).
+- In the round before its conclusion of 3 October, the 2D delivery review
+  re-assembled the final D states' residuals and integrals independently.
+  It did not re-run the main D solves or the optimisation in its
+  environment.
+
+**The data.** R1t's and R1u's designs and states on D:
+
+| | R1t: `results/zhao2d_r1t_fields.npz` | R1u: `results/zhao2d_r1u_fields.npz` |
+|---|---|---|
+| binary design on the design mesh h: 5200 cells, ordered as `design_elem_centres` in R1t's file; s = 1 solid, 0 fluid | `solid_fraction_binary` | `solid_fraction_filled` |
+| the same on the flow mesh h/2 (20 800 cells) | `new_solid_fraction_flow_h2` | `solid_fraction_flow_h2` |
+| flow state on h/2: p, u, v at each of the 21 141 nodes | `new_press_vel_check` | `press_vel` |
+| temperature on h/8 (334 161 nodes), 0 at the inlet | `new_temperature_check` | `temperature` |
+| Ψ, C, J, T_max, D_T/Q, residuals, the states' hashes | `results/zhao2d_r1t.json`, `cells["new/check"]` | `results/zhao2d_r1u.json`, `cells["filled/check"]` |
+
+The node coordinates are `flow_node_coords_h2` in
+`results/zhao2d_r1m_fields.npz` and `thermal_node_coords_h8` in
+`results/zhao2d_r1i_fields.npz`; their hashes are the D meshes' in the
+records. Lengths are in metres and velocities in m/s (the inlet speed is
+0.2). R1t's file also holds its optimisation: the raw designs (`designs`,
+`design`), the continuous terminal and its states (`solid_fraction`,
+`press_vel`, `temperature`) and MMA's saved state (`mma_*`).
+
+**Entry points.** Install as in "Setup" below; `pytest` runs the validation
+suite. The scripts behind the records are listed under "Running R1" in
+[`docs/zhao_reproduction.md`](docs/zhao_reproduction.md#running-r1), with run
+times for R1d and from R1k on. Scripts with `--out DIR` write there; its
+default is `results/`, the cited records, and only the scripts from R1h on
+refuse to overwrite without `--overwrite`. The two freeze scripts write their
+references into `tfopus/` with `--write`, the gradient checks only print, and
+`zhao2d_binary_diagnostic.py --write` rewrites `results/zhao2d_r1d_main.json`
+in place. For the two designs: `scripts/zhao2d_r1t_d_continue.py` (R1t: 20 MMA
+updates on D, then one flow and one thermal solve of its binary design),
+`scripts/zhao2d_r1u_fill_check.py` (R1u: one flow and one thermal solve),
+`scripts/zhao2d_r1w_pool_screen.py` (the ranking of the 18) and
+`scripts/zhao2d_figures.py` (the 15 figures in `docs/figures/`, redrawn from
+the saved results with no solve).
+
 ## Layout
 
 | Path | Contents |
@@ -428,6 +499,18 @@ pytest                                   # add -m "not slow" to skip refinement 
 
 `TOFLUX_ZIP` sets the archive path and `TOFLUX_ROOT` the checkout location. The
 suite uses SciPy's sparse direct solver, so PETSc and PARDISO are not needed.
+`requirements-dev.txt` also lists matplotlib, which only the figure scripts
+use.
+
+**The environment the results were made in.** The 20 records from R1h on
+store Python, the platform, jax, NumPy, SciPy, double precision, the thread
+variables and the CPU count under `provenance.environment`, the same in all
+of them: Windows 11 (10.0.26200), Python 3.13.6, jax 0.11.0, NumPy 2.4.6,
+SciPy 1.17.1, x64, 8 BLAS threads, 32 CPUs. jaxlib 0.11.0 (which jax 0.11.0
+pins) and SciPy's bundled OpenBLAS 0.3.30 are those of the installation, not
+recorded. The figures were drawn with matplotlib 3.10.9. Every stage run was made
+on that one machine, and a one-step install into a clean environment has not
+been tried.
 
 On Windows, `tfopus` sets a default of 8 BLAS threads at import
 (`tfopus/_threads.py`). SciPy's bundled OpenBLAS would otherwise run a pool of

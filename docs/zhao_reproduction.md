@@ -37,7 +37,8 @@ governing equations, objective, constraint — is kept.
 | R1u | a diagnostic geometry: R1t's qualified binary design with its isolated fluid cell 3750 filled, nothing else changed (1999 fluid cells); on D with the linear path, at most 1F + 1T, no MMA, no AD | **done** — the isolated cell found by shared edges and filled, nothing else: 1999 fluid cells, one component. On D, J is 0.026% above R1t's (Ψ +0.048%, C +0.022%), and still 0.130% below R1r's (Ψ −0.95%, C +0.04%, T_max −1.77%). Among the designs with no isolated cell it is lowest for 0.1747 < w < 0.7566. 1F + 1T, 312 s. Closed in the review of 7786ce7 with the binding fix. The filled design keeps 83.19% of R1t's absolute advantage in J over R1r's; the cell is not without effect. R1t stays the numerical first and the optimisation trajectory. The filled design ("R1t, filled") becomes the representative with no isolated component |
 | R1v | a real continuation of R1t's run. Part 1: migrate R1t's checkpoint to the new binding from its own record, and an append-only budget operation, tested on a small mesh (2 of 2, then 2 appended, equals 4 at once). Part 2, with separate confirmation: at most 20 appended updates (20 → at most 40) from R1t's raw design and MMA history on D, then at most 1F + 1T | part 1 **done** — `MMACheckpoint.append_budget` and `migrate_legacy_checkpoint`; 8 new tests. On a small mesh, 2 of 2 with 2 appended makes the updates of 4 at once, bit for bit, and a pause inside the appended budget is the uninterrupted run's pause, flag included. R1t's checkpoint is migrated with its state untouched: only the binding's entry gains the optimisation block, rebuilt from R1t's record and the source it ran with, byte for byte. Dry: appending 20 is accepted, and the driver's resume would start at R1t's raw terminal design. Nothing solved on the main mesh. Part 2 **done** — the first resumed evaluation reproduces R1t's terminal (J to 8×10⁻¹⁵, g and η exactly), and the first appended step is the size of R1t's last ones, with no jump in J. Budget used, not converged: the continuous J on D fell 0.131% more (0.216% over R1t and R1v). The qualified binary design exported from the terminal is 1.11% above R1t's on D (Ψ −2.28%, C +1.81%, T_max +3.26%), and 0.95% above R1r's. It has the same isolated cell, 3750, and is the lowest of the seven at no weight. Two evaluations took 5456 s and 25 454 s; they coincide with the machine's overnight standby in the Windows event log, and both states passed their gates like the rest. Closed, both parts, in the review of 03ccf6c. It found that the 21 saved designs export to 18 distinct binary designs, 16 of them not evaluated at the time, so the terminal's result does not show that none beats R1t's. R1t's design stays the numerical first among the evaluated designs, R1u's the representative with no isolated component, and R1v's is kept as a trade-off. Automatic appends at β = 32 are paused |
 | R1w | binary candidate selection along R1v's saved trajectory: the 21 raw designs exported by the frozen rule, deduplicated to 18 geometries, R1t's and R1v's reused, each of the other at most 16 solved on D (at most 16F + 16T; 0 MMA, 0 main-mesh AD), ranked once, then stop | **done** — the 21 saved designs export to 18 binary designs: 16 solved on D (1F + 1T each), R1t's and R1v's reused, every state within the 10⁻⁸ gate, none failed. Ranked once by J at w = 0.5 on D: R1t's design (iterate 20) is the lowest; the nearest, iterate 28's, is +0.027% (Ψ +0.11%, C +0.01%). Six designs lie within 0.21% of R1t's and twelve 0.76–1.14% above it, R1v's terminal's 16th; one cell, 1728, is solid in all six and fluid in all twelve, which is co-occurrence only. Over these 18 and R1u's, R1r's, R1o's, R1n's and the pilot's, none of the 16 new designs is the lowest at any weight; among the 18 alone, iterate 27's and 35's are the lowest for 0.774 < w < 0.976. All 18 keep the isolated cell 3750. 33 min by the script's timer, on the local CPU. So, at w = 0.5, choosing the terminal missed the 14 new designs better than R1v's (R1t's, already evaluated, makes 15), but none better than R1t's, under the rule and on this model |
-| R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised |
+| 2D close-out | the two items of the 2D delivery review (3 October): R1w's recomputed continuous densities compared to a stated tolerance, with targeted tests, and a minimal reproduction note in the README and requirements (the plotting dependency, the environment the results were made in, R1t's and R1u's data fields, the entry points, and the 2D scope with its limits) | **done**; the 2D acceptance is the review's to close. No optimisation, sweep, 3D or new physical check is part of it |
+| R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised; outside the 2D delivery, which excludes §4.2 |
 
 ## Figures
 
@@ -5398,6 +5399,22 @@ for. The excerpt, read after the run, shows no Kernel-Power event during it
     up with the iterates.
   - The map gives R1t's and R1v's saved densities for iterates 20 and 40,
     bit for bit. Iterate 20 exports R1t's binary design and 40 R1v's.
+  - Changed after the run, on 3 October, at the 2D delivery review: the
+    script now accepts the recomputed continuous densities if every cell is
+    within 10⁻¹⁰ of the saved one, and records whether they match bit for
+    bit and the largest difference. Recomputed elsewhere, the filter's sums,
+    the exponentials of Eq. (19) and the projection's bisection can differ in
+    the last bits. On R1t's and R1v's raw terminals, measured on the design
+    side only and not saved as a record: another summation order, NumPy's exp
+    or x moved by 1 ulp moved s by at most 9×10⁻¹⁵, β 32 → 32.00001 by
+    1.3×10⁻⁷, and the filter radius 2 → 2.0001 elements by 5×10⁻⁴. The raw
+    designs, the model identity and the binary designs are still compared
+    exactly; the export's cut is at least 1.1×10⁻⁴ from the nearest density in
+    all 21 designs. Three tests in `validation/test_zhao2d_r1w_pool.py` cover it: the
+    criterion itself, a saved density moved by 10⁻¹³ (accepted, and the
+    binary designs still match), and one moved by 10⁻⁶ (refused before the
+    manifest). The run is not repeated; its record hashes the script as run
+    (`ec989b2`).
   - 16 designs to solve, within the 16 allowed.
 - **The check-layer route,** built in 192.5 s: flow h/2 (20 800 elements),
   thermal h/8 (332 800), quadrature 3.
