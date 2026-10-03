@@ -125,8 +125,9 @@ def rel(b, a) -> float:
 # summation order, NumPy's exp, or x moved by 1 ulp moved s by at most 9e-15, while beta
 # 32 -> 32.00001 moved it by 1.3e-7 and the filter radius 2 -> 2.0001 elements by 5e-4. A smaller
 # change (beta by under about 7e-9, or the bisection cut to 36 halvings) would pass; the binary
-# designs, compared exactly, still guard the export, whose cut is at least 1.1e-4 from the
-# nearest density in all 21 designs.
+# designs, compared exactly, still guard the export. Its cut t is itself a density, the smallest
+# solid one; in all 21 designs the densities ranked on either side of the cut (the largest fluid
+# one and t) are at least 1.1e-4 apart.
 DENSITY_ATOL = 1e-10
 
 

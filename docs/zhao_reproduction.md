@@ -37,7 +37,7 @@ governing equations, objective, constraint — is kept.
 | R1u | a diagnostic geometry: R1t's qualified binary design with its isolated fluid cell 3750 filled, nothing else changed (1999 fluid cells); on D with the linear path, at most 1F + 1T, no MMA, no AD | **done** — the isolated cell found by shared edges and filled, nothing else: 1999 fluid cells, one component. On D, J is 0.026% above R1t's (Ψ +0.048%, C +0.022%), and still 0.130% below R1r's (Ψ −0.95%, C +0.04%, T_max −1.77%). Among the designs with no isolated cell it is lowest for 0.1747 < w < 0.7566. 1F + 1T, 312 s. Closed in the review of 7786ce7 with the binding fix. The filled design keeps 83.19% of R1t's absolute advantage in J over R1r's; the cell is not without effect. R1t stays the numerical first and the optimisation trajectory. The filled design ("R1t, filled") becomes the representative with no isolated component |
 | R1v | a real continuation of R1t's run. Part 1: migrate R1t's checkpoint to the new binding from its own record, and an append-only budget operation, tested on a small mesh (2 of 2, then 2 appended, equals 4 at once). Part 2, with separate confirmation: at most 20 appended updates (20 → at most 40) from R1t's raw design and MMA history on D, then at most 1F + 1T | part 1 **done** — `MMACheckpoint.append_budget` and `migrate_legacy_checkpoint`; 8 new tests. On a small mesh, 2 of 2 with 2 appended makes the updates of 4 at once, bit for bit, and a pause inside the appended budget is the uninterrupted run's pause, flag included. R1t's checkpoint is migrated with its state untouched: only the binding's entry gains the optimisation block, rebuilt from R1t's record and the source it ran with, byte for byte. Dry: appending 20 is accepted, and the driver's resume would start at R1t's raw terminal design. Nothing solved on the main mesh. Part 2 **done** — the first resumed evaluation reproduces R1t's terminal (J to 8×10⁻¹⁵, g and η exactly), and the first appended step is the size of R1t's last ones, with no jump in J. Budget used, not converged: the continuous J on D fell 0.131% more (0.216% over R1t and R1v). The qualified binary design exported from the terminal is 1.11% above R1t's on D (Ψ −2.28%, C +1.81%, T_max +3.26%), and 0.95% above R1r's. It has the same isolated cell, 3750, and is the lowest of the seven at no weight. Two evaluations took 5456 s and 25 454 s; they coincide with the machine's overnight standby in the Windows event log, and both states passed their gates like the rest. Closed, both parts, in the review of 03ccf6c. It found that the 21 saved designs export to 18 distinct binary designs, 16 of them not evaluated at the time, so the terminal's result does not show that none beats R1t's. R1t's design stays the numerical first among the evaluated designs, R1u's the representative with no isolated component, and R1v's is kept as a trade-off. Automatic appends at β = 32 are paused |
 | R1w | binary candidate selection along R1v's saved trajectory: the 21 raw designs exported by the frozen rule, deduplicated to 18 geometries, R1t's and R1v's reused, each of the other at most 16 solved on D (at most 16F + 16T; 0 MMA, 0 main-mesh AD), ranked once, then stop | **done** — the 21 saved designs export to 18 binary designs: 16 solved on D (1F + 1T each), R1t's and R1v's reused, every state within the 10⁻⁸ gate, none failed. Ranked once by J at w = 0.5 on D: R1t's design (iterate 20) is the lowest; the nearest, iterate 28's, is +0.027% (Ψ +0.11%, C +0.01%). Six designs lie within 0.21% of R1t's and twelve 0.76–1.14% above it, R1v's terminal's 16th; one cell, 1728, is solid in all six and fluid in all twelve, which is co-occurrence only. Over these 18 and R1u's, R1r's, R1o's, R1n's and the pilot's, none of the 16 new designs is the lowest at any weight; among the 18 alone, iterate 27's and 35's are the lowest for 0.774 < w < 0.976. All 18 keep the isolated cell 3750. 33 min by the script's timer, on the local CPU. So, at w = 0.5, choosing the terminal missed the 14 new designs better than R1v's (R1t's, already evaluated, makes 15), but none better than R1t's, under the rule and on this model |
-| 2D close-out | the two items of the 2D delivery review (3 October): R1w's recomputed continuous densities compared to a stated tolerance, with targeted tests, and a minimal reproduction note in the README and requirements (the plotting dependency, the environment the results were made in, R1t's and R1u's data fields, the entry points, and the 2D scope with its limits) | **done**; the 2D acceptance is the review's to close. No optimisation, sweep, 3D or new physical check is part of it |
+| 2D close-out | the two items of the 2D delivery review (3 October): R1w's recomputed continuous densities compared to a stated tolerance, with targeted tests, and a minimal reproduction note in the README and requirements (the plotting dependency, the environment the results were made in, R1t's and R1u's data fields, the entry points, and the 2D scope with its limits) | **done**, and the 2D acceptance **closed** in the review of 12b9085: the 2D scope is complete and deliverable with the stated limits, with no function, re-run or computation left to add. One wording correction, about the export's cut, was applied after it. No optimisation, sweep, 3D or new physical check is part of it |
 | R2 | 3D extruded analysis, straight-channel reference (fig 15) | not authorised; outside the 2D delivery, which excludes §4.2 |
 
 ## Figures
@@ -5409,8 +5409,12 @@ for. The excerpt, read after the run, shows no Kernel-Power event during it
     or x moved by 1 ulp moved s by at most 9×10⁻¹⁵, β 32 → 32.00001 by
     1.3×10⁻⁷, and the filter radius 2 → 2.0001 elements by 5×10⁻⁴. The raw
     designs, the model identity and the binary designs are still compared
-    exactly; the export's cut is at least 1.1×10⁻⁴ from the nearest density in
-    all 21 designs. Three tests in `validation/test_zhao2d_r1w_pool.py` cover it: the
+    exactly. The export's cut t is itself a density, the smallest solid one;
+    in all 21 designs the densities ranked on either side of the cut (the
+    largest fluid one and t) are at least 1.1×10⁻⁴ apart. (First written as
+    "the cut is at least 1.1×10⁻⁴ from the nearest density", which is wrong:
+    that distance is 0. Corrected after the review of 12b9085.) Three tests in
+    `validation/test_zhao2d_r1w_pool.py` cover it: the
     criterion itself, a saved density moved by 10⁻¹³ (accepted, and the
     binary designs still match), and one moved by 10⁻⁶ (refused before the
     manifest). The run is not repeated; its record hashes the script as run
@@ -5643,6 +5647,64 @@ and the square in `docs/figures/zhao2d_status.png`.
   solve. It would remove the mesh difference only; the other three would
   remain, so it would still place the design, not compare the methods. It was
   not run; no new solve was asked for.
+
+## The 2D acceptance, closed in the review of 12b9085
+
+The review closed the final 2D acceptance. The 2D scope, Zhao §4.1 by the
+density method as approved, is complete and can be delivered with the
+limits stated in the README ("The 2D deliverable"). The 3D heat sink of §4.2
+is excluded and is not an outstanding item. No function, re-run (R1w's
+16F + 16T, or any optimisation) or computation remains required, and no
+further research stage is opened. Physical accuracy, optimality and
+manufacturability stay limits of use, not tasks.
+
+What the review checked:
+- **The snapshot.** Against fc732ac, 190 files are unchanged byte for byte and
+  5 modified (the R1w script and its tests, `requirements-dev.txt`, the
+  README and this document), none added or deleted. `tfopus`, the
+  references, the records, the checkpoints and the figures are unchanged.
+- **The density check.** It is element-wise and absolute, max |Δs| ≤ 10⁻¹⁰
+  with equal shapes and finite values, and has no relative tolerance. The
+  exact checks on the raw designs, the model and scale identities and the
+  binary digests are unchanged, and so are the state gates.
+- **The tests, in its environment** (Linux, Python 3.13.5, JAX 0.9.0.1,
+  NumPy 2.3.5, SciPy 1.17.0):
+  - R1w's test file passed, 9 tests in 37.1 s;
+  - there the recomputed densities differ from the saved ones by
+    2.6×10⁻¹⁵ (R1t's) and 7.8×10⁻¹⁵ (R1v's): not bit for bit, and within
+    the tolerance;
+  - the whole manifest replayed equal to the original: 21 iterates, 18
+    designs, 2 reused and 16 to solve;
+  - a saved density moved by 10⁻¹³ was accepted, and one moved by 10⁻⁶ was
+    refused before the manifest and the D model;
+  - its first run of the file stopped at the tool's 180 s limit with 8 tests
+    passed, and a fresh run completed. The full suite (366 collected) was
+    not run, and nothing was solved, differentiated or optimised.
+- **An independent design-side rebuild**, in NumPy and SciPy without the
+  project's code, reproduced all 21 binary digests. Round-off variants
+  moved s by 7–9×10⁻¹⁵, β 32 → 32.00001 by 1.35 and 1.44×10⁻⁷, and the
+  filter radius 2 → 2.0001 elements by 5.0 and 4.5×10⁻⁴.
+- **The reproduction note.** The README's fields and shapes exist as stated,
+  and the 20 records from R1h on carry the same environment as R1t's. It did
+  not inspect the installation's jaxlib, OpenBLAS or matplotlib, and the
+  requirements are not a lock file.
+- **The history.** R1w's record still hashes the script as run
+  (`c9130883…`, reproduced from fc732ac's script with CRLF line ends); the
+  current script differs, as documented.
+- **Not checked:** the live remote, the current Windows installation, and
+  the sessions and agents.
+
+**The one correction**, applied in the script's comment and in R1w's note
+above. The export's cut t is itself a density (`t = values[k]`, the smallest
+solid one), so its distance to the nearest density is 0. The 1.1×10⁻⁴ is
+the smallest gap between the densities ranked 2000 and 2001, the largest
+fluid one and t, over the 21 designs: 1.117×10⁻⁴. No tolerance, export rule,
+test or result changes.
+
+R1t's design stays the numerical representative under the original
+qualification rule, on D at w = 0.5 on the common scale. R1u's stays the
+derived geometry representative, with no fluid component isolated by shared
+edges.
 
 ## R0 headline: the reported Ψ₀ and C₀ are transposed
 
